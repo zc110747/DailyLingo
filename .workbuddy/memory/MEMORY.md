@@ -41,12 +41,19 @@
 9. **改 md 后不必手动敲构建**：`python scripts/watch.py`（或双击 `watch.bat`）会在 1 s 内
    全量重建。全量而非单页增量 —— 新增/删除文章会改动相邻文章的上下篇导航。
    md 写坏时只报错并继续监听；`--audio` 会顺带补齐缺失 WAV。
+10. **改了 `## Article` 正文就必须重新生成同名 WAV**（`sources/` 里那份会过期）；
+    `watch.py --audio` 只在**缺文件**时补，不检测内容过期，需人工重跑 EnglishAudio。
+11. **改名/删除文章要手删旧产物**：`sources/<旧名>.wav` 与 `src/<旧名>.html`。
+   构建脚本与 `watch.py` 都遵守「不删文件」，只会提示。
+   改名的配套动作：`git mv content/...` → 改 H1 → 改相邻文章 `## Continues` 里的交叉引用
+   → 重新生成 WAV → 删旧产物 → 重新构建。编号**永不**随标题变化。
 
 ## 文章 Markdown 格式
 兼容两种，可混用：
-- 既有格式（`D:\user_project\git\DailyWork\english`）：`# 标题` + `## Article` / `## Words`
+- 既有格式（原本来自 `D:\user_project\git\DailyWork\english`，该目录**已不存在**，
+  内容已并入本仓 `content/`）：`# 标题` + `## Article` / `## Words`
   （3 列或 5 列，表头按别名识别）/ `## Questions`（`**题干**` 或 `Question N：题干` + `A. …`）/
-  `## Answers` / `## Continues`（被忽略）。
+  `## Answers` / `## Continues`（被忽略，别名含单数 `Continue`）。
 - 扩展格式：YAML front matter（`id` / `title` / `audio`）+ `## Q1` + `题型：单选|填空` +
   `答案：` / `可接受答案：` / `解释：`。
 - **答案四种写法可混用**：① 紧凑字母串（`BAC`，按题目顺序）；② `Question5: …`；
@@ -63,11 +70,20 @@ WAV 由 **EnglishAudio**（Piper + ONNX，离线）生成：
 只朗读 `## Article` 章节，输出与 md 同名的 WAV，正文含非英文会被拒绝（退出码 4），
 md 必须是 UTF-8。本仓现有 6 个 WAV 均为单声道 / 16 bit / 22 050 Hz。
 
+## 文章清单（6 篇，全部在 Chapter 0001–0100）
+| 编号 | 文件 | 标题 |
+|---|---|---|
+| 0001 | `0001.A_New_Hobby.md` | A New Hobby |
+| 0002 | `0002.A_Busy_Morning.md` | A Busy Morning |
+| 0003 | `0003.Helping_a_Neighbor.md` | Helping a Neighbor |
+| 0004 | `0004.A_Day_at_the_Beach.md` | A Day at the Beach |
+| 0005 | `0005.A_Day_on_the_Farm.md` | A Day on the Farm（原名 A Busy Morning，与 0002 撞名，已改） |
+| 0006 | `0006.A_Visit_to_the_Library.md` | A Visit to the Library |
+
 ## 已验证 / 待验证
 - 已验证：`python scripts/build.py`（6 篇 / 1 个 Chapter / 0 警告）、
   `python scripts/validate.py`（PASS 207 / FAIL 0 / WARN 0）、`pytest -q`（99 passed）、
   本地 `http.server` 全部资源 200、`watch.py` 实测 touch 后 1 s 内重建（23 ms）。
 - 待人工验证：真实浏览器交互（折叠、拖进度条、倍速、点检查答案）、真机出声、移动端布局、
   GitHub Pages 实际发布后的访问（`git push` 由用户自己做）。
-- 待确认：`0002` 与 `0005` 标题都是 “A Busy Morning”（0005 正文其实是农场一天）；
-  `tests/example.md` 为空骨架，是否当模板保留或删除。
+- 已无待确认项（`tests/example.md` 用户已自行删除）。
