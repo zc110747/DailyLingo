@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#快速开始)
 [![运行期依赖: 无](https://img.shields.io/badge/%E8%BF%90%E8%A1%8C%E6%9C%9F%E4%BE%9D%E8%B5%96-none-success.svg)](#快速开始)
-[![测试: 99 passed](https://img.shields.io/badge/tests-99%20passed-success.svg)](#验证结果)
+[![测试: 103 passed](https://img.shields.io/badge/tests-103%20passed-success.svg)](#验证结果)
 [![部署: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#部署到-github-pages)
 
 **线上站点：** <https://zc110747.github.io/DailyLingo/>
@@ -34,6 +34,7 @@
 - [功能特性](#功能特性)
 - [快速开始](#快速开始)
 - [目录结构](#目录结构)
+- [站点图标](#站点图标)
 - [文章编号与命名](#文章编号与命名)
 - [Markdown 文章格式](#markdown-文章格式)
 - [首页 Chapter 目录](#首页-chapter-目录)
@@ -60,6 +61,10 @@
 - **真实音频，不是模拟** —— HTML5 Audio 播放器直连真实 WAV。播放暂停、已播时间、总时长、
   实时进度、点击跳转、拖动定位、±5 秒、`0.75x`–`2x` 倍速、音量、加载 / 结束 / 失败状态，
   全部由真实播放事件驱动。
+- **先播放，再阅读** —— 播放器位于 `Article` 标题之下、**正文之上**，阅读长文时吸顶，
+  可以先点开音频，再顺着往下读，不必滚回顶部找控件。
+- **自带站点图标** —— 手写的 SVG（打开的书 + 声波）加光栅回退，全站每个页面都声明。
+  不依赖 CDN、不用图标字体、没有构建步骤：文件原样提交。
 - **无需后端的即时判分** —— 单选与填空在浏览器内判分。忽略大小写、忽略首尾空白、容忍尾部标点；
   空白输入永远不判为正确；支持一题多个可接受答案。
 - **答案单一真值源** —— 判分答案内嵌在页面 `#quiz-data`，与 Answers 区域同源生成，
@@ -127,7 +132,10 @@ DailyLingo/
 │   ├── css/style.css           # 全站统一样式（桌面 + 移动）
 │   ├── js/audio-player.js      # 音频播放器
 │   ├── js/main.js              # 题目判分 / 页面交互
-│   └── images/
+│   └── images/                 # 站点图标（原样提交，非构建产物）
+│       ├── favicon.svg         # 设计源文件：打开的书 + 声波
+│       ├── favicon-32.png      # 不支持 SVG 图标时的光栅回退
+│       └── favicon-180.png     # apple-touch-icon
 ├── scripts/
 │   ├── build.py                # 构建：解析 -> 分组 -> 渲染 -> 关联音频
 │   ├── watch.py                # 同步：md/wav 一变就自动重建
@@ -159,6 +167,27 @@ DailyLingo/
 
 > **生成物（`index.html`、`src/*.html`）是刻意提交的。** GitHub Pages 以仓库根目录作为站点根
 > （*Deploy from a branch*），不提交它们发布会得到一个空站点。
+
+---
+
+## 站点图标
+
+图标是手写的 SVG（919 B）：圆角蓝底上排三条声波、下方一本打开的书 —— *听 + 读*，
+正好对应本站的两件事。光栅回退由同一套几何渲染而来，三个文件视觉一致。
+
+| 文件 | 声明方式 | 大小 |
+|---|---|---|
+| `assets/images/favicon.svg` | `rel="icon" type="image/svg+xml"` | 919 B（矢量） |
+| `assets/images/favicon-32.png` | `rel="icon" type="image/png" sizes="32x32"` | 942 B |
+| `assets/images/favicon-180.png` | `rel="apple-touch-icon" sizes="180x180"` | 4 682 B |
+
+- 每个页面都声明这三个文件，相对路径规则与全站一致（首页 `assets/images/…`，
+  文章页 `../assets/images/…`），并附带与图标底色一致的 `<meta name="theme-color">`。
+- 首页还会在品牌名左侧显示图标（`class="brand-icon"`），属于品牌标识的一部分，
+  不属于「品牌名 + Chapter 目录」之外的信息。
+- 需要换图标时，替换这三个文件后重新构建即可。`validate.py` 会检查文件存在、
+  PNG 头有效，以及每个页面都以正确前缀声明了它们。
+- 图标是**静态资产而非构建产物**：原样提交，即使从不运行构建脚本站点也照常工作。
 
 ---
 
@@ -339,7 +368,7 @@ end   = start + 99
 
 | # | 区域 | 内容 |
 |---|---|---|
-| 1 | **Article** | 编号、标题、英文正文、WAV 播放器 |
+| 1 | **Article** | 编号、标题、**WAV 播放器**、英文正文。播放器渲染在**区域标题之下、第一段正文之上**，所以自然顺序是：先开音频，再读文字 |
 | 2 | **Words** | 单词表（单词 / 音标 / 词性 / 中文释义 / 例句）。窄屏下表格在自身容器内横向滚动，**整页不会横向滚动** |
 | 3 | **Questions** | 单选 + 填空，原生 JavaScript 判分，无需后端 |
 | 4 | **Answers** | **默认折叠**；展开后显示正确答案、可接受答案与解释 |
@@ -347,6 +376,9 @@ end   = start + 99
 
 - 题目 ID 在页面内唯一（`Q1`、`Q2`…），答案通过 ID 与题目关联。
 - 判分答案内嵌在页面 `#quiz-data`，与 Answers 区域**同源生成**，修改答案后重建即自动同步。
+- 播放器放在**正文之上**，并在文章滚动时 `position: sticky` 吸顶，进度条与倍速控件在阅读过程中
+  始终够得着；不想要吸顶效果，删掉 `assets/css/style.css` 里的 `.section-article .player`
+  规则即可，不影响其他布局。
 - 首篇不生成上一篇链接、末篇不生成下一篇链接 —— 显示「上一篇：无」而不是死链。
 - 上一篇 / 下一篇按**编号数值升序**计算，与首页 Chapter 分组完全独立。
 
@@ -576,25 +608,26 @@ DailyLingo 构建完成
 
 ```text
 $ python scripts/validate.py
-结果：PASS 207 / FAIL 0 / WARN 0
+结果：PASS 227 / FAIL 0 / WARN 0
 ```
 
 覆盖：文章数据；编号唯一性与升序；Chapter 区间边界与「只输出有真实文章的 Chapter」；
 首页只含品牌名与折叠目录（并做摘要 / 难度 / 音频状态的**反向**检查）；第一个 Chapter 默认展开；
-五个区域顺序；浏览器标签与主标题一致性；单词表行数；题目数量；判分数据与 Answers 同源；
-Answers 默认折叠；上一篇 / 下一篇链接与标题；首末篇边界；无绝对根路径；静态资源存在性；
-重复构建字节级一致。
+五个区域顺序；**播放器位于 `Article` 区内、标题之下、第一段正文之上**；
+**图标文件存在、PNG/SVG 有效、每个页面都以正确相对前缀声明**；浏览器标签与主标题一致性；
+单词表行数；题目数量；判分数据与 Answers 同源；Answers 默认折叠；上一篇 / 下一篇链接与标题；
+首末篇边界；无绝对根路径；静态资源存在性；重复构建字节级一致。
 
 ### 自动化测试
 
 ```text
 $ pytest -q
-99 passed in 14.52s
+103 passed in 12.24s
 ```
 
 | 文件 | 用例数 | 覆盖内容 |
 |---|---|---|
-| `tests/test_build.py` | 95 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、GitHub Pages 子路径、构建可重复 |
+| `tests/test_build.py` | 99 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、GitHub Pages 子路径、构建可重复 |
 | `tests/test_frontend.py` | 4 | 在 Node 中真实执行 `assets/js/main.js`：单选正确 / 错误 / 空选、大小写不敏感、首尾空格、尾部标点、多个可接受答案、空白输入不判正确；并与 `build.normalize_answer` 做逐样本一致性比对 |
 
 测试全部使用临时目录，不会污染或覆盖真实的 `content/` 与 `sources/`。
@@ -603,16 +636,19 @@ $ pytest -q
 
 ```text
 $ python -m http.server 8123
-200 1601   text/html              <- /
-200 9683   text/html              <- /src/0001.A_New_Hobby.html
-200 12912  text/html              <- /src/0002.A_Busy_Morning.html
-200 12626  text/html              <- /src/0003.Helping_a_Neighbor.html
-200 14772  text/html              <- /src/0004.A_Day_at_the_Beach.html
-200 17257  text/html              <- /src/0005.A_Day_on_the_Farm.html
-200 11134  text/html              <- /src/0006.A_Visit_to_the_Library.html
-200 15783  text/css               <- /assets/css/style.css
+200 2055   text/html              <- /
+200 9984   text/html              <- /src/0001.A_New_Hobby.html
+200 13213  text/html              <- /src/0002.A_Busy_Morning.html
+200 12927  text/html              <- /src/0003.Helping_a_Neighbor.html
+200 15073  text/html              <- /src/0004.A_Day_at_the_Beach.html
+200 17558  text/html              <- /src/0005.A_Day_on_the_Farm.html
+200 11435  text/html              <- /src/0006.A_Visit_to_the_Library.html
+200 16371  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
 200 9894   application/javascript <- /assets/js/audio-player.js
+200 919    image/svg+xml          <- /assets/images/favicon.svg
+200 942    image/png              <- /assets/images/favicon-32.png
+200 4682   image/png              <- /assets/images/favicon-180.png
 200 1641488 audio/wav             <- /sources/0001.A_New_Hobby.wav
 200 3581660 audio/wav             <- /sources/0005.A_Day_on_the_Farm.wav
 200 1954552 audio/wav             <- /sources/0006.A_Visit_to_the_Library.wav
@@ -676,6 +712,10 @@ WAV 响应支持 HTTP Range 请求（`206 Partial Content`），因此线上拖�
 5. **`src/` 中已删除文章的历史 HTML 不会被自动清理**：构建不删除文件，
    避免误删非构建产物。若某篇文章被移除，请手工删除对应的
    `src/xxxx.*.html` 与 `sources/xxxx.*.wav`。
+6. **图标外观与吸顶播放器未在浏览器中目视确认**：图标资产做了结构校验（尺寸、PNG 签名、
+   每个页面的声明）并已按渲染结果目视检查过，但 16 px 标签栏里的实际观感、以及手机上滚动时
+   播放器的吸顶表现，需要真实浏览器会话。若不需要吸顶效果，删掉 `assets/css/style.css` 中的
+   `.section-article .player` 规则即可。
 
 ---
 

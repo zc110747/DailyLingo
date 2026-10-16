@@ -55,6 +55,12 @@ DEFAULT_CONTENT_DIR = ROOT / "content"
 DEFAULT_OUT_DIR = ROOT
 DEFAULT_SOURCES_DIR = ROOT / "sources"
 
+# 站点图标（静态资产，随仓库提交；相对路径随页面深度加前缀）
+FAVICON_SVG = "assets/images/favicon.svg"
+FAVICON_PNG32 = "assets/images/favicon-32.png"
+FAVICON_PNG180 = "assets/images/favicon-180.png"
+THEME_COLOR = "#3166a4"  # 与图标底色中值一致
+
 # Markdown 章节名（大小写不敏感）→ 内部键
 SECTION_ALIASES = {
     "article": "article",
@@ -711,6 +717,18 @@ def group_chapters(articles: Iterable[Article]) -> list[Chapter]:
 # --------------------------------------------------------------------------
 
 
+def _render_icons(prefix: str) -> str:
+    """站点图标声明。``prefix`` 为到仓库根目录的相对前缀（首页 ""，文章页 "../"）。"""
+    return "\n".join(
+        [
+            f'  <link rel="icon" type="image/svg+xml" href="{prefix}{FAVICON_SVG}">',
+            f'  <link rel="icon" type="image/png" sizes="32x32" href="{prefix}{FAVICON_PNG32}">',
+            f'  <link rel="apple-touch-icon" sizes="180x180" href="{prefix}{FAVICON_PNG180}">',
+            f'  <meta name="theme-color" content="{THEME_COLOR}">',
+        ]
+    )
+
+
 def render_index(chapters: Sequence[Chapter]) -> str:
     parts: list[str] = []
     for i, chapter in enumerate(chapters):
@@ -737,12 +755,16 @@ def render_index(chapters: Sequence[Chapter]) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{esc(BRAND)}</title>
   <meta name="description" content="{esc(BRAND)} 每日英语学习：英文阅读、音频朗读、重点单词与阅读理解练习。">
+{_render_icons("")}
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="page page-index">
   <main class="container">
     <header class="site-header">
-      <h1 class="brand">{esc(BRAND)}</h1>
+      <h1 class="brand">
+        <img class="brand-icon" src="assets/images/favicon.svg" alt="" width="32" height="32" aria-hidden="true">
+        <span class="brand-text">{esc(BRAND)}</span>
+      </h1>
     </header>
     <nav class="catalogue" aria-label="文章目录">
 {chapters_html}
@@ -958,6 +980,7 @@ def render_article_page(article: Article) -> str:
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{esc(article.page_title)}</title>
+{_render_icons("../")}
   <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body class="page page-article">
@@ -969,8 +992,8 @@ def render_article_page(article: Article) -> str:
 
     <section class="section section-article" id="article">
       <h2 class="section-title">Article</h2>
-{paragraph_html}
 {player_html}
+{paragraph_html}
     </section>
 
     <section class="section section-words" id="words">

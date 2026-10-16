@@ -131,6 +131,16 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
     report.check("首页包含品牌名", build.BRAND in index_html)
     report.check("首页包含折叠目录容器", 'class="catalogue"' in index_html)
     report.check("首页使用原生 <details>/<summary>", "<details" in index_html and "<summary" in index_html)
+    report.check(
+        "首页声明 SVG + PNG + apple-touch 图标",
+        f'href="{build.FAVICON_SVG}"' in index_html
+        and f'href="{build.FAVICON_PNG32}"' in index_html
+        and f'href="{build.FAVICON_PNG180}"' in index_html,
+    )
+    report.check(
+        "首页品牌名旁显示站点图标",
+        'class="brand-icon"' in index_html and f'src="{build.FAVICON_SVG}"' in index_html,
+    )
 
     open_count = len(re.findall(r"<details class=\"chapter\" open>", index_html))
     detail_count = len(re.findall(r'<details class="chapter"', index_html))
@@ -186,6 +196,28 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
         report.check(
             f"{article.html_name} 返回目录链接存在",
             'href="../index.html"' in html,
+        )
+        report.check(
+            f"{article.html_name} 声明站点图标（相对路径 ../）",
+            f'href="../{build.FAVICON_SVG}"' in html
+            and f'href="../{build.FAVICON_PNG32}"' in html
+            and f'href="../{build.FAVICON_PNG180}"' in html,
+        )
+
+        # 播放器必须位于 Article 标题之下、正文之上（先播放再阅读）
+        article_at = html.find('id="article"')
+        words_at = html.find('id="words"')
+        player_at = html.find("data-player")
+        if player_at < 0:
+            player_at = html.find("player-unavailable")
+        first_p = html.find("<p>", article_at)
+        report.check(
+            f"{article.html_name} 播放器在 Article 区内且位于正文之前",
+            article_at >= 0
+            and player_at > article_at
+            and player_at < words_at
+            and (first_p < 0 or player_at < first_p),
+            f"article={article_at} player={player_at} words={words_at} first_p={first_p}",
         )
 
         # 音频
@@ -263,8 +295,26 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
             report.check(f"{article.html_name} 末篇无下一篇链接", "下一篇：无" in html)
 
     print("== 5. 静态资源 ==")
-    for rel in ("assets/css/style.css", "assets/js/main.js", "assets/js/audio-player.js"):
+    for rel in (
+        "assets/css/style.css",
+        "assets/js/main.js",
+        "assets/js/audio-player.js",
+        build.FAVICON_SVG,
+        build.FAVICON_PNG32,
+        build.FAVICON_PNG180,
+    ):
         report.check(f"{rel} 存在", (out_dir / rel).is_file())
+    for rel in (build.FAVICON_PNG32, build.FAVICON_PNG180):
+        icon = out_dir / rel
+        report.check(
+            f"{rel} 是有效 PNG",
+            icon.is_file() and icon.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n",
+        )
+    svg_icon = out_dir / build.FAVICON_SVG
+    report.check(
+        f"{build.FAVICON_SVG} 是有效 SVG",
+        svg_icon.is_file() and b"<svg" in svg_icon.read_bytes()[:400],
+    )
 
     print("== 6. 构建可重复性 ==")
     with tempfile.TemporaryDirectory() as tmp:

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+import struct
 from pathlib import Path
 
 import pytest
@@ -719,6 +720,62 @@ def test_css_and_js_paths_are_relative(tmp_path):
     assert 'src="assets/js/main.js"' in index
     assert 'href="../assets/css/style.css"' in page
     assert 'src="../assets/js/audio-player.js"' in page
+
+
+def test_player_sits_above_article_body(tmp_path):
+    """播放器必须在 Article 标题之下、正文之上：先按播放，再读文字。"""
+    result, out, _, _ = make_site(tmp_path, {"0001.A.md": article_md("A")}, audio=["0001.A.wav"])
+    html = read(out / "src" / result.articles[0].html_name)
+    article_at = html.index('id="article"')
+    player_at = html.index("data-player")
+    words_at = html.index('id="words"')
+    first_p = html.index("<p>", article_at)
+    assert article_at < player_at < words_at
+    assert player_at < first_p
+    assert html.index("My name is David.") > player_at
+
+
+def test_player_placeholder_also_above_article_body(tmp_path):
+    """缺音频时替换出来的提示同样位于正文之前。"""
+    result, out, _, _ = make_site(tmp_path, {"0001.A.md": article_md("A")})
+    html = read(out / "src" / result.articles[0].html_name)
+    article_at = html.index('id="article"')
+    placeholder_at = html.index("player-unavailable")
+    assert article_at < placeholder_at < html.index('id="words"')
+    assert placeholder_at < html.index("My name is David.")
+
+
+def test_icons_declared_with_correct_relative_prefix(tmp_path):
+    result, out, _, _ = make_site(tmp_path, {"0001.A.md": article_md("A")}, audio=["0001.A.wav"])
+    index = read(out / "index.html")
+    page = read(out / "src" / result.articles[0].html_name)
+
+    for rel in (build.FAVICON_SVG, build.FAVICON_PNG32, build.FAVICON_PNG180):
+        assert f'href="{rel}"' in index, rel
+        assert f'href="../{rel}"' in page, rel
+
+    assert 'type="image/svg+xml"' in index
+    assert 'rel="apple-touch-icon"' in index
+    assert f'<meta name="theme-color" content="{build.THEME_COLOR}">' in index
+    # 首页品牌名旁显示站点图标（品牌的一部分，不属于「额外信息」）
+    assert 'class="brand-icon"' in index
+    assert f'src="{build.FAVICON_SVG}"' in index
+    # 图标不应出现在第五章要求的「首页禁止内容」里
+    assert "words-table" not in index and "data-player" not in index
+
+
+def test_icon_assets_exist_and_are_valid():
+    """图标是随仓库提交的静态资产，必须真实存在且格式有效。"""
+    root = Path(__file__).resolve().parent.parent
+    svg = (root / build.FAVICON_SVG).read_bytes()
+    assert b"<svg" in svg and b"viewBox" in svg
+
+    for rel, size in ((build.FAVICON_PNG32, 32), (build.FAVICON_PNG180, 180)):
+        data = (root / rel).read_bytes()
+        assert data[:8] == b"\x89PNG\r\n\x1a\n", rel
+        width, height, depth, color_type = struct.unpack(">IIBB", data[16:26])
+        assert (width, height) == (size, size), rel
+        assert depth == 8 and color_type == 6, rel  # 8 bit / RGBA
 
 
 def test_no_absolute_root_paths(tmp_path):

@@ -14,6 +14,7 @@
 | `src/*.html`、`index.html` | 构建生成 | 否（重新构建即覆盖） |
 | `sources/*.wav` | 外部音频工具生成 | 由工具写入 |
 | `assets/` | 全站 CSS / JS | 是 |
+| `assets/images/` | 站点图标 `favicon.svg` / `-32.png` / `-180.png`（**静态资产，原样提交**） | 是 |
 | `scripts/build.py` | 构建 | 是 |
 | `scripts/watch.py` | md/wav 变化后自动重建（同步机制） | 是 |
 | `scripts/validate.py` | 验证 | 是 |
@@ -53,6 +54,15 @@
    构建脚本与 `watch.py` 都遵守「不删文件」，只会提示。
    改名的配套动作：`git mv content/...` → 改 H1 → 改相邻文章 `## Continues` 里的交叉引用
    → 重新生成 WAV → 删旧产物 → 重新构建。编号**永不**随标题变化。
+12. 文章页 Article 区内顺序为 **`<h2>Article</h2>` → 播放器 → 正文段落**（诉求：先点开播放再读文字）；
+    播放器另加 `.section-article .player { position: sticky; top: 8px }` 在阅读长文时吸顶，
+    不想要吸顶删掉这条规则即可。`validate.py` 会断言这个顺序（有 / 无 WAV 两种情形都测）。
+13. 站点图标是**静态资产、随仓库提交**（不是构建产物，删不掉也不用生成）：
+    `assets/images/favicon.svg`（设计源，打开的书 + 声波）、`favicon-32.png`、`favicon-180.png`；
+    由 `build._render_icons(prefix)` 在每页 head 声明三条 link + `<meta name="theme-color">`
+    （首页前缀 `""`、文章页 `"../"`），`build.THEME_COLOR = "#3166a4"`；首页品牌名左侧另有
+    `class="brand-icon"`。**PNG 的光栅化脚本是一次性的，已删除**——要改图标需重写一个
+    （纯标准库手写 PNG 编码 + 超采样即可，几何与 SVG 保持一致）。
 
 ## 文章 Markdown 格式
 兼容两种，可混用：
@@ -88,8 +98,9 @@ md 必须是 UTF-8。本仓现有 6 个 WAV 均为单声道 / 16 bit / 22 050 Hz
 
 ## 已验证 / 待验证
 - 已验证：`python scripts/build.py`（6 篇 / 1 个 Chapter / 0 警告）、
-  `python scripts/validate.py`（PASS 207 / FAIL 0 / WARN 0）、`pytest -q`（99 passed）、
-  本地 `http.server` 全部资源 200、`watch.py` 实测 touch 后 1 s 内重建（23 ms）。
+  `python scripts/validate.py`（PASS 227 / FAIL 0 / WARN 0）、`pytest -q`（103 passed）、
+  本地 `http.server` 16 条路径全 200（含 `image/svg+xml`、`image/png`）、
+  `watch.py` 实测 touch 后 1 s 内重建（23 ms）。
 - **GitHub Pages 已实际发布并验证**：`https://zc110747.github.io/DailyLingo/` 首页与
   css/js/wav 全部 200，首页正确列出 6 篇；WAV 返回 **206 Partial Content（支持 Range）**，
   所以**线上拖动进度条可跳转**，而本地 `python -m http.server` 不支持 Range。

@@ -11,7 +11,7 @@ committed as-is and served straight from GitHub Pages.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#quick-start)
 [![Runtime dependencies: none](https://img.shields.io/badge/runtime%20dependencies-none-success.svg)](#quick-start)
-[![Tests: 99 passed](https://img.shields.io/badge/tests-99%20passed-success.svg)](#verification-results)
+[![Tests: 103 passed](https://img.shields.io/badge/tests-103%20passed-success.svg)](#verification-results)
 [![Deploy: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#deployment-to-github-pages)
 
 **Live site:** <https://zc110747.github.io/DailyLingo/>
@@ -34,6 +34,7 @@ committed as-is and served straight from GitHub Pages.
 - [Features](#features)
 - [Quick Start](#quick-start)
 - [Project Structure](#project-structure)
+- [Site Icon](#site-icon)
 - [Article Numbering and Naming](#article-numbering-and-naming)
 - [Markdown Article Format](#markdown-article-format)
 - [Homepage Chapter Directory](#homepage-chapter-directory)
@@ -61,6 +62,11 @@ committed as-is and served straight from GitHub Pages.
 - **Real audio, not a mock** — an HTML5 Audio player wired to the actual WAV file. Play/pause,
   elapsed time, duration, live progress, click-to-seek, drag-to-seek, ±5 s, `0.75x`–`2x` speed,
   volume, loading/finished/error states — every indicator is driven by real playback events.
+- **Play first, then read** — the player sits directly under the `Article` heading and **above the
+  body text**, and sticks to the top of the viewport while you scroll, so you can start the audio
+  and then read along without ever scrolling back to the controls.
+- **A real site icon** — a hand-authored SVG (open book + sound bars) with raster fallbacks, wired
+  into every page. No CDN, no icon font, no build step: the files are committed as-is.
 - **Instant grading with no backend** — single-choice and fill-in-the-blank questions graded in the
   browser. Case-insensitive, whitespace-trimmed, trailing-punctuation-tolerant; a blank answer is
   never accepted. Multiple acceptable answers per question are supported.
@@ -131,7 +137,10 @@ DailyLingo/
 │   ├── css/style.css           # Site-wide styles (desktop + mobile)
 │   ├── js/audio-player.js      # Audio player
 │   ├── js/main.js              # Question grading / page interactions
-│   └── images/
+│   └── images/                 # Site icon (committed as-is, not generated)
+│       ├── favicon.svg         # Source design: open book + sound bars
+│       ├── favicon-32.png      # Raster fallback for browsers without SVG icons
+│       └── favicon-180.png     # apple-touch-icon
 ├── scripts/
 │   ├── build.py                # Build: parse -> group -> render -> link audio
 │   ├── watch.py                # Sync: rebuild automatically when md/wav changes
@@ -165,6 +174,30 @@ Directory responsibilities:
 > **The generated files (`index.html`, `src/*.html`) are committed on purpose.** GitHub Pages serves
 > the repository root as the site root with *Deploy from a branch*, so omitting them would publish
 > an empty site.
+
+---
+
+## Site Icon
+
+The icon is hand-authored SVG (919 B): a rounded blue square holding three sound bars and an open
+book — *listen + read*, which is what the site does. The raster fallbacks are rendered from the
+same geometry, so all three files look identical.
+
+| File | Declared as | Size |
+|---|---|---|
+| `assets/images/favicon.svg` | `rel="icon" type="image/svg+xml"` | 919 B (vector) |
+| `assets/images/favicon-32.png` | `rel="icon" type="image/png" sizes="32x32"` | 942 B |
+| `assets/images/favicon-180.png` | `rel="apple-touch-icon" sizes="180x180"` | 4 682 B |
+
+- Every page declares all three, using the same relative-path rule as the rest of the site
+  (`assets/images/…` on the homepage, `../assets/images/…` on article pages) plus a
+  `<meta name="theme-color">` matching the icon background.
+- The homepage also shows the icon next to the brand name (`class="brand-icon"`), as part of the
+  brand — it is not extra information beyond "brand name + Chapter directory".
+- To rebrand, drop in three replacement files and rebuild. `validate.py` checks that they exist,
+  that the PNG headers are valid and that all pages declare them with the right prefix.
+- Icons are **static assets, not build output**: they are committed as-is so the site keeps working
+  even if the build script is never run.
 
 ---
 
@@ -352,13 +385,17 @@ Rendered in a fixed order, all articles sharing the same template, CSS and JavaS
 
 | # | Section | Contents |
 |---|---|---|
-| 1 | **Article** | Number, title, English body, WAV player |
+| 1 | **Article** | Number, title, **WAV player**, English body. The player is rendered **under the section heading and above the first paragraph**, so the natural order is: start the audio, then read |
 | 2 | **Words** | Word table (word / IPA / part of speech / Chinese gloss / example). On narrow screens the table scrolls inside its own container, so the **page itself never scrolls horizontally** |
 | 3 | **Questions** | Single-choice and fill-in questions, graded by vanilla JavaScript with no backend |
 | 4 | **Answers** | **Collapsed by default**; expanding reveals correct answers, acceptable answers and explanations |
 | 5 | **Continue** | Back to the index, previous article, next article (showing the real number and title of the target) |
 
 - Question IDs are unique per page (`Q1`, `Q2`, …) and answers are bound to questions through them.
+- The player is placed **above the body text** and is `position: sticky` while the article scrolls,
+  so the progress bar and the speed controls stay reachable during reading. Removing the
+  `.section-article .player` rule in `assets/css/style.css` turns the sticky behaviour off without
+  affecting anything else.
 - The grading key is embedded in the page's `#quiz-data` and is generated **from the same data** as
   the Answers section, so editing an answer and rebuilding keeps both in sync automatically.
 - The first article renders no previous link and the last renders no next link — the text
@@ -609,27 +646,29 @@ DailyLingo 构建完成
 
 ```text
 $ python scripts/validate.py
-结果：PASS 207 / FAIL 0 / WARN 0
+结果：PASS 227 / FAIL 0 / WARN 0
 ```
 
 Covers: article data; number uniqueness and ascending order; Chapter range boundaries and the
 "only non-empty Chapters" rule; the homepage containing nothing but the brand and the directory
 (including negative checks for summaries / difficulty / audio status); the first Chapter being
-expanded; the order of the five sections; browser title and heading consistency; word-table row
-counts; question counts; the grading key matching the Answers section; Answers being collapsed by
-default; previous/next links and titles; first/last article boundaries; absence of root-absolute
-paths; existence of static assets; byte-identical rebuilds.
+expanded; the order of the five sections; **the player sitting inside `Article`, under the heading
+and above the first paragraph**; **the icon files existing, being valid PNG/SVG, and being declared
+on every page with the right relative prefix**; browser title and heading consistency; word-table
+row counts; question counts; the grading key matching the Answers section; Answers being collapsed
+by default; previous/next links and titles; first/last article boundaries; absence of
+root-absolute paths; existence of static assets; byte-identical rebuilds.
 
 ### Automated tests
 
 ```text
 $ pytest -q
-99 passed in 14.52s
+103 passed in 12.24s
 ```
 
 | File | Cases | Coverage |
 |---|---|---|
-| `tests/test_build.py` | 95 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, GitHub Pages subpath, reproducible builds |
+| `tests/test_build.py` | 99 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, **the player rendered above the body text (with and without a WAV)**, **icon declarations carrying the correct relative prefix, home page icon next to the brand, icon assets valid PNG/SVG with the expected dimensions**, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, GitHub Pages subpath, reproducible builds |
 | `tests/test_frontend.py` | 4 | Executes `assets/js/main.js` for real in Node: correct / incorrect / empty single-choice selections, case insensitivity, leading and trailing whitespace, trailing punctuation, multiple acceptable answers, blank input never correct; plus a sample-by-sample consistency check against `build.normalize_answer` |
 
 Every test uses temporary directories and never touches the real `content/` or `sources/`.
@@ -638,16 +677,19 @@ Every test uses temporary directories and never touches the real `content/` or `
 
 ```text
 $ python -m http.server 8123
-200 1601   text/html              <- /
-200 9683   text/html              <- /src/0001.A_New_Hobby.html
-200 12912  text/html              <- /src/0002.A_Busy_Morning.html
-200 12626  text/html              <- /src/0003.Helping_a_Neighbor.html
-200 14772  text/html              <- /src/0004.A_Day_at_the_Beach.html
-200 17257  text/html              <- /src/0005.A_Day_on_the_Farm.html
-200 11134  text/html              <- /src/0006.A_Visit_to_the_Library.html
-200 15783  text/css               <- /assets/css/style.css
+200 2055   text/html              <- /
+200 9984   text/html              <- /src/0001.A_New_Hobby.html
+200 13213  text/html              <- /src/0002.A_Busy_Morning.html
+200 12927  text/html              <- /src/0003.Helping_a_Neighbor.html
+200 15073  text/html              <- /src/0004.A_Day_at_the_Beach.html
+200 17558  text/html              <- /src/0005.A_Day_on_the_Farm.html
+200 11435  text/html              <- /src/0006.A_Visit_to_the_Library.html
+200 16371  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
 200 9894   application/javascript <- /assets/js/audio-player.js
+200 919    image/svg+xml          <- /assets/images/favicon.svg
+200 942    image/png              <- /assets/images/favicon-32.png
+200 4682   image/png              <- /assets/images/favicon-180.png
 200 1641488 audio/wav             <- /sources/0001.A_New_Hobby.wav
 200 3581660 audio/wav             <- /sources/0005.A_Day_on_the_Farm.wav
 200 1954552 audio/wav             <- /sources/0006.A_Visit_to_the_Library.wav
@@ -720,6 +762,11 @@ on this machine, so no "verified" claim is made for them:
 5. **Orphaned HTML is not cleaned up automatically.** The build never deletes files, to avoid
    touching anything that is not a build artefact. If an article is removed, delete the matching
    `src/xxxx.*.html` and `sources/xxxx.*.wav` by hand.
+6. **The icon and the sticky player are not visually verified in a browser.** The SVG/PNG assets are
+   structurally checked (dimensions, PNG signature, declaration on every page) and the icon was
+   reviewed as a rendered image, but how the favicon looks in a real tab bar at 16 px, and how the
+   sticky player behaves while scrolling on a phone, need a browser session. If the sticky
+   behaviour is unwanted, delete the `.section-article .player` rule in `assets/css/style.css`.
 
 ---
 

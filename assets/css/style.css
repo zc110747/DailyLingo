@@ -84,11 +84,21 @@ summary:focus-visible,
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin: 0;
   font-size: 34px;
   font-weight: 650;
   letter-spacing: -0.5px;
   color: var(--text);
+}
+
+.brand-icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: block;
 }
 
 .catalogue {
@@ -241,12 +251,25 @@ summary:focus-visible,
 /* -------------------------------------------------------------- 播放器 */
 
 .player {
-  margin-top: 26px;
+  margin: 0 0 28px;
   padding: 16px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+}
+
+/* 播放器位于 Article 标题之下、正文之上：先按播放再读文字。
+   阅读长文时吸顶，进度条与倍速控件始终可用。
+   不想要吸顶效果，删除下面这条规则即可（其余布局不受影响）。 */
+.section-article .player {
+  position: sticky;
+  top: 8px;
+  z-index: 5;
+}
+
+.section-article .player-unavailable {
+  position: static;
 }
 
 .player-unavailable {
@@ -839,7 +862,13 @@ summary:focus-visible,
   }
 
   .brand {
+    gap: 10px;
     font-size: 28px;
+  }
+
+  .brand-icon {
+    width: 28px;
+    height: 28px;
   }
 
   .article-header {
