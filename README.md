@@ -23,7 +23,7 @@ DailyLingo/
 │   ├── 0002.A_Busy_Morning.html
 │   ├── 0003.Helping_a_Neighbor.html
 │   ├── 0004.A_Day_at_the_Beach.html
-│   ├── 0005.A_Busy_Morning.html
+│   ├── 0005.A_Day_on_the_Farm.html
 │   └── 0006.A_Visit_to_the_Library.html
 ├── content/                    # 文章唯一维护源（Markdown）
 │   ├── 0001.A_New_Hobby.md
@@ -218,9 +218,9 @@ BAC
 
 ```markdown
 ---
-id: "0005"
+id: "0101"
 title: "Some Title"
-audio: "0005.Some_Title.wav"
+audio: "0101.Some_Title.wav"
 ---
 ```
 
@@ -242,6 +242,8 @@ DailyLingo
     0002. A Busy Morning
     0003. Helping a Neighbor
     0004. A Day at the Beach
+    0005. A Day on the Farm
+    0006. A Visit to the Library
 ```
 
 ### 6.1 分组算法（`build.chapter_bounds` / `build.group_chapters`）
@@ -362,7 +364,7 @@ python scripts/watch.py --audio
 | `0002.A_Busy_Morning.wav` | 单声道 / 16 bit / 22 050 Hz | 46.37 s | 2 044 944 B |
 | `0003.Helping_a_Neighbor.wav` | 单声道 / 16 bit / 22 050 Hz | 50.43 s | 2 224 164 B |
 | `0004.A_Day_at_the_Beach.wav` | 单声道 / 16 bit / 22 050 Hz | 56.23 s | 2 479 932 B |
-| `0005.A_Busy_Morning.wav` | 单声道 / 16 bit / 22 050 Hz | 81.51 s | 3 594 460 B |
+| `0005.A_Day_on_the_Farm.wav` | 单声道 / 16 bit / 22 050 Hz | 81.22 s | 3 581 660 B |
 | `0006.A_Visit_to_the_Library.wav` | 单声道 / 16 bit / 22 050 Hz | 44.32 s | 1 954 552 B |
 
 ### 8.2 改完 Markdown 自动重建（`scripts/watch.py`）
@@ -499,12 +501,12 @@ python -m http.server 8000
 
 ```text
 $ python scripts/build.py --verbose
-  文章 0001  A New Hobby              |  3 词  3 题  |  音频 有
-  文章 0002  A Busy Morning           |  4 词  5 题  |  音频 有
-  文章 0003  Helping a Neighbor       |  4 词  5 题  |  音频 有
-  文章 0004  A Day at the Beach       |  7 词  6 题  |  音频 有
-  文章 0005  A Busy Morning           | 11 词  7 题  |  音频 有
-  文章 0006  A Visit to the Library   |  9 词  3 题  |  音频 有
+  文章 0001  A New Hobby  |  3 词  3 题  |  音频 有
+  文章 0002  A Busy Morning  |  4 词  5 题  |  音频 有
+  文章 0003  Helping a Neighbor  |  4 词  5 题  |  音频 有
+  文章 0004  A Day at the Beach  |  7 词  6 题  |  音频 有
+  文章 0005  A Day on the Farm  |  11 词  7 题  |  音频 有
+  文章 0006  A Visit to the Library  |  9 词  3 题  |  音频 有
 DailyLingo 构建完成
   文章总数：6
   Chapter 分组：1
@@ -543,19 +545,19 @@ $ pytest -q
 
 ```text
 $ python -m http.server 8123
-200 1595   text/html            <- /
-200 9683   text/html            <- /src/0001.A_New_Hobby.html
-200 12912  text/html            <- /src/0002.A_Busy_Morning.html
-200 12626  text/html            <- /src/0003.Helping_a_Neighbor.html
-200 14766  text/html            <- /src/0004.A_Day_at_the_Beach.html
-200 17245  text/html            <- /src/0005.A_Busy_Morning.html
-200 11128  text/html            <- /src/0006.A_Visit_to_the_Library.html
-200 15783  text/css             <- /assets/css/style.css
+200 1601   text/html              <- /
+200 9683   text/html              <- /src/0001.A_New_Hobby.html
+200 12912  text/html              <- /src/0002.A_Busy_Morning.html
+200 12626  text/html              <- /src/0003.Helping_a_Neighbor.html
+200 14772  text/html              <- /src/0004.A_Day_at_the_Beach.html
+200 17257  text/html              <- /src/0005.A_Day_on_the_Farm.html
+200 11134  text/html              <- /src/0006.A_Visit_to_the_Library.html
+200 15783  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
 200 9894   application/javascript <- /assets/js/audio-player.js
-200 1641488 audio/wav           <- /sources/0001.A_New_Hobby.wav
-200 3594460 audio/wav           <- /sources/0005.A_Busy_Morning.wav
-200 1954552 audio/wav           <- /sources/0006.A_Visit_to_the_Library.wav
+200 1641488 audio/wav             <- /sources/0001.A_New_Hobby.wav
+200 3581660 audio/wav             <- /sources/0005.A_Day_on_the_Farm.wav
+200 1954552 audio/wav             <- /sources/0006.A_Visit_to_the_Library.wav
 ```
 
 ### 14.5 开发过程中发现并修复的真实缺陷
