@@ -12,9 +12,9 @@
   --surface-alt: #f0f2f5;
   --border: #dfe3e8;
   --border-strong: #c7ced6;
-  --text: #26323f;
-  --text-muted: #64707d;
-  --text-faint: #8a95a1;
+  --text: #1e2833;
+  --text-muted: #55616e;
+  --text-faint: #6e7a87;
   --accent: #3a72c4;
   --accent-strong: #2b5aa3;
   --accent-soft: #e8eff9;
@@ -112,7 +112,7 @@ summary:focus-visible,
   padding: 14px 18px;
   cursor: pointer;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
   background: var(--surface);
   list-style: none;
@@ -165,6 +165,8 @@ summary:focus-visible,
 .article-link {
   display: block;
   padding: 9px 18px 9px 34px;
+  font-size: 16.5px;
+  font-weight: 500;
   color: var(--text);
   font-variant-numeric: tabular-nums;
   border-left: 3px solid transparent;
@@ -190,17 +192,19 @@ summary:focus-visible,
 .article-number-large {
   margin: 0 0 4px;
   font-family: var(--mono);
-  font-size: 14px;
+  font-size: 14.5px;
+  font-weight: 600;
   letter-spacing: 1.5px;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .article-title-main {
   margin: 0;
   font-size: 30px;
-  font-weight: 650;
+  font-weight: 700;
   letter-spacing: -0.4px;
   line-height: 1.3;
+  color: var(--text);
 }
 
 .section {
@@ -210,12 +214,12 @@ summary:focus-visible,
 .section-title {
   margin: 0 0 16px;
   padding-bottom: 8px;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 13.5px;
+  font-weight: 800;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  border-bottom: 1px solid var(--border-strong);
 }
 
 .section-article p {
@@ -492,10 +496,10 @@ summary:focus-visible,
 
 .words-table thead th {
   background: var(--surface-alt);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.4px;
-  color: var(--text-muted);
+  color: var(--text);
   white-space: nowrap;
 }
 
