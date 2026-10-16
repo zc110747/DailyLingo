@@ -22,17 +22,17 @@ DailyLingo/
 │   ├── 0001.A_New_Hobby.html
 │   ├── 0002.A_Busy_Morning.html
 │   ├── 0003.Helping_a_Neighbor.html
-│   └── 0004.A_Day_at_the_Beach.html
+│   ├── 0004.A_Day_at_the_Beach.html
+│   ├── 0005.A_Busy_Morning.html
+│   └── 0006.A_Visit_to_the_Library.html
 ├── content/                    # 文章唯一维护源（Markdown）
 │   ├── 0001.A_New_Hobby.md
-│   ├── 0002.A_Busy_Morning.md
-│   ├── 0003.Helping_a_Neighbor.md
-│   └── 0004.A_Day_at_the_Beach.md
+│   ├── …
+│   └── 0006.A_Visit_to_the_Library.md
 ├── sources/                    # 外部工具生成的 WAV（与 Markdown 同名）
 │   ├── 0001.A_New_Hobby.wav
-│   ├── 0002.A_Busy_Morning.wav
-│   ├── 0003.Helping_a_Neighbor.wav
-│   └── 0004.A_Day_at_the_Beach.wav
+│   ├── …
+│   └── 0006.A_Visit_to_the_Library.wav
 ├── assets/
 │   ├── css/style.css           # 全站统一样式（桌面 + 移动）
 │   ├── js/audio-player.js      # 音频播放器
@@ -40,16 +40,22 @@ DailyLingo/
 │   └── images/
 ├── scripts/
 │   ├── build.py                # 构建脚本（解析 → 分组 → 生成页面 → 关联音频）
+│   ├── watch.py                # 同步脚本：md/wav 一变就自动重建（见第八节）
 │   └── validate.py             # 项目验证脚本
 ├── tests/
 │   ├── conftest.py
 │   ├── test_build.py           # 构建 / 数据 / 分组 / 标题导航 / 题目答案 / 路径
 │   └── test_frontend.py        # 前端判分逻辑（在 Node 中执行 assets/js/main.js）
+├── watch.bat                   # 双击即开始监听并自动重建（Windows）
 ├── requirements.txt
 ├── .gitignore
 ├── LICENSE
 └── README.md
 ```
+
+> `tools/`（EnglishAudio 本地 TTS 打包产物，约 100 MB）**不在仓库内**：它体积大且已在其它
+> 仓库维护，这里只按需调用。`.gitignore` 已忽略该目录，放进去也不会污染 Git 状态，
+> 见 [8.1 用 EnglishAudio 生成 WAV](#81-用-englishaudio-生成-wav)。
 
 目录职责边界：
 
@@ -94,7 +100,14 @@ python scripts/validate.py
 # 3) 自动化测试
 pytest -q
 
-# 4) 本地预览（详见第六节）
+# 4) 改完 Markdown 自动重建（监听 content/ 与 sources/，Ctrl+C 退出）
+python scripts/watch.py
+# 缺音频时顺带调用 EnglishAudio 生成
+python scripts/watch.py --audio
+# 只重建一次（适合脚本里调用）
+python scripts/watch.py --once
+
+# 5) 本地预览（详见第六节）
 python -m http.server 8000
 ```
 
@@ -180,11 +193,17 @@ BAC
 - `## Words` 表头列名按别名识别，3 列和 5 列都支持：
   `Word/单词`、`Pronunciation/音标`、`词性/pos`、`中文释义/meaning`、`例句/example`。
   单元格里的 `**粗体**` 会被剥离。
-- `## Answers` 支持三种写法（可混用）：
+- `## Answers` 支持四种写法（可混用）：
   1. 紧凑字母串 —— 按题目顺序逐题赋答案：`BAC`、`ACBBA`、`CABABB`；
   2. 单题行 —— `Question5: He feels happy because he has helped someone.`；
-  3. 分块 —— `## Q1` + `答案：B` + `解释：…` + `可接受答案：cook, to cook`。
-- `## Continues` 会被构建忽略（上一篇 / 下一篇与目录全部自动生成，不需要人工维护）。
+  3. 分块 —— `## Q1` + `答案：B` + `解释：…` + `可接受答案：cook, to cook`；
+  4. 编号答案列表 —— `1. **B. To the library.** 解释文字`：
+     粗体里的选项字母作为答案，粗体后的文字作为解释（粗体后没写解释时，用粗体原文当解释）；
+     填空题也适用（`1. cook` / `1. **cook**`）。
+     判据是严格的：`cook`、`bamboo` 这类单词不会被误判成选项 `C` / `B`
+     （见 `build.extract_choice_key` 与 `tests/test_build.py::test_extract_choice_key`）。
+- 题干支持 `Question 1：…`（半角/全角冒号均可）、`**题干**`、`## Q1`、`1. 题干` 等写法。
+- `## Continues`（或 `## Continue`）会被构建忽略（上一篇 / 下一篇与目录全部自动生成，不需要人工维护）。
 
 ### 5.2 题型
 
@@ -300,26 +319,42 @@ end   = start + 99
 **某篇文章缺少 WAV 时**：播放器位置显示缺失提示，而 Article 正文、Words、Questions、
 Answers、Continue **全部照常可用**，构建只输出警告、不中断其他页面。
 
-### 8.1 用 009.ai_voice 生成 WAV
+### 8.1 用 EnglishAudio 生成 WAV
 
 音频由外部工具生成，构建脚本**不做** TTS、**不做**音频转码。本项目使用
-`D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice`（Piper + ONNX 本地离线女声）：
+**EnglishAudio**（Piper + ONNX 本地离线语音，不联网、不上传文本），它同时存在于：
+
+- `D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd`（源仓库，已单独维护）；
+- `<本仓库>/tools\eaudio.cmd`（可选：把整包复制进来即可，`tools/` 已被 `.gitignore` 忽略，
+  因为含 63 MB 语音模型、约 100 MB，不再在仓库里存第二份）。
+
+`scripts/watch.py --audio` 会按下面的顺序自动定位它，找不到时只重建网页并给出提示：
+
+```text
+--audio-tool <路径>  >  环境变量 DAILYLINGO_AUDIO_TOOL  >  <仓库>/tools/eaudio.cmd
+                     >  009.ai_voice\publisher\eaudio.cmd
+```
 
 ```bash
 # 单篇：读取 Markdown 的 ## Article 章节 → 生成与 md 同名的 WAV
-"D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd" \
-  "D:\user_project\git\DailyLingo\content\0001.A_New_Hobby.md" \
-  --dist="D:\user_project\git\DailyLingo\sources"
+"D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
+  "content\0006.A_Visit_to_the_Library.md" --dist="sources"
 
 # 批量：把 content/ 下所有 md 一次转完
-cd /d D:\user_project\git\DailyLingo\content
-for %f in (*.md) do "D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd" "%f" --dist="..\sources"
+for %f in (content\*.md) do ^
+  "D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd" "%f" --dist="sources"
+
+# 也可以交给同步脚本：新增 md 后自动补齐缺失的 wav，再重建网页
+python scripts/watch.py --audio
 ```
+
+> WAV 文件名必须与 Markdown 同名。**文件名里不要有空格**：`0006.A_Visit_to_the Library.md`
+> 这种带空格的名字会让链接与 `sources/` 里的音频对不上（改成下划线再重新生成即可）。
 
 该工具只朗读 `## Article` 章节，`## Words` / `## Questions` / `## Answers` / `## Continues`
 不会被读出来；正文含非英文字符会被直接拒绝（退出码 4），Markdown 必须是 UTF-8。
 
-本仓库 4 个 WAV 均由该工具生成，实测参数：
+本仓库 6 个 WAV 均由该工具生成，实测参数（Python `wave` 读出）：
 
 | 文件 | 声道 / 位深 / 采样率 | 时长 | 大小 |
 |---|---|---|---|
@@ -327,6 +362,28 @@ for %f in (*.md) do "D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publis
 | `0002.A_Busy_Morning.wav` | 单声道 / 16 bit / 22 050 Hz | 46.37 s | 2 044 944 B |
 | `0003.Helping_a_Neighbor.wav` | 单声道 / 16 bit / 22 050 Hz | 50.43 s | 2 224 164 B |
 | `0004.A_Day_at_the_Beach.wav` | 单声道 / 16 bit / 22 050 Hz | 56.23 s | 2 479 932 B |
+| `0005.A_Busy_Morning.wav` | 单声道 / 16 bit / 22 050 Hz | 81.51 s | 3 594 460 B |
+| `0006.A_Visit_to_the_Library.wav` | 单声道 / 16 bit / 22 050 Hz | 44.32 s | 1 954 552 B |
+
+### 8.2 改完 Markdown 自动重建（`scripts/watch.py`）
+
+手工维护时不必反复敲构建命令：`watch.py` 轮询 `content/*.md` 与 `sources/*.wav`，
+发现新增 / 修改 / 删除后自动重建 `index.html` 与 `src/*.html`。
+
+| 命令 | 作用 |
+|---|---|
+| `python scripts/watch.py` | 监听并自动重建（默认 1 s 轮询） |
+| `python scripts/watch.py --audio` | 顺带用 EnglishAudio 补齐缺失的 WAV |
+| `python scripts/watch.py --once` | 只重建一次后退出（适合放进脚本 / Git hook） |
+| `python scripts/watch.py --interval 0.5` | 调整轮询间隔 |
+| `watch.bat`（双击） | Windows 上一键启动，等价于 `--audio` |
+
+行为约定：
+
+- **全量重建**（6 篇 < 0.2 s）：新增或删除一篇文章会改变相邻文章的上一篇 / 下一篇，
+  只重写「变化的那一页」会留下不一致的假象。
+- Markdown 写坏时**只打印错误并继续监听**，不会退出；修好再保存即可重建成功。
+- 被删除文章遗留的 `src/*.html` 只提示、**不自动删除**（构建脚本同样不删文件）。
 
 ---
 
@@ -389,8 +446,14 @@ python -m http.server 8000
 
 2. 写原始标题与正文：`# My Weekend`、`## Article`。
 3. 填 `## Words`（3 列或 5 列均可）、`## Questions`、`## Answers`。
-4. 用外部工具生成同编号 WAV 并放进 `sources/`（见 8.1）。
-5. 重建与自检：
+4. 用 EnglishAudio 生成同编号 WAV 并放进 `sources/`（见 8.1）：
+
+   ```bash
+   "D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
+     "content\0006.A_Visit_to_the_Library.md" --dist="sources"
+   ```
+
+5. 重建与自检（也可以先开着 `python scripts/watch.py --audio`，保存 md 后自动完成 4 与 5）：
 
    ```bash
    python scripts/build.py --verbose
@@ -399,6 +462,9 @@ python -m http.server 8000
    ```
 
 6. 浏览器里检查页面与音频，然后提交推送。
+
+> 命名注意：文件名用 `NNNN.Title_With_Underscores.md`，**不要出现空格**——
+> 空格会让 `sources/` 里的音频名、页面链接与 `href` 三处对不上。
 
 新增后**自动完成**：首页文章列表、Chapter 分组（必要时新增分组）、文章主标题、
 浏览器标签标题、上一篇 / 下一篇导航、WAV 关联。
@@ -433,14 +499,16 @@ python -m http.server 8000
 
 ```text
 $ python scripts/build.py --verbose
-  文章 0001  A New Hobby          |  3 词  3 题  |  音频 有
-  文章 0002  A Busy Morning       |  4 词  5 题  |  音频 有
-  文章 0003  Helping a Neighbor   |  4 词  5 题  |  音频 有
-  文章 0004  A Day at the Beach   |  7 词  6 题  |  音频 有
+  文章 0001  A New Hobby              |  3 词  3 题  |  音频 有
+  文章 0002  A Busy Morning           |  4 词  5 题  |  音频 有
+  文章 0003  Helping a Neighbor       |  4 词  5 题  |  音频 有
+  文章 0004  A Day at the Beach       |  7 词  6 题  |  音频 有
+  文章 0005  A Busy Morning           | 11 词  7 题  |  音频 有
+  文章 0006  A Visit to the Library   |  9 词  3 题  |  音频 有
 DailyLingo 构建完成
-  文章总数：4
+  文章总数：6
   Chapter 分组：1
-    Chapter 0001–0100（默认展开）：4 篇
+    Chapter 0001–0100（默认展开）：6 篇
   警告：0 条
 ```
 
@@ -448,7 +516,7 @@ DailyLingo 构建完成
 
 ```text
 $ python scripts/validate.py
-结果：PASS 146 / FAIL 0 / WARN 0
+结果：PASS 207 / FAIL 0 / WARN 0
 ```
 
 覆盖：文章数据、编号唯一性与升序、Chapter 区间边界与「只输出有真实文章的 Chapter」、
@@ -461,12 +529,12 @@ $ python scripts/validate.py
 
 ```text
 $ pytest -q
-84 passed in 3.69s
+99 passed in 14.52s
 ```
 
 | 文件 | 用例数 | 覆盖内容 |
 |---|---|---|
-| `tests/test_build.py` | 80 | 文章解析（含缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（0001/0100/0101/0200/0201/0300/301/9999/10001）、缺号仍正确分组、不存在的 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、`题型：填空` + 多可接受答案、`______` 保留、非法答案可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、GitHub Pages 子路径、构建可重复 |
+| `tests/test_build.py` | 95 | 文章解析（含缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（0001/0100/0101/0200/0201/0300/301/9999/10001）、缺号仍正确分组、不存在的 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、GitHub Pages 子路径、构建可重复 |
 | `tests/test_frontend.py` | 4 | 在 Node 中真实执行 `assets/js/main.js`：单选正确 / 错误 / 空选、大小写不敏感、首尾空格、尾部标点、多个可接受答案、空白输入不判正确；并与 `build.normalize_answer` 做逐样本一致性比对 |
 
 测试全部使用临时目录，不会污染或覆盖真实的 `content/` 与 `sources/`。
@@ -475,15 +543,19 @@ $ pytest -q
 
 ```text
 $ python -m http.server 8123
-200 1371   text/html            <- /
+200 1595   text/html            <- /
 200 9683   text/html            <- /src/0001.A_New_Hobby.html
 200 12912  text/html            <- /src/0002.A_Busy_Morning.html
 200 12626  text/html            <- /src/0003.Helping_a_Neighbor.html
-200 14727  text/html            <- /src/0004.A_Day_at_the_Beach.html
-200 15703  text/css             <- /assets/css/style.css
+200 14766  text/html            <- /src/0004.A_Day_at_the_Beach.html
+200 17245  text/html            <- /src/0005.A_Busy_Morning.html
+200 11128  text/html            <- /src/0006.A_Visit_to_the_Library.html
+200 15783  text/css             <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
 200 9894   application/javascript <- /assets/js/audio-player.js
 200 1641488 audio/wav           <- /sources/0001.A_New_Hobby.wav
+200 3594460 audio/wav           <- /sources/0005.A_Busy_Morning.wav
+200 1954552 audio/wav           <- /sources/0006.A_Visit_to_the_Library.wav
 ```
 
 ### 14.5 开发过程中发现并修复的真实缺陷
@@ -494,6 +566,14 @@ $ python -m http.server 8123
 - **`## Q1` 子标题把题目区提前截断**：章节切分原先只认二级标题，
   遇到无法识别的 `## Q1` 就结束当前章节，导致扩展格式的文章「没有解析到任何题目」。
   已改为「无法识别为章节的标题行保留在当前章节内」。
+- **编号答案列表解析不到答案**：新增的 `0006` 用 `1. **B. To the library.** 解释文字`
+  写答案，解析器只认紧凑字母串 / `QuestionN:` / 分块三种写法，导致
+  `Q1/Q2/Q3 缺少答案` 直接构建失败。已扩充 `apply_answers` 支持这种写法
+  （并新增 `extract_choice_key`，用严格的判据避免把 `cook`、`bamboo` 误判成 `C`、`B`），
+  加了 5 个回归测试 + 11 组参数化边界用例。
+- **文件名里出现空格**：`0006.A_Visit_to_the Library.md` 会让 `sources/` 的音频名与
+  页面链接对不上（生成的链接里也带空格）。已统一为下划线命名
+  （`0006.A_Visit_to_the_Library.md` / `.wav`），旧文件已删除。
 
 ---
 

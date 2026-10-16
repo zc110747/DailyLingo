@@ -516,6 +516,83 @@ def test_compact_answer_key_maps_in_order(tmp_path):
     assert [q.answer for q in result.articles[0].questions] == ["B", "A", "C"]
 
 
+def test_numbered_answer_list_with_bold_option_and_explanation(tmp_path):
+    """``1. **B. To the library.** 解释文字`` —— 编号列表 + 粗体选项 + 解释。"""
+    questions = (
+        "Question 1：Where does Emma go?\n\nA. To the supermarket.\n\nB. To the library.\n\nC. To the park.\n\n"
+        "Question 2：Which floor are the books on?\n\nA. The first floor.\n\nB. The second floor.\n\nC. The third floor.\n\n"
+        "Question 3：What do pandas eat?\n\nA. Bamboo.\n\nB. Fish.\n\nC. Rice."
+    )
+    answers = (
+        "1. **B. To the library.** Emma goes to the library.\n\n"
+        "2. **B. The second floor.** The woman tells Emma.\n\n"
+        "3. **A. Bamboo.** Emma learns that pandas eat bamboo."
+    )
+    result, out, _, _ = make_site(
+        tmp_path, {"0001.A.md": article_md("A", questions=questions, answers=answers)}
+    )
+    questions_parsed = result.articles[0].questions
+    assert [q.qtype for q in questions_parsed] == ["choice", "choice", "choice"]
+    assert [q.answer for q in questions_parsed] == ["B", "B", "A"]
+    assert [q.explanation for q in questions_parsed] == [
+        "Emma goes to the library.",
+        "The woman tells Emma.",
+        "Emma learns that pandas eat bamboo.",
+    ]
+    html = read(out / "src" / result.articles[0].html_name)
+    assert "Emma goes to the library." in html
+
+
+def test_numbered_answer_without_explanation_uses_option_text(tmp_path):
+    """粗体后没有解释时，把选项原文当解释，Answers 区不会只剩一个字母。"""
+    result, _, _, _ = make_site(tmp_path, {"0001.A.md": article_md("A", answers="1. **B. How to cook**")})
+    q = result.articles[0].questions[0]
+    assert q.answer == "B"
+    assert q.explanation == "B. How to cook"
+
+
+def test_numbered_fill_answer_is_not_read_as_choice_letter(tmp_path):
+    """``cook`` 以 c 开头，但不能被误判成选项 C。"""
+    questions = "Question 1: David wants to learn how to ______."
+    result, _, _, _ = make_site(
+        tmp_path, {"0001.A.md": article_md("A", questions=questions, answers="1. cook")}
+    )
+    q = result.articles[0].questions[0]
+    assert q.qtype == "fill"
+    assert q.answer == "cook"
+    assert q.acceptable == ["cook"]
+
+
+def test_numbered_fill_answer_with_bold_wrapper(tmp_path):
+    questions = "Question 1: David wants to learn how to ______."
+    result, _, _, _ = make_site(
+        tmp_path, {"0001.A.md": article_md("A", questions=questions, answers="1. **cook**")}
+    )
+    q = result.articles[0].questions[0]
+    assert q.answer == "cook"
+    assert q.explanation == ""
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("B", "B"),
+        ("b", "B"),
+        ("B. To the library.", "B"),
+        ("B) To the library.", "B"),
+        ("B、到图书馆", "B"),
+        ("**B. To the library.**", "B"),
+        ("Cook", None),
+        ("cook", None),
+        ("He helped someone.", None),
+        ("bamboo", None),
+        ("", None),
+    ],
+)
+def test_extract_choice_key(raw, expected):
+    assert build.extract_choice_key(raw) == expected
+
+
 def test_blank_marker_is_preserved(tmp_path):
     questions = "Question 1: Lucy is tired, but she is very ______."
     result, _, _, _ = make_site(

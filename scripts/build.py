@@ -118,6 +118,11 @@ _ANS_ACCEPT_RE = re.compile(r"^(?:可接受答案|接受的答案|acceptable|acc
 _ANS_EXPLAIN_RE = re.compile(r"^(?:解释|说明|explanation|解析)\s*[:：]\s*(.*)$", re.I)
 _COMPACT_KEY_RE = re.compile(r"^[A-Da-d]+$")
 _ACCEPT_SPLIT_RE = re.compile(r"\s*[,，、;；/|]\s*")
+# 编号答案列表：``1. **B. To the library.** 解释文字``
+_ANS_NUMBERED_RE = re.compile(r"^(\d+)\s*[.、)]\s+(.*)$")
+_ANS_BOLD_HEAD_RE = re.compile(r"^\*\*(.+?)\*\*\s*(.*)$")
+_ANS_CHOICE_KEY_RE = re.compile(r"^([A-Za-z])\s*[.、)]\s*(.*)$")
+_ANS_SINGLE_LETTER_RE = re.compile(r"^([A-Za-z])$")
 
 TYPE_CHOICE = "choice"
 TYPE_FILL = "fill"
@@ -481,13 +486,27 @@ def _normalize_type(value: str) -> str:
     raise BuildError(f"无法识别的题型：{value!r}（支持：单选 / 填空）")
 
 
+def extract_choice_key(text: str) -> str | None:
+    """从 ``B`` / ``B. To the library.`` 里取出选项字母；不是选项字母时返回 None。
+
+    只在「编号答案列表」这条支路上使用，避免影响填空题答案（``cook`` 不该被当成 C）。
+    判据必须严格：``cook`` 以 c 开头，但 c 后面不是 ``.``/``)``/``、``，且整串不是单字母，
+    因此不会被误判成选项 C。
+    """
+    cleaned = strip_markdown(text).strip()
+    m = _ANS_CHOICE_KEY_RE.match(cleaned) or _ANS_SINGLE_LETTER_RE.match(cleaned)
+    return m.group(1).upper() if m else None
+
+
 def apply_answers(questions: list[Question], lines: Sequence[str]) -> None:
     """把答案区数据绑定到题目上。
 
-    支持三种写法：
+    支持四种写法：
       * 紧凑字母串     ``BAC``              → 按顺序赋给各题
       * 单题行         ``Question5: ...``   → 赋给第 5 题
       * 分块           ``## Q1`` + ``答案：B`` / ``可接受答案：…`` / ``解释：…``
+      * 编号答案列表   ``1. **B. To the library.** 解释`` → 赋给第 1 题，
+                       粗体里的选项字母作为答案，粗体后的文字作为解释
     """
     entries: dict[int, dict] = {}
     compact: str | None = None
@@ -511,6 +530,31 @@ def apply_answers(questions: list[Question], lines: Sequence[str]) -> None:
             text = strip_markdown(m.group(2))
             current = {"index": idx, "answer": text or None, "acceptable": [], "explanation": None}
             entries[idx] = current
+            continue
+
+        m = _ANS_NUMBERED_RE.match(line)
+        if m:
+            idx = int(m.group(1))
+            body = m.group(2).strip()
+            entry = {"index": idx, "answer": None, "acceptable": [], "explanation": None}
+            entries[idx] = entry
+            current = entry
+
+            head, tail = body, ""
+            bold = _ANS_BOLD_HEAD_RE.match(body)
+            if bold:
+                head, tail = bold.group(1).strip(), bold.group(2).strip()
+
+            key = extract_choice_key(head)
+            detail = strip_markdown(tail)
+            if key:
+                entry["answer"] = key
+                # 粗体后没有解释时，用选项原文当解释，Answers 区不至于只剩一个字母
+                entry["explanation"] = detail or strip_markdown(head)
+            else:
+                entry["answer"] = strip_markdown(head)
+                if detail:
+                    entry["explanation"] = detail
             continue
 
         m = _ANS_ACCEPT_RE.match(line)

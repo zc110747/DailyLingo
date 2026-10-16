@@ -20,3 +20,10 @@ desktop.ini
 # ---- 本地临时产物 ----
 # 生成物（index.html / src/*.html）与 content/、sources/、assets/ 都必须提交：
 # GitHub Pages 直接以仓库根目录作为站点根，缺少任何一项站点都无法访问。
+
+# ---- 本地语音工具（不进仓库） ----
+# EnglishAudio 打包产物约 100 MB（含 63 MB 语音模型），且已在其它仓库维护，
+# 因此不在本仓库再存一份。放到 tools/ 下仅本机可用，不会污染 Git 状态。
+# 需要生成音频时用 --audio-tool 或 DAILYLINGO_AUDIO_TOOL 指向 EnglishAudio 的
+# eaudio.cmd（详见 README「生成音频」）。
+tools/
