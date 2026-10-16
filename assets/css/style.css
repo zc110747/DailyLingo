@@ -927,6 +927,14 @@ summary:focus-visible,
   .continue-nav {
     flex-direction: column;
   }
+
+  /* 竖排后 flex-basis 作用在「高度」上：共享规则里的 `1 1 200px` 会把每个标签撑成
+     200px 高（桌面端是横向排，200px 落在宽度上所以正常）。移动端只留自然高度。 */
+  .continue-nav .nav-link,
+  .continue-nav .nav-disabled,
+  .continue-nav .nav-home {
+    flex: 0 0 auto;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

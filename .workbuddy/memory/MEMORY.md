@@ -81,6 +81,14 @@
       跳转只靠点击 / 拖动进度条与键盘方向键（`←`/`→`）。
     - **倍速只有 0.75x / 1x / 1.25x** 三档（`RATES` 数组与页面按钮同步），1x 默认激活。
     - 控件行布局：`<label 音量>` 在前、`.player-rates` 在后靠 `margin-left: auto` 右对齐。
+15. **写 `flex-direction: column` 前先检查子项的 `flex-basis` 是不是长度值。**
+    `.nav-link/.nav-disabled` 的共享规则是 `flex: 1 1 200px`（桌面横向排时 200px 落在**宽度**上，
+    两个一行）；移动端 `@media (max-width: 640px)` 把 `.continue-nav` 翻成竖排后，
+    **200px 就变成每个标签的高度**，卡片被撑到 200px 高（实测 366×200）。
+    已在移动端加 `.continue-nav { .nav-link / .nav-disabled / .nav-home } { flex: 0 0 auto }` 修掉
+    （366×52.6），桌面端不受影响 —— **修法必须落在媒体查询里，别去改共享规则**。
+    百分比（`1 1 60%`）与 `auto` 不会踩这个坑；`.fill-input`（`1 1 220px`）的父 `.fill-row`
+    是 row + wrap 且移动端不翻转，所以没问题。
 
 ## 本机预览
 IDE 内置预览把 **文件所在目录**当站点根：`index.html`（仓库根）预览正常，而 `src/` 下的
