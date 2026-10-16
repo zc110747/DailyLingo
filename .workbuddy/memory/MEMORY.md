@@ -63,6 +63,17 @@
     （首页前缀 `""`、文章页 `"../"`），`build.THEME_COLOR = "#3166a4"`；首页品牌名左侧另有
     `class="brand-icon"`。**PNG 的光栅化脚本是一次性的，已删除**——要改图标需重写一个
     （纯标准库手写 PNG 编码 + 超采样即可，几何与 SVG 保持一致）。
+14. 播放器尺寸是「紧凑款」（用户要求整体约 1/2）：卡片高实测 136→78.7 px，进度条视觉高
+    **5 px**，靠 `.player-track::before`（18 px 高、`top:50%` + `margin-top:-9px`）把可点区域
+    撑到 **±9 px**。伪元素不是独立事件目标，`event.currentTarget` 仍是 `.player-track`。
+    **改这条命中区等于改可点范围**（实测：±7 px 有效、±11 px 无效）；
+    `.player-controls .btn` 有局部收窄，别误改全站 `.btn`。
+
+## 本机预览
+IDE 内置预览把 **文件所在目录**当站点根：`index.html`（仓库根）预览正常，而 `src/` 下的
+文章页会丢样式（`../assets/…` 解析成 `/static-html/assets/…` → 404）。要看带样式的文章页，
+用自包含副本 `.workbuddy/preview/`（`cp src/*.html` + `cp -r assets` + `cp sources/xx.wav sources/`，
+再把 HTML 里的 `../` 全部去掉），该目录已 gitignore。**注意这是预览副本，不是交付物**。
 
 ## 文章 Markdown 格式
 兼容两种，可混用：
@@ -105,4 +116,9 @@ md 必须是 UTF-8。本仓现有 6 个 WAV 均为单声道 / 16 bit / 22 050 Hz
   css/js/wav 全部 200，首页正确列出 6 篇；WAV 返回 **206 Partial Content（支持 Range）**，
   所以**线上拖动进度条可跳转**，而本地 `python -m http.server` 不支持 Range。
 - 待人工验证：真实浏览器交互（折叠、拖进度条、倍速、点检查答案）、真机出声、移动端布局。
+- 播放器尺寸/命中区已用 headless Chromium 实测（`getBoundingClientRect()` + 真实点按/拖动）：
+  卡片 136→78.7 px、滑柄中心偏移 0.00 px、点按 ±7 px 命中而 ±11 px 不命中、拖到 60% 得 22 s。
+  测法：`NODE_PATH=~/.workbuddy/binaries/node/workspace/node_modules` 跑 playwright，
+  直接开 `file:///…/src/xxx.html`（**不用起 http 服务**）；`<audio>` 不在 DOM 里，取状态看
+  `aria-valuenow` / `aria-valuemax` / `[data-role=current]` 文本。
 - 已无待确认项（`tests/example.md` 用户已自行删除）。
