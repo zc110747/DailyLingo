@@ -113,22 +113,15 @@ python -m http.server 8000
 ```text
 DailyLingo/
 ├── index.html                  # 首页（生成）：品牌名 + Chapter 折叠目录
-├── src/                        # 文章详情页（生成）
+├── src/                        # 文章详情页（生成）—— 每篇文章一个 .html
 │   ├── 0001.A_New_Hobby.html
-│   ├── 0002.A_Busy_Morning.html
-│   ├── 0003.Helping_a_Neighbor.html
-│   ├── 0004.A_Day_at_the_Beach.html
-│   ├── 0005.A_Day_on_the_Farm.html
-│   ├── 0006.A_Visit_to_the_Library.html
-│   └── 0007.A_Day_at_the_Market.html
+│   └── …                       # 0002、0003、… 每篇一个
 ├── content/                    # 文章唯一维护源（Markdown）
 │   ├── 0001.A_New_Hobby.md
-│   ├── …
-│   └── 0007.A_Day_at_the_Market.md
+│   └── …                       # 0002、0003、… 每篇一个
 ├── sources/                    # 外部 TTS 工具生成的 WAV（与 md 同名）
 │   ├── 0001.A_New_Hobby.wav
-│   ├── …
-│   └── 0007.A_Day_at_the_Market.wav
+│   └── …                       # 0002、0003、… 每篇一个
 ├── assets/
 │   ├── css/style.css           # 全站统一样式（桌面 + 移动）
 │   ├── js/audio-player.js      # 音频播放器
@@ -326,13 +319,10 @@ DailyLingo
 
 ▼ Chapter 0001–0100
     0001. A New Hobby
-    0002. A Busy Morning
-    0003. Helping a Neighbor
-    0004. A Day at the Beach
-    0005. A Day on the Farm
-    0006. A Visit to the Library
-    0007. A Day at the Market
+    …
 ```
+
+*（目录按编号升序列出该 Chapter 的全部文章，这里只展示第一条。真实首页不做任何省略。）*
 
 ### 分组算法（`build.chapter_bounds` / `build.group_chapters`）
 
@@ -444,17 +434,13 @@ python scripts/watch.py --audio
 > **改了正文就必须重新生成 WAV。** 同步脚本只在文件**缺失**时补齐，不检测内容过期，
 > 所以改过正文的文章会一直保留过期录音，直到你重跑一次工具。
 
-本仓库 7 个 WAV 均由该工具生成，参数用 Python `wave` 模块读出核对：
+本仓库所有 WAV 均由该工具生成，参数**完全一致**（单声道 / 16 bit / 22 050 Hz，每篇文章一个），
+用 Python `wave` 模块读出核对：
 
 | 文件 | 声道 / 位深 / 采样率 | 时长 | 大小 |
 |---|---|---|---|
 | `0001.A_New_Hobby.wav` | 单声道 / 16 bit / 22 050 Hz | 37.22 s | 1 641 488 B |
-| `0002.A_Busy_Morning.wav` | 单声道 / 16 bit / 22 050 Hz | 46.37 s | 2 044 944 B |
-| `0003.Helping_a_Neighbor.wav` | 单声道 / 16 bit / 22 050 Hz | 50.43 s | 2 224 164 B |
-| `0004.A_Day_at_the_Beach.wav` | 单声道 / 16 bit / 22 050 Hz | 56.23 s | 2 479 932 B |
-| `0005.A_Day_on_the_Farm.wav` | 单声道 / 16 bit / 22 050 Hz | 81.22 s | 3 581 660 B |
-| `0006.A_Visit_to_the_Library.wav` | 单声道 / 16 bit / 22 050 Hz | 44.32 s | 1 954 552 B |
-| `0007.A_Day_at_the_Market.wav` | 单声道 / 16 bit / 22 050 Hz | 54.75 s | 2 414 676 B |
+| …（每篇文章一行） | 单声道 / 16 bit / 22 050 Hz | 各不相同 | 各不相同 |
 
 ### 改完 Markdown 自动重建
 
@@ -471,7 +457,7 @@ python scripts/watch.py --audio
 
 行为约定：
 
-- **全量重建**（7 篇 < 0.2 s）：新增或删除一篇文章会改变相邻文章的上一篇 / 下一篇，
+- **全量重建**（8 篇 < 0.2 s）：新增或删除一篇文章会改变相邻文章的上一篇 / 下一篇，
   只重写「变化的那一页」会留下不一致的假象。
 - Markdown 写坏时**只打印错误并继续监听**，不会退出；修好再保存即可重建成功。
 - 被删除文章遗留的 `src/*.html` 只提示、**不自动删除**（构建脚本同样不删文件）。
@@ -532,7 +518,7 @@ python -m http.server 8000
 1. 在 `content/` 新建 Markdown，文件名用**未占用的编号**：
 
    ```text
-   content/0008.My_Weekend.md
+   content/0009.My_Weekend.md
    ```
 
 2. 写原始标题与正文：`# My Weekend`，然后 `## Article`。
@@ -542,7 +528,7 @@ python -m http.server 8000
 
    ```bat
    "D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
-     "content\0008.My_Weekend.md" --dist="sources"
+     "content\0009.My_Weekend.md" --dist="sources"
    ```
 
 5. 重建与自检 —— 或者更省事：先开着 `python scripts/watch.py --audio`，
@@ -597,24 +583,21 @@ python -m http.server 8000
 ```text
 $ python scripts/build.py --verbose
   文章 0001  A New Hobby  |  3 词  3 题  |  音频 有
-  文章 0002  A Busy Morning  |  4 词  5 题  |  音频 有
-  文章 0003  Helping a Neighbor  |  4 词  5 题  |  音频 有
-  文章 0004  A Day at the Beach  |  7 词  6 题  |  音频 有
-  文章 0005  A Day on the Farm  |  11 词  7 题  |  音频 有
-  文章 0006  A Visit to the Library  |  9 词  3 题  |  音频 有
-  文章 0007  A Day at the Market  |  8 词  5 题  |  音频 有
+  …                                   # 每篇文章一行
 DailyLingo 构建完成
-  文章总数：7
+  文章总数：8
   Chapter 分组：1
-    Chapter 0001–0100（默认展开）：7 篇
+    Chapter 0001–0100（默认展开）：8 篇
   警告：0 条
 ```
+
+*（为可读性做了省略：真实输出每篇文章打印一行 `文章 NNNN …`，并在 Chapter 下逐条列出标题。）*
 
 ### 验证脚本
 
 ```text
 $ python scripts/validate.py
-结果：PASS 274 / FAIL 0 / WARN 0
+结果：PASS 309 / FAIL 0 / WARN 0
 ```
 
 覆盖：文章数据；编号唯一性与升序；Chapter 区间边界与「只输出有真实文章的 Chapter」；
@@ -629,7 +612,7 @@ $ python scripts/validate.py
 
 ```text
 $ pytest -q
-108 passed in 2.39s
+108 passed in 2.93s
 ```
 
 | 文件 | 用例数 | 覆盖内容 |
@@ -643,14 +626,9 @@ $ pytest -q
 
 ```text
 $ python -m http.server 8123
-200 2169   text/html              <- /
+200 2275   text/html              <- /
 200 9617   text/html              <- /src/0001.A_New_Hobby.html
-200 12846  text/html              <- /src/0002.A_Busy_Morning.html
-200 12560  text/html              <- /src/0003.Helping_a_Neighbor.html
-200 14706  text/html              <- /src/0004.A_Day_at_the_Beach.html
-200 17191  text/html              <- /src/0005.A_Day_on_the_Farm.html
-200 11117  text/html              <- /src/0006.A_Visit_to_the_Library.html
-200 14214  text/html              <- /src/0007.A_Day_at_the_Market.html
+200 …                               <- /src/0002 … 0008（每篇文章一个页面）
 200 16857  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
 200 9610   application/javascript <- /assets/js/audio-player.js
@@ -658,14 +636,15 @@ $ python -m http.server 8123
 200 942    image/png              <- /assets/images/favicon-32.png
 200 4682   image/png              <- /assets/images/favicon-180.png
 200 1641488 audio/wav             <- /sources/0001.A_New_Hobby.wav
-200 2044944 audio/wav             <- /sources/0002.A_Busy_Morning.wav
-200 2224164 audio/wav             <- /sources/0003.Helping_a_Neighbor.wav
-200 2479932 audio/wav             <- /sources/0004.A_Day_at_the_Beach.wav
-200 3581660 audio/wav             <- /sources/0005.A_Day_on_the_Farm.wav
-200 1954552 audio/wav             <- /sources/0006.A_Visit_to_the_Library.wav
-200 2414676 audio/wav             <- /sources/0007.A_Day_at_the_Market.wav
-206 audio/wav (Range)          <- /sources/0007.A_Day_at_the_Market.wav
+200 …                               <- /sources/0002 … 0008（每篇文章一个 WAV）
 ```
+
+*（做了省略：全部 23 条路径——8 个文章页、8 个 WAV、首页与共享静态资源——都真实请求过且全部
+`200`；按文章逐条的那部分只留一个示例加 `…`，文章变多以后这份清单仍然可读。）*
+
+> **`python -m http.server` 不支持 `Range`。** 带 `Range: bytes=0-1023` 的请求仍返回 `200`
+> 整份文件，也没有 `Accept-Ranges` 头，所以「拖动进度条跳转」无法对着本地服务器验证。
+> GitHub Pages 支持（见下）。
 
 ### 线上发布
 
@@ -676,12 +655,12 @@ $ curl -I https://zc110747.github.io/DailyLingo/
 200  application/javascript         <- /assets/js/main.js
 200  application/javascript         <- /assets/js/audio-player.js
 200  audio/wav                      <- /sources/0001.A_New_Hobby.wav
-200  audio/wav                      <- /sources/0005.A_Day_on_the_Farm.wav
+200  audio/wav                      <- /sources/0002 …（每篇文章一个 WAV）
 206  Partial Content (Range)        <- /sources/0001.A_New_Hobby.wav
 ```
 
-GitHub Pages 上返回的首页列出的正是全部 7 篇文章，归属于 `Chapter 0001–0100`。
-WAV 响应支持 HTTP Range 请求（`206 Partial Content`），因此线上拖动进度条可正常跳转。
+GitHub Pages 上返回的首页列出的正是仓库里的全部文章，归属于 `Chapter 0001–0100`。
+WAV 响应支持 HTTP Range 请求（`206 Partial Content`，已实测），因此线上拖动进度条可正常跳转。
 
 ### 开发过程中发现并修复的真实缺陷
 

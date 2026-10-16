@@ -30,6 +30,14 @@
 改任一份都要同步改另一份；改章节标题后记得顺手更新 `.gitignore` 与
 `tests/test_frontend.py` 里指向 README 章节的注释。
 
+### README 里「按文件逐条列举」一律省略
+文章量目标是**几千篇**，所以 README 中凡是逐篇罗列文件/标题/路径的地方（目录树、
+首页目录示例、WAV 参数表、`build.py --verbose` 输出、`http.server` 清单），
+**只保留第一条 + `…`**，并在块后加一句 *（abridged / 做了省略）* 说明。
+不允许再写成全量清单——文章一多就臃肿得没法读。
+判据：只要那段内容会随文章数线性增长，就必须省略。
+（历史叙述、单个示例命令、编号规则的通用示例不在此列，可保留。）
+
 ## 硬约定
 1. 编号是永久 ID：四位补零，超过四位不截断；文件名 = `NNNN.Title_With_Underscores.md`，
    **文件名里不要有空格**（否则 `sources/` 音频名、页面链接、`href` 三处对不上）；
@@ -103,11 +111,11 @@ WAV 由 **EnglishAudio**（Piper + ONNX，离线）生成：
 `watch.py --audio` 的定位顺序：`--audio-tool` > `DAILYLINGO_AUDIO_TOOL` >
 `<仓库>/tools/eaudio.cmd` > 上面那个 publisher 路径；都找不到只提示不中断。
 只朗读 `## Article` 章节，输出与 md 同名的 WAV，正文含非英文会被拒绝（退出码 4），
-md 必须是 UTF-8。本仓现有 7 个 WAV 均为单声道 / 16 bit / 22 050 Hz。
+md 必须是 UTF-8。本仓现有 8 个 WAV 均为单声道 / 16 bit / 22 050 Hz。
 直接跑 `EnglishAudio.exe <md> --dist=sources`（`MSYS_NO_PATHCONV=1`，从仓库根执行）比走
 `.cmd` 包装更省事：stdout 能正常看到它自己的 banner（含字数 / 时长 / 字节数 / RTF）。
 
-## 文章清单（7 篇，全部在 Chapter 0001–0100）
+## 文章清单（8 篇，全部在 Chapter 0001–0100）
 | 编号 | 文件 | 标题 |
 |---|---|---|
 | 0001 | `0001.A_New_Hobby.md` | A New Hobby |
@@ -117,15 +125,21 @@ md 必须是 UTF-8。本仓现有 7 个 WAV 均为单声道 / 16 bit / 22 050 Hz
 | 0005 | `0005.A_Day_on_the_Farm.md` | A Day on the Farm（原名 A Busy Morning，与 0002 撞名，已改） |
 | 0006 | `0006.A_Visit_to_the_Library.md` | A Visit to the Library |
 | 0007 | `0007.A_Day_at_the_Market.md` | A Day at the Market |
+| 0008 | `0008.The_Blue_Planet.md` | The Blue Planet |
 
 ## 已验证 / 待验证
-- 已验证：`python scripts/build.py`（7 篇 / 1 个 Chapter / 0 警告）、
-  `python scripts/validate.py`（PASS 274 / FAIL 0 / WARN 0）、`pytest -q`（108 passed）、
-  本地 `http.server` 22 条路径全 200（含 `image/svg+xml`、`image/png`、Range 206）、
+- 已验证：`python scripts/build.py`（8 篇 / 1 个 Chapter / 0 警告）、
+  `python scripts/validate.py`（PASS 309 / FAIL 0 / WARN 0）、`pytest -q`（108 passed）、
+  本地 `http.server` 23 条路径全 200（8 HTML + 8 WAV + 首页 + CSS/JS + 3 图标）、
   `watch.py` 实测 touch 后 1 s 内重建（23 ms）。
 - **GitHub Pages 已实际发布并验证**：`https://zc110747.github.io/DailyLingo/` 首页与
   css/js/wav 全部 200；WAV 返回 **206 Partial Content（支持 Range）**，
-  所以**线上拖动进度条可跳转**，而本地 `python -m http.server` 不支持 Range。
+  所以**线上拖动进度条可跳转**。
+- ⚠️ **本地与线上的 Range 行为不同，两张清单不要互相抄结论**：
+  `SimpleHTTPRequestHandler`（Python 3.13.14）**完全不支持 Range** —— 带
+  `Range: bytes=0-1023` 仍返回 `200` 整份文件、且**没有** `Accept-Ranges` 头。
+  （曾在 `15985d3` 的「本地静态服务器」清单里错写一行 `206`，已删除并改成显式说明。）
+  要验证拖动跳转，只能对**线上**或支持 Range 的服务器发请求。
 - 待人工验证：真实浏览器交互（折叠、拖进度条、倍速、点检查答案）、真机出声、移动端布局。
 - 播放器尺寸/命中区已用 headless Chromium 实测（`getBoundingClientRect()` + 真实点按/拖动）：
   卡片 136 → **85.7 px**（早期一版 78.7 px，后因「第一行与外框要留白」加了 padding）、

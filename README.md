@@ -119,22 +119,15 @@ python -m http.server 8000
 ```text
 DailyLingo/
 ├── index.html                  # Homepage (generated): brand + collapsible Chapter directory
-├── src/                        # Article pages (generated)
+├── src/                        # Article pages (generated) — one .html per article
 │   ├── 0001.A_New_Hobby.html
-│   ├── 0002.A_Busy_Morning.html
-│   ├── 0003.Helping_a_Neighbor.html
-│   ├── 0004.A_Day_at_the_Beach.html
-│   ├── 0005.A_Day_on_the_Farm.html
-│   ├── 0006.A_Visit_to_the_Library.html
-│   └── 0007.A_Day_at_the_Market.html
+│   └── …                       # 0002, 0003, … one per article
 ├── content/                    # Article source of truth (Markdown)
 │   ├── 0001.A_New_Hobby.md
-│   ├── …
-│   └── 0007.A_Day_at_the_Market.md
+│   └── …                       # 0002, 0003, … one per article
 ├── sources/                    # WAV files from the external TTS tool (same basename as the .md)
 │   ├── 0001.A_New_Hobby.wav
-│   ├── …
-│   └── 0007.A_Day_at_the_Market.wav
+│   └── …                       # 0002, 0003, … one per article
 ├── assets/
 │   ├── css/style.css           # Site-wide styles (desktop + mobile)
 │   ├── js/audio-player.js      # Audio player
@@ -341,13 +334,11 @@ DailyLingo
 
 ▼ Chapter 0001–0100
     0001. A New Hobby
-    0002. A Busy Morning
-    0003. Helping a Neighbor
-    0004. A Day at the Beach
-    0005. A Day on the Farm
-    0006. A Visit to the Library
-    0007. A Day at the Market
+    …
 ```
+
+*(The directory lists every article in the Chapter in ascending order; only the first entry is shown
+here. The real homepage is never abbreviated.)*
 
 ### Grouping algorithm (`build.chapter_bounds` / `build.group_chapters`)
 
@@ -472,18 +463,14 @@ The tool only reads the `## Article` section — `## Words`, `## Questions`, `##
 > not detect that the text changed, so an edited article keeps a stale recording until you re-run
 > the tool.
 
-All seven WAV files in this repository were produced by that tool. Measured parameters (read back with
-Python's `wave` module):
+Every WAV file in this repository was produced by that tool, and all of them share the same
+parameters — **mono / 16 bit / 22 050 Hz**, one file per article. Read back with Python's `wave`
+module:
 
 | File | Channels / bit depth / sample rate | Duration | Size |
 |---|---|---|---|
 | `0001.A_New_Hobby.wav` | mono / 16 bit / 22 050 Hz | 37.22 s | 1 641 488 B |
-| `0002.A_Busy_Morning.wav` | mono / 16 bit / 22 050 Hz | 46.37 s | 2 044 944 B |
-| `0003.Helping_a_Neighbor.wav` | mono / 16 bit / 22 050 Hz | 50.43 s | 2 224 164 B |
-| `0004.A_Day_at_the_Beach.wav` | mono / 16 bit / 22 050 Hz | 56.23 s | 2 479 932 B |
-| `0005.A_Day_on_the_Farm.wav` | mono / 16 bit / 22 050 Hz | 81.22 s | 3 581 660 B |
-| `0006.A_Visit_to_the_Library.wav` | mono / 16 bit / 22 050 Hz | 44.32 s | 1 954 552 B |
-| `0007.A_Day_at_the_Market.wav` | mono / 16 bit / 22 050 Hz | 54.75 s | 2 414 676 B |
+| … (one row per article) | mono / 16 bit / 22 050 Hz | varies | varies |
 
 ### Auto-Rebuild on Markdown Changes
 
@@ -501,7 +488,7 @@ removed.
 
 Behaviour:
 
-- **Full rebuild** (seven articles in under 0.2 s): adding or removing an article changes the
+- **Full rebuild** (eight articles in under 0.2 s): adding or removing an article changes the
   previous/next links of its neighbours, so rewriting only the changed page would leave the site
   subtly inconsistent.
 - A malformed Markdown file **prints an error and keeps watching** — fix it and save again.
@@ -565,7 +552,7 @@ Adjust the branch or folder if this repository is configured differently.
 1. Create a Markdown file in `content/` using an **unused number**:
 
    ```text
-   content/0008.My_Weekend.md
+   content/0009.My_Weekend.md
    ```
 
 2. Write the raw title and body: `# My Weekend`, then `## Article`.
@@ -575,7 +562,7 @@ Adjust the branch or folder if this repository is configured differently.
 
    ```bat
    "D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
-     "content\0008.My_Weekend.md" --dist="sources"
+     "content\0009.My_Weekend.md" --dist="sources"
    ```
 
 5. Rebuild and self-check — or, better, leave `python scripts/watch.py --audio` running, in which
@@ -634,26 +621,22 @@ All figures below were measured on this machine: Windows 10 19045 / Python 3.13.
 ```text
 $ python scripts/build.py --verbose
   文章 0001  A New Hobby  |  3 词  3 题  |  音频 有
-  文章 0002  A Busy Morning  |  4 词  5 题  |  音频 有
-  文章 0003  Helping a Neighbor  |  4 词  5 题  |  音频 有
-  文章 0004  A Day at the Beach  |  7 词  6 题  |  音频 有
-  文章 0005  A Day on the Farm  |  11 词  7 题  |  音频 有
-  文章 0006  A Visit to the Library  |  9 词  3 题  |  音频 有
-  文章 0007  A Day at the Market  |  8 词  5 题  |  音频 有
+  …                                   # one such line per article
 DailyLingo 构建完成
-  文章总数：7
+  文章总数：8
   Chapter 分组：1
-    Chapter 0001–0100（默认展开）：7 篇
+    Chapter 0001–0100（默认展开）：8 篇
   警告：0 条
 ```
 
-*(The CLI output is currently in Chinese; the format is stable.)*
+*(Abridged for readability — the real output prints one `文章 NNNN …` line per article and lists
+every title under its Chapter. The CLI output is currently in Chinese; the format is stable.)*
 
 ### Validation
 
 ```text
 $ python scripts/validate.py
-结果：PASS 274 / FAIL 0 / WARN 0
+结果：PASS 309 / FAIL 0 / WARN 0
 ```
 
 Covers: article data; number uniqueness and ascending order; Chapter range boundaries and the
@@ -672,7 +655,7 @@ root-absolute paths; existence of static assets; byte-identical rebuilds.
 
 ```text
 $ pytest -q
-108 passed in 2.39s
+108 passed in 2.93s
 ```
 
 | File | Cases | Coverage |
@@ -686,14 +669,9 @@ Every test uses temporary directories and never touches the real `content/` or `
 
 ```text
 $ python -m http.server 8123
-200 2169   text/html              <- /
+200 2275   text/html              <- /
 200 9617   text/html              <- /src/0001.A_New_Hobby.html
-200 12846  text/html              <- /src/0002.A_Busy_Morning.html
-200 12560  text/html              <- /src/0003.Helping_a_Neighbor.html
-200 14706  text/html              <- /src/0004.A_Day_at_the_Beach.html
-200 17191  text/html              <- /src/0005.A_Day_on_the_Farm.html
-200 11117  text/html              <- /src/0006.A_Visit_to_the_Library.html
-200 14214  text/html              <- /src/0007.A_Day_at_the_Market.html
+200 …                               <- /src/0002 … 0008  (one page per article)
 200 16857  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
 200 9610   application/javascript <- /assets/js/audio-player.js
@@ -701,14 +679,16 @@ $ python -m http.server 8123
 200 942    image/png              <- /assets/images/favicon-32.png
 200 4682   image/png              <- /assets/images/favicon-180.png
 200 1641488 audio/wav             <- /sources/0001.A_New_Hobby.wav
-200 2044944 audio/wav             <- /sources/0002.A_Busy_Morning.wav
-200 2224164 audio/wav             <- /sources/0003.Helping_a_Neighbor.wav
-200 2479932 audio/wav             <- /sources/0004.A_Day_at_the_Beach.wav
-200 3581660 audio/wav             <- /sources/0005.A_Day_on_the_Farm.wav
-200 1954552 audio/wav             <- /sources/0006.A_Visit_to_the_Library.wav
-200 2414676 audio/wav             <- /sources/0007.A_Day_at_the_Market.wav
-206 audio/wav (Range)          <- /sources/0007.A_Day_at_the_Market.wav
+200 …                               <- /sources/0002 … 0008  (one WAV per article)
 ```
+
+*(Abridged: all 23 paths — 8 article pages, 8 WAVs, the homepage and the shared assets — were
+requested and answered `200`; the per-article rows are collapsed to one example plus `…` so this
+listing stays readable as the collection grows.)*
+
+> **`python -m http.server` ignores `Range`.** A `Range: bytes=0-1023` request still comes back as
+> `200` with the whole file and no `Accept-Ranges` header, so drag-to-seek cannot be exercised
+> against the local server. GitHub Pages does honour it (see below).
 
 ### Published site
 
@@ -719,12 +699,13 @@ $ curl -I https://zc110747.github.io/DailyLingo/
 200  application/javascript         <- /assets/js/main.js
 200  application/javascript         <- /assets/js/audio-player.js
 200  audio/wav                      <- /sources/0001.A_New_Hobby.wav
-200  audio/wav                      <- /sources/0005.A_Day_on_the_Farm.wav
+200  audio/wav                      <- /sources/0002 … (one WAV per article)
 206  Partial Content (Range)        <- /sources/0001.A_New_Hobby.wav
 ```
 
-The homepage served from GitHub Pages lists all seven articles under `Chapter 0001–0100`. WAV
-responses support HTTP Range requests (`206 Partial Content`), so seeking works on the live site.
+The homepage served from GitHub Pages lists every article under `Chapter 0001–0100`. WAV
+responses support HTTP Range requests (`206 Partial Content`, verified), so seeking works on the
+live site.
 
 ### Real defects found and fixed during development
 
