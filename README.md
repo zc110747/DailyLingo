@@ -1,154 +1,213 @@
 # DailyLingo
 
-每日英语学习网站：英文阅读 + WAV 朗读 + 重点单词 + 阅读理解练习 + 文章导航。
+**[English](README.md) | [简体中文](README-CH.md)**
 
-纯静态站点 —— **无登录、无数据库、无后端、无远程 API**，构建产物直接部署到 GitHub Pages。
+A daily English-learning site: short graded readings with real WAV narration, a key-word table,
+reading-comprehension practice with instant grading, and fully automatic article navigation.
 
-- 前端：HTML5 + CSS3 + 原生 JavaScript（不引入 React / Vue 等框架）
-- 文章源：Markdown（唯一维护入口）
-- 构建 / 验证：Python 3（**只使用标准库**）
-- 自动化测试：pytest（含在 Node 中执行的前端判分逻辑测试）
-- 音频：外部工具生成的 WAV，用 HTML5 Audio API 播放
-- 部署：GitHub Pages（项目站点，全站相对路径）
+Pure static site — **no login, no database, no backend, no remote API**. The build output is
+committed as-is and served straight from GitHub Pages.
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#quick-start)
+[![Runtime dependencies: none](https://img.shields.io/badge/runtime%20dependencies-none-success.svg)](#quick-start)
+[![Tests: 99 passed](https://img.shields.io/badge/tests-99%20passed-success.svg)](#verification-results)
+[![Deploy: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#deployment-to-github-pages)
+
+**Live site:** <https://zc110747.github.io/DailyLingo/>
+
+> **Chinese documentation:** [README-CH.md](README-CH.md)
+
+| | |
+|---|---|
+| **Frontend** | HTML5 + CSS3 + vanilla JavaScript (no React/Vue, no front-end build step) |
+| **Content source** | Markdown — the single source of truth |
+| **Build / validation** | Python 3, **standard library only** |
+| **Tests** | pytest, including the front-end grading logic executed in Node |
+| **Audio** | WAV files produced by an external offline TTS tool, played via the HTML5 Audio API |
+| **Deployment** | GitHub Pages project site, entirely relative paths |
 
 ---
 
-## 一、目录结构
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Project Structure](#project-structure)
+- [Article Numbering and Naming](#article-numbering-and-naming)
+- [Markdown Article Format](#markdown-article-format)
+- [Homepage Chapter Directory](#homepage-chapter-directory)
+- [Article Page Sections](#article-page-sections)
+- [Audio Player](#audio-player)
+- [Generating Audio with EnglishAudio](#generating-audio-with-englishaudio)
+- [Auto-Rebuild on Markdown Changes](#auto-rebuild-on-markdown-changes)
+- [GitHub Pages Path Compatibility](#github-pages-path-compatibility)
+- [Local Preview](#local-preview)
+- [Deployment to GitHub Pages](#deployment-to-github-pages)
+- [Adding a New Article](#adding-a-new-article)
+- [Build Script Boundaries](#build-script-boundaries)
+- [Verification Results](#verification-results)
+- [Known Limitations and Manual Verification](#known-limitations-and-manual-verification)
+
+---
+
+## Features
+
+- **Collapsible Chapter directory** — the homepage shows *only* the `DailyLingo` brand and a
+  `<details>` tree of articles grouped into fixed 100-number Chapters. No summaries, no difficulty
+  labels, no audio status, no counters.
+- **Five fixed sections per article** — `Article` / `Words` / `Questions` / `Answers` / `Continue`,
+  always in that order, sharing one template, one stylesheet and one script.
+- **Real audio, not a mock** — an HTML5 Audio player wired to the actual WAV file. Play/pause,
+  elapsed time, duration, live progress, click-to-seek, drag-to-seek, ±5 s, `0.75x`–`2x` speed,
+  volume, loading/finished/error states — every indicator is driven by real playback events.
+- **Instant grading with no backend** — single-choice and fill-in-the-blank questions graded in the
+  browser. Case-insensitive, whitespace-trimmed, trailing-punctuation-tolerant; a blank answer is
+  never accepted. Multiple acceptable answers per question are supported.
+- **Single source of truth for answers** — the grading key is embedded in the page's `#quiz-data`
+  and generated from the same data as the Answers section, so the two can never drift apart.
+- **Zero manual navigation** — previous/next links, the homepage list and Chapter grouping are all
+  derived from the article number. Add a Markdown file, rebuild, and everything updates.
+- **Graceful degradation** — a missing WAV only renders an error message inside the player. The
+  article text, word table, questions, answers and navigation all keep working.
+- **Reproducible builds** — identical input produces byte-identical output, verified by rebuilding
+  the whole site into a temporary directory and diffing it against the files on disk.
+
+---
+
+## Quick Start
+
+```bash
+# 1. Install test dependencies (build/validation need nothing at all)
+python -m pip install -r requirements.txt
+
+# 2. Build the site -> index.html + src/*.html
+python scripts/build.py
+python scripts/build.py --verbose    # with a per-article report
+
+# 3. Validate the generated output and data consistency
+python scripts/validate.py
+
+# 4. Run the automated tests
+pytest -q
+
+# 5. Auto-rebuild whenever a Markdown file changes, then preview
+python scripts/watch.py              # Ctrl+C to stop
+python -m http.server 8000
+```
+
+| | Requirement | Tested version |
+|---|---|---|
+| Python | 3.9+ (build script uses the standard library only) | 3.13.12 |
+| pytest | Only needed to run the tests | 9.1.1 |
+| Node.js | Only needed for `tests/test_frontend.py` (skipped if absent) | 22.22.2 |
+
+> `scripts/build.py` and `scripts/validate.py` import **nothing outside the Python standard library**.
+> pytest in `requirements.txt` exists solely for the test suite.
+
+---
+
+## Project Structure
 
 ```text
 DailyLingo/
-├── index.html                  # 首页（由构建脚本生成）：品牌名 + Chapter 折叠目录
-├── src/                        # 文章详情页（由构建脚本生成）
+├── index.html                  # Homepage (generated): brand + collapsible Chapter directory
+├── src/                        # Article pages (generated)
 │   ├── 0001.A_New_Hobby.html
 │   ├── 0002.A_Busy_Morning.html
 │   ├── 0003.Helping_a_Neighbor.html
 │   ├── 0004.A_Day_at_the_Beach.html
 │   ├── 0005.A_Day_on_the_Farm.html
 │   └── 0006.A_Visit_to_the_Library.html
-├── content/                    # 文章唯一维护源（Markdown）
+├── content/                    # Article source of truth (Markdown)
 │   ├── 0001.A_New_Hobby.md
 │   ├── …
 │   └── 0006.A_Visit_to_the_Library.md
-├── sources/                    # 外部工具生成的 WAV（与 Markdown 同名）
+├── sources/                    # WAV files from the external TTS tool (same basename as the .md)
 │   ├── 0001.A_New_Hobby.wav
 │   ├── …
 │   └── 0006.A_Visit_to_the_Library.wav
 ├── assets/
-│   ├── css/style.css           # 全站统一样式（桌面 + 移动）
-│   ├── js/audio-player.js      # 音频播放器
-│   ├── js/main.js              # 题目判分 / 页面交互
+│   ├── css/style.css           # Site-wide styles (desktop + mobile)
+│   ├── js/audio-player.js      # Audio player
+│   ├── js/main.js              # Question grading / page interactions
 │   └── images/
 ├── scripts/
-│   ├── build.py                # 构建脚本（解析 → 分组 → 生成页面 → 关联音频）
-│   ├── watch.py                # 同步脚本：md/wav 一变就自动重建（见第八节）
-│   └── validate.py             # 项目验证脚本
+│   ├── build.py                # Build: parse -> group -> render -> link audio
+│   ├── watch.py                # Sync: rebuild automatically when md/wav changes
+│   └── validate.py             # Output and data validation
 ├── tests/
 │   ├── conftest.py
-│   ├── test_build.py           # 构建 / 数据 / 分组 / 标题导航 / 题目答案 / 路径
-│   └── test_frontend.py        # 前端判分逻辑（在 Node 中执行 assets/js/main.js）
-├── watch.bat                   # 双击即开始监听并自动重建（Windows）
+│   ├── test_build.py           # Parsing / grouping / titles / navigation / grading / paths
+│   └── test_frontend.py        # Grading logic executed for real in Node
+├── watch.bat                   # Double-click to start watching on Windows
 ├── requirements.txt
 ├── .gitignore
 ├── LICENSE
-└── README.md
+├── README.md                   # This file (English, default)
+└── README-CH.md                # 简体中文文档
 ```
 
-> `tools/`（EnglishAudio 本地 TTS 打包产物，约 100 MB）**不在仓库内**：它体积大且已在其它
-> 仓库维护，这里只按需调用。`.gitignore` 已忽略该目录，放进去也不会污染 Git 状态，
-> 见 [8.1 用 EnglishAudio 生成 WAV](#81-用-englishaudio-生成-wav)。
+> `tools/` (the ~100 MB packaged EnglishAudio TTS build) is **not** in this repository: it is large
+> and already maintained elsewhere, so it is only invoked on demand. `.gitignore` already ignores
+> the directory, so dropping a copy there will not dirty `git status`.
+> See [Generating Audio with EnglishAudio](#generating-audio-with-englishaudio).
 
-目录职责边界：
+Directory responsibilities:
 
-| 目录 | 定位 | 可否手工编辑 |
+| Path | Role | Hand-editable |
 |---|---|---|
-| `content/` | 文章唯一维护源 | **是**，人工维护 |
-| `src/` | 构建生成的文章 HTML | 否，重新构建即覆盖 |
-| `index.html` | 构建生成 | 否，重新构建即覆盖 |
-| `sources/` | 外部工具生成的 WAV | 由音频工具写入 |
-| `assets/` | 全站公共 CSS / JS | 是 |
+| `content/` | Article source of truth | **Yes**, maintained by hand |
+| `src/`, `index.html` | Generated HTML | No — rebuilding overwrites it |
+| `sources/` | WAV files produced by the external tool | Written by the audio tool |
+| `assets/` | Site-wide CSS / JS | Yes |
+
+> **The generated files (`index.html`, `src/*.html`) are committed on purpose.** GitHub Pages serves
+> the repository root as the site root with *Deploy from a branch*, so omitting them would publish
+> an empty site.
 
 ---
 
-## 二、环境要求与安装
+## Article Numbering and Naming
 
-| 项目 | 要求 | 实测版本 |
-|---|---|---|
-| Python | 3.9+（构建脚本只依赖标准库） | 3.13.12 |
-| pytest | 仅在跑测试时需要 | 9.1.1 |
-| Node.js | 仅在跑 `tests/test_frontend.py` 时需要（缺失时自动跳过） | 22.22.2 |
+### Numbering
 
-```bash
-python -m pip install -r requirements.txt
-```
+- The number is a **permanent ID**. It never changes when the title, body or sort order changes.
+- Articles are sorted ascending by numeric value; duplicate numbers are rejected.
+- Displayed as four digits, zero-padded: `0001`, `0002`, `0010`, `0100`, `0101`.
+- Numbers longer than four digits **keep every digit, never truncated**: `10000`, `123456`.
+- The filename, the `id` front-matter field and the number must all agree, or the build fails.
 
-> 构建和验证脚本自身**不需要**任何第三方包；`requirements.txt` 里的 pytest 只为测试服务。
-
----
-
-## 三、常用命令
-
-```bash
-# 1) 构建站点（生成 index.html 与 src/*.html）
-python scripts/build.py
-
-# 带逐篇明细
-python scripts/build.py --verbose
-
-# 2) 验证生成结果与数据一致性
-python scripts/validate.py
-
-# 3) 自动化测试
-pytest -q
-
-# 4) 改完 Markdown 自动重建（监听 content/ 与 sources/，Ctrl+C 退出）
-python scripts/watch.py
-# 缺音频时顺带调用 EnglishAudio 生成
-python scripts/watch.py --audio
-# 只重建一次（适合脚本里调用）
-python scripts/watch.py --once
-
-# 5) 本地预览（详见第六节）
-python -m http.server 8000
-```
-
----
-
-## 四、文章编号与命名规则
-
-### 4.1 编号
-
-- 编号是**永久 ID**，不随标题、正文或排序变化；按数值升序排列；不允许重复。
-- 默认显示为四位，不足补零：`0001`、`0002`、`0010`、`0100`、`0101`。
-- 超过四位的编号**保留完整数字，不截断**：`10000`、`123456`。
-- 文件名、元数据（front matter 的 `id`）与编号必须一致，否则构建直接报错。
-
-### 4.2 文件命名
+### File naming
 
 ```text
 content/0001.A_New_Hobby.md
-src/0001.A_New_Hobby.html      （构建生成）
-sources/0001.A_New_Hobby.wav   （音频工具生成）
+src/0001.A_New_Hobby.html       # generated
+sources/0001.A_New_Hobby.wav    # generated by the audio tool
 ```
 
-### 4.3 标题生成
+> **Never put spaces in a filename.** `0006.A_Visit_to_the Library.md` would desynchronise the audio
+> filename from the page link and the `href` attribute. Use underscores instead.
 
-原始标题**不含编号**，编号由统一逻辑添加，全站共用同一套实现
-（`build.display_title` / `build.page_title`）：
+### Title generation
 
-| 位置 | 内容 |
+The raw title **never contains the number**; the number is prepended by a single shared helper
+(`build.display_title` / `build.page_title`) used by every page:
+
+| Location | Output |
 |---|---|
-| 首页列表 | `0001. A New Hobby` |
-| 文章页 `<h1>` | `A New Hobby`（配上方独立的编号显示） |
-| 浏览器标签 | `0001. A New Hobby \| DailyLingo` |
-| 上一篇 / 下一篇导航 | `上一篇：0001. A New Hobby` |
+| Homepage list | `0001. A New Hobby` |
+| Article `<h1>` | `A New Hobby` (with the number shown separately above it) |
+| Browser tab | `0001. A New Hobby \| DailyLingo` |
+| Previous / next navigation | `Previous: 0001. A New Hobby` |
 
-首页、文章页、浏览器标签、前后篇导航都调用同一函数，不存在手工硬编码的标题。
+No title is ever hard-coded in a template.
 
 ---
 
-## 五、Markdown 文章格式
+## Markdown Article Format
 
-### 5.1 兼容格式（当前 `content/` 采用）
+### Compatible format (currently used by `content/`)
 
 ```markdown
 # A New Hobby
@@ -185,36 +244,40 @@ BAC
 - [cataloge](./catalogue.md)
 ```
 
-要点：
+Notes:
 
-- 一级标题 `# ...` 是**原始标题**（不含编号）。
-- 章节名大小写不敏感，也支持 `# Article`（一级）与 `## Article`（二级）两种层级；
-  `## Questions` 内部的 `## Q1` 属于题目区，**不会被当成新章节**。
-- `## Words` 表头列名按别名识别，3 列和 5 列都支持：
-  `Word/单词`、`Pronunciation/音标`、`词性/pos`、`中文释义/meaning`、`例句/example`。
-  单元格里的 `**粗体**` 会被剥离。
-- `## Answers` 支持四种写法（可混用）：
-  1. 紧凑字母串 —— 按题目顺序逐题赋答案：`BAC`、`ACBBA`、`CABABB`；
-  2. 单题行 —— `Question5: He feels happy because he has helped someone.`；
-  3. 分块 —— `## Q1` + `答案：B` + `解释：…` + `可接受答案：cook, to cook`；
-  4. 编号答案列表 —— `1. **B. To the library.** 解释文字`：
-     粗体里的选项字母作为答案，粗体后的文字作为解释（粗体后没写解释时，用粗体原文当解释）；
-     填空题也适用（`1. cook` / `1. **cook**`）。
-     判据是严格的：`cook`、`bamboo` 这类单词不会被误判成选项 `C` / `B`
-     （见 `build.extract_choice_key` 与 `tests/test_build.py::test_extract_choice_key`）。
-- 题干支持 `Question 1：…`（半角/全角冒号均可）、`**题干**`、`## Q1`、`1. 题干` 等写法。
-- `## Continues`（或 `## Continue`）会被构建忽略（上一篇 / 下一篇与目录全部自动生成，不需要人工维护）。
+- The `# ...` heading is the **raw title** (no number).
+- Section names are case-insensitive, and both `# Article` and `## Article` levels are accepted.
+  A `## Q1` inside `## Questions` is **not** treated as a new section.
+- `## Words` table headers are matched by alias, and both 3-column and 5-column layouts work:
+  `Word/单词`, `Pronunciation/音标`, `词性/pos`, `中文释义/meaning`, `例句/example`.
+  `**bold**` inside a cell is stripped.
+- `## Answers` accepts four notations (freely mixable):
+  1. **Compact key string** — assigned in question order: `BAC`, `ACBBA`, `CABABB`;
+  2. **Per-question line** — `Question5: He feels happy because he has helped someone.`;
+  3. **Blocks** — `## Q1` + `答案：B` + `解释：…` + `可接受答案：cook, to cook`;
+  4. **Numbered answer list** — `1. **B. To the library.** explanation text`: the option letter
+     inside the bold run becomes the answer and the text after it becomes the explanation
+     (if no trailing text is present, the bold text itself is used). Fill-in-the-blank answers use
+     the same form (`1. cook` / `1. **cook**`).
+     The letter detector is deliberately strict, so words such as `cook` or `bamboo` are never
+     misread as option `C` or `B` (see `build.extract_choice_key` and
+     `tests/test_build.py::test_extract_choice_key`).
+- Question stems may be written as `Question 1：…` (half- or full-width colon), `**stem**`,
+  `## Q1`, or `1. stem`.
+- `## Continues` (or `## Continue`) is ignored by the build — previous/next links and the table of
+  contents are always generated, never maintained by hand.
 
-### 5.2 题型
+### Question types
 
-| 题型 | 判定方式 | 判分 |
+| Type | Detected when | Grading |
 |---|---|---|
-| 单选 | 题干下有 `A. / B. / C. …` 选项，或显式写 `题型：单选` | 选项字母比对（忽略大小写） |
-| 填空 | 题干下没有选项，或显式写 `题型：填空` | 与「答案 / 可接受答案」比对，**忽略大小写、忽略首尾空白、忽略尾部标点；空白输入永远不判为正确** |
+| Single choice | Options `A. / B. / C. …` follow the stem, or `题型：单选` is written explicitly | Option letter comparison, case-insensitive |
+| Fill in the blank | No options follow the stem, or `题型：填空` is written explicitly | Compared against the answer / acceptable answers: **case-insensitive, leading and trailing whitespace ignored, trailing punctuation ignored; a blank answer is never correct** |
 
-题干中的 `______`（连续下划线）会被**完整保留**，不会被误当成 Markdown 强调语法。
+A `______` run inside a stem is preserved verbatim and is never mistaken for Markdown emphasis.
 
-### 5.3 可选：YAML Front Matter
+### Optional: YAML front matter
 
 ```markdown
 ---
@@ -224,15 +287,16 @@ audio: "0101.Some_Title.wav"
 ---
 ```
 
-三项都可省略：`id` 默认取文件名前缀（写了则必须与文件名一致），
-`title` 默认取 `# 一级标题`，`audio` 默认取 `<编号>.<文件名标题>.wav`。
+All three keys are optional: `id` defaults to the filename prefix (if present it must match),
+`title` defaults to the `# ...` heading, and `audio` defaults to `<number>.<filename title>.wav`.
 
 ---
 
-## 六、首页：Chapter 折叠目录
+## Homepage Chapter Directory
 
-首页**只显示**两样东西：`DailyLingo` 品牌名，以及按 Chapter 分组的可折叠文章目录。
-不显示摘要、难度、音频状态、文章数量统计或任何其他信息。
+The homepage shows **exactly two things**: the `DailyLingo` brand name and a collapsible directory
+of articles grouped by Chapter. No summaries, difficulty, audio status, article counts or anything
+else.
 
 ```text
 DailyLingo
@@ -246,17 +310,17 @@ DailyLingo
     0006. A Visit to the Library
 ```
 
-### 6.1 分组算法（`build.chapter_bounds` / `build.group_chapters`）
+### Grouping algorithm (`build.chapter_bounds` / `build.group_chapters`)
 
-每 100 个编号划分为一个**固定**区间，分组依据是编号的**数值**，不是文章数量、
-数组下标或排序位置：
+Every 100 numbers form a **fixed** range. Grouping depends on the **numeric** value of the article
+number — never on article count, array index or sort position:
 
 ```python
 start = ((number - 1) // 100) * 100 + 1
 end   = start + 99
 ```
 
-| 编号 | 所属 Chapter |
+| Number | Chapter |
 |---|---|
 | `0001` | Chapter 0001–0100 |
 | `0100` | Chapter 0001–0100 |
@@ -264,198 +328,215 @@ end   = start + 99
 | `0200` | Chapter 0101–0200 |
 | `0201` | Chapter 0201–0300 |
 
-**只输出包含真实文章的 Chapter** —— 中间缺号不改变区间边界，也不会提前创建空分组。
-新增文章后重新构建会自动出现新分组；删除某组最后一篇文章后重新构建，该组不再显示。
+**Only Chapters that contain a real article are emitted.** Gaps in the numbering never shift the
+range boundaries, and empty groups are never created ahead of time. Adding an article and rebuilding
+makes a new group appear automatically; removing the last article of a group makes it disappear.
 
-当前仓库只有 `0001`–`0004`，因此首页**只显示 `Chapter 0001–0100`**。
+Group computation and HTML rendering are separate (`group_chapters` → `render_index`), so the rules
+never leak into the template and can be unit-tested directly.
 
-分组计算与 HTML 渲染分离（`group_chapters` → `render_index`），规则不散落在模板里，
-可以直接被单元测试调用。
+### Collapse behaviour
 
-### 6.2 折叠行为
-
-- 使用语义化的原生 `<details>` / `<summary>`，鼠标与键盘均可操作，焦点状态可见。
-- `Chapter 0001–0100`（第一组）**默认展开**，其他实际存在的 Chapter **默认折叠**。
-- 每个 Chapter 独立控制，展开一个不会强制关闭其他。
-- 收起 / 展开状态由箭头方向体现（`▸` / `▾`）。
+- Uses semantic native `<details>` / `<summary>`; operable by mouse and keyboard, with a visible
+  focus ring.
+- `Chapter 0001–0100` (the first group) is **expanded by default**; every other existing Chapter is
+  **collapsed by default**.
+- Each Chapter is independent — expanding one never force-closes another.
+- State is conveyed by the arrow direction (`▸` / `▾`).
 
 ---
 
-## 七、文章详情页：固定五个区域
+## Article Page Sections
 
-按固定顺序渲染，所有文章共用同一套模板与 CSS / JS：
+Rendered in a fixed order, all articles sharing the same template, CSS and JavaScript:
 
-| # | 区域 | 内容 |
+| # | Section | Contents |
 |---|---|---|
-| 1 | **Article** | 编号、标题、英文正文、WAV 播放器 |
-| 2 | **Words** | 单词表（单词 / 音标 / 词性 / 中文释义 / 例句），窄屏下表格自身横向滚动，**不会导致整页横向滚动** |
-| 3 | **Questions** | 单选 + 填空，原生 JavaScript 判分，无需后端 |
-| 4 | **Answers** | 默认**折叠**，用户主动展开后显示答案、可接受答案与解释 |
-| 5 | **Continue** | 返回目录、上一篇、下一篇（显示目标文章的真实编号与标题） |
+| 1 | **Article** | Number, title, English body, WAV player |
+| 2 | **Words** | Word table (word / IPA / part of speech / Chinese gloss / example). On narrow screens the table scrolls inside its own container, so the **page itself never scrolls horizontally** |
+| 3 | **Questions** | Single-choice and fill-in questions, graded by vanilla JavaScript with no backend |
+| 4 | **Answers** | **Collapsed by default**; expanding reveals correct answers, acceptable answers and explanations |
+| 5 | **Continue** | Back to the index, previous article, next article (showing the real number and title of the target) |
 
-- 题目 ID 全局唯一（`Q1`、`Q2`…），答案通过 ID 与题目关联。
-- 自动判分用的正确答案内嵌在页面 `#quiz-data` 中，**与 Answers 区域同源**，
-  因此修改文章答案后重新构建，两者自动同步。
-- 首篇文章不生成上一篇链接，末篇文章不生成下一篇链接（显示「上一篇：无」等文字，而不是死链）。
-- 上一篇 / 下一篇按**编号数值升序**计算，与首页 Chapter 分组完全独立。
+- Question IDs are unique per page (`Q1`, `Q2`, …) and answers are bound to questions through them.
+- The grading key is embedded in the page's `#quiz-data` and is generated **from the same data** as
+  the Answers section, so editing an answer and rebuilding keeps both in sync automatically.
+- The first article renders no previous link and the last renders no next link — the text
+  "Previous: none" is shown instead of a dead link.
+- Previous/next are computed by **ascending numeric order** and are completely independent of the
+  homepage Chapter grouping.
 
 ---
 
-## 八、音频播放器
+## Audio Player
 
-使用真实 WAV 文件与 HTML5 Audio API，**所有显示状态都与真实播放状态同步**，
-不存在模拟进度条或伪造播放状态。支持：
+Built on the real WAV file and the HTML5 Audio API. **Every displayed state is synchronised with
+actual playback** — there is no simulated progress bar and no faked play state. Supported:
 
-- 播放 / 暂停
-- 当前播放时间、音频总时长、实时播放进度
-- 点击进度条跳转、按住拖动进度条调整播放位置（Pointer Events，触屏可用）
-- 进度条支持键盘操作：`←` / `→` 5 秒（`Shift` 10 秒）、`Home` / `End`、`Space` / `Enter` 播放暂停
-- 后退 5 秒 / 前进 5 秒
-- `0.75x` / `1x` / `1.25x` / `1.5x` / `2x` 倍速
-- 音量调节
-- 状态提示：正在加载 / 缓冲中 / 已就绪 / 正在播放 / 已暂停 / 播放结束
-- 音频缺失或加载失败时的明确错误提示
+- Play / pause
+- Elapsed time, total duration, live progress
+- Click the progress bar to seek; press and drag to scrub (Pointer Events, so touch works)
+- Keyboard control of the progress bar: `←` / `→` 5 s (`Shift` 10 s), `Home` / `End`,
+  `Space` / `Enter` to toggle playback
+- Back 5 s / forward 5 s
+- `0.75x` / `1x` / `1.25x` / `1.5x` / `2x` playback rate
+- Volume control
+- Status messages: loading / buffering / ready / playing / paused / finished
+- An explicit error message when the audio file is missing or fails to load
 
-音频时长尚未加载或不可获取时，时长显示为 `--:--`，页面其余部分不受影响。
+When the duration is not yet available, it is shown as `--:--` and nothing else on the page breaks.
 
-**某篇文章缺少 WAV 时**：播放器位置显示缺失提示，而 Article 正文、Words、Questions、
-Answers、Continue **全部照常可用**，构建只输出警告、不中断其他页面。
+**If an article's WAV is missing**, the player area shows a notice while the article body, word
+table, questions, answers and navigation **all keep working**. The build emits a warning instead of
+aborting the other pages.
 
-### 8.1 用 EnglishAudio 生成 WAV
+### Generating Audio with EnglishAudio
 
-音频由外部工具生成，构建脚本**不做** TTS、**不做**音频转码。本项目使用
-**EnglishAudio**（Piper + ONNX 本地离线语音，不联网、不上传文本），它同时存在于：
+Audio is produced by an external tool — the build script **never** synthesises speech and **never**
+transcodes. This project uses **EnglishAudio** (Piper + ONNX, fully offline: no network access and
+no text ever leaves the machine). It can live in either place:
 
-- `D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd`（源仓库，已单独维护）；
-- `<本仓库>/tools\eaudio.cmd`（可选：把整包复制进来即可，`tools/` 已被 `.gitignore` 忽略，
-  因为含 63 MB 语音模型、约 100 MB，不再在仓库里存第二份）。
+- `D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd` — the source
+  repository, maintained separately;
+- `<this repo>/tools\eaudio.cmd` — optional: copy the whole package in. `tools/` is `.gitignore`d
+  because the package is ~100 MB (including a 63 MB voice model), so it is not stored twice.
 
-`scripts/watch.py --audio` 会按下面的顺序自动定位它，找不到时只重建网页并给出提示：
+`scripts/watch.py --audio` locates it in the following order, and if nothing is found it simply
+rebuilds the pages and prints a notice:
 
 ```text
---audio-tool <路径>  >  环境变量 DAILYLINGO_AUDIO_TOOL  >  <仓库>/tools/eaudio.cmd
+--audio-tool <path>  >  env var DAILYLINGO_AUDIO_TOOL  >  <repo>/tools/eaudio.cmd
                      >  009.ai_voice\publisher\eaudio.cmd
 ```
 
-```bash
-# 单篇：读取 Markdown 的 ## Article 章节 → 生成与 md 同名的 WAV
+```bat
+:: Single file: reads the ## Article section -> writes a same-named WAV
 "D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
   "content\0006.A_Visit_to_the_Library.md" --dist="sources"
 
-# 批量：把 content/ 下所有 md 一次转完
+:: Batch: convert every .md under content/
 for %f in (content\*.md) do ^
   "D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd" "%f" --dist="sources"
 
-# 也可以交给同步脚本：新增 md 后自动补齐缺失的 wav，再重建网页
+:: Or let the watcher fill in missing WAVs and rebuild for you
 python scripts/watch.py --audio
 ```
 
-> WAV 文件名必须与 Markdown 同名。**文件名里不要有空格**：`0006.A_Visit_to_the Library.md`
-> 这种带空格的名字会让链接与 `sources/` 里的音频对不上（改成下划线再重新生成即可）。
+The tool only reads the `## Article` section — `## Words`, `## Questions`, `## Answers` and
+`## Continues` are never spoken. A body containing non-English characters is rejected outright
+(exit code 4), and the Markdown must be UTF-8.
 
-该工具只朗读 `## Article` 章节，`## Words` / `## Questions` / `## Answers` / `## Continues`
-不会被读出来；正文含非英文字符会被直接拒绝（退出码 4），Markdown 必须是 UTF-8。
+> **Re-generate the WAV after editing the body.** The watcher only fills in *missing* files; it does
+> not detect that the text changed, so an edited article keeps a stale recording until you re-run
+> the tool.
 
-本仓库 6 个 WAV 均由该工具生成，实测参数（Python `wave` 读出）：
+All six WAV files in this repository were produced by that tool. Measured parameters (read back with
+Python's `wave` module):
 
-| 文件 | 声道 / 位深 / 采样率 | 时长 | 大小 |
+| File | Channels / bit depth / sample rate | Duration | Size |
 |---|---|---|---|
-| `0001.A_New_Hobby.wav` | 单声道 / 16 bit / 22 050 Hz | 37.22 s | 1 641 488 B |
-| `0002.A_Busy_Morning.wav` | 单声道 / 16 bit / 22 050 Hz | 46.37 s | 2 044 944 B |
-| `0003.Helping_a_Neighbor.wav` | 单声道 / 16 bit / 22 050 Hz | 50.43 s | 2 224 164 B |
-| `0004.A_Day_at_the_Beach.wav` | 单声道 / 16 bit / 22 050 Hz | 56.23 s | 2 479 932 B |
-| `0005.A_Day_on_the_Farm.wav` | 单声道 / 16 bit / 22 050 Hz | 81.22 s | 3 581 660 B |
-| `0006.A_Visit_to_the_Library.wav` | 单声道 / 16 bit / 22 050 Hz | 44.32 s | 1 954 552 B |
+| `0001.A_New_Hobby.wav` | mono / 16 bit / 22 050 Hz | 37.22 s | 1 641 488 B |
+| `0002.A_Busy_Morning.wav` | mono / 16 bit / 22 050 Hz | 46.37 s | 2 044 944 B |
+| `0003.Helping_a_Neighbor.wav` | mono / 16 bit / 22 050 Hz | 50.43 s | 2 224 164 B |
+| `0004.A_Day_at_the_Beach.wav` | mono / 16 bit / 22 050 Hz | 56.23 s | 2 479 932 B |
+| `0005.A_Day_on_the_Farm.wav` | mono / 16 bit / 22 050 Hz | 81.22 s | 3 581 660 B |
+| `0006.A_Visit_to_the_Library.wav` | mono / 16 bit / 22 050 Hz | 44.32 s | 1 954 552 B |
 
-### 8.2 改完 Markdown 自动重建（`scripts/watch.py`）
+### Auto-Rebuild on Markdown Changes
 
-手工维护时不必反复敲构建命令：`watch.py` 轮询 `content/*.md` 与 `sources/*.wav`，
-发现新增 / 修改 / 删除后自动重建 `index.html` 与 `src/*.html`。
+No need to re-run the build by hand while writing: `watch.py` polls `content/*.md` and
+`sources/*.wav` and rebuilds `index.html` and `src/*.html` whenever something is added, changed or
+removed.
 
-| 命令 | 作用 |
+| Command | Effect |
 |---|---|
-| `python scripts/watch.py` | 监听并自动重建（默认 1 s 轮询） |
-| `python scripts/watch.py --audio` | 顺带用 EnglishAudio 补齐缺失的 WAV |
-| `python scripts/watch.py --once` | 只重建一次后退出（适合放进脚本 / Git hook） |
-| `python scripts/watch.py --interval 0.5` | 调整轮询间隔 |
-| `watch.bat`（双击） | Windows 上一键启动，等价于 `--audio` |
+| `python scripts/watch.py` | Watch and rebuild (1 s polling by default) |
+| `python scripts/watch.py --audio` | Also fill in missing WAVs with EnglishAudio |
+| `python scripts/watch.py --once` | Rebuild once and exit (handy in scripts / Git hooks) |
+| `python scripts/watch.py --interval 0.5` | Change the polling interval |
+| `watch.bat` (double-click) | One-click start on Windows, equivalent to `--audio` |
 
-行为约定：
+Behaviour:
 
-- **全量重建**（6 篇 < 0.2 s）：新增或删除一篇文章会改变相邻文章的上一篇 / 下一篇，
-  只重写「变化的那一页」会留下不一致的假象。
-- Markdown 写坏时**只打印错误并继续监听**，不会退出；修好再保存即可重建成功。
-- 被删除文章遗留的 `src/*.html` 只提示、**不自动删除**（构建脚本同样不删文件）。
-
----
-
-## 九、GitHub Pages 路径兼容
-
-站点部署在**项目子路径**下，例如 `https://zc110747.github.io/DailyLingo/`。
-
-- 全部链接与资源引用都是**相对路径**，没有任何以 `/` 开头的站点根路径：
-  - 首页 → 文章：`src/0001.A_New_Hobby.html`
-  - 文章 → 首页：`../index.html`
-  - 文章 → 资源：`../assets/css/style.css`、`../assets/js/*.js`
-  - 文章 → 音频：`../sources/0001.A_New_Hobby.wav`
-  - 上一篇 / 下一篇：同目录文件名
-- `scripts/validate.py` 会检查生成结果中不存在 `href="/..."` / `src="/..."`。
-- 不依赖后端路由、服务器重写或动态 API，本地静态服务器与 GitHub Pages 行为一致。
+- **Full rebuild** (six articles in under 0.2 s): adding or removing an article changes the
+  previous/next links of its neighbours, so rewriting only the changed page would leave the site
+  subtly inconsistent.
+- A malformed Markdown file **prints an error and keeps watching** — fix it and save again.
+- `src/*.html` left behind by a deleted article is reported but **never deleted** (the build script
+  does not delete files either).
 
 ---
 
-## 十、本地运行
+## GitHub Pages Path Compatibility
+
+The site is deployed under a **project subpath**, for example `https://zc110747.github.io/DailyLingo/`.
+
+- Every link and asset reference is **relative**; there is not a single root-absolute path:
+  - homepage → article: `src/0001.A_New_Hobby.html`
+  - article → homepage: `../index.html`
+  - article → assets: `../assets/css/style.css`, `../assets/js/*.js`
+  - article → audio: `../sources/0001.A_New_Hobby.wav`
+  - previous / next: plain filenames in the same directory
+- `scripts/validate.py` asserts that no `href="/..."` or `src="/..."` appears in the generated HTML.
+- No backend routing, server rewrite or dynamic API is involved, so a local static server and GitHub
+  Pages behave identically.
+
+---
+
+## Local Preview
 
 ```bash
 python scripts/build.py
 python -m http.server 8000
 ```
 
-浏览器打开：
+Then open:
 
-- 首页：<http://localhost:8000/>
-- 示例文章：<http://localhost:8000/src/0001.A_New_Hobby.html>
+- Homepage — <http://localhost:8000/>
+- Example article — <http://localhost:8000/src/0001.A_New_Hobby.html>
 
-> `python -m http.server` 不支持 HTTP Range 请求（实际部署的 GitHub Pages 支持）。
-> 浏览器会把整个 WAV 下载完再播放，因此本地预览时的拖动跳转体验与线上略有差异，
-> 功能本身不受影响。
-
----
-
-## 十一、GitHub Pages 部署
-
-1. `python scripts/build.py && python scripts/validate.py && pytest -q` 全部通过。
-2. 提交并推送（**构建产物 `index.html` 与 `src/*.html` 必须一起提交**）。
-3. 打开仓库 **Settings → Pages**。
-4. **Source** 选择 *Deploy from a branch*。
-5. **Branch** 选择 `main`，目录选择 `/ (root)`。
-6. 保存，等待发布完成。
-7. 打开实际发布地址（例如 `https://zc110747.github.io/DailyLingo/`），逐项检查：
-   首页 → Chapter 折叠展开 → 文章正文 → 音频播放与倍速 → 单词表 → 练习题判分 →
-   展开 Answers → 上/下一篇导航。
-
-若仓库使用其他分支或部署方式，按实际配置调整。
+> `python -m http.server` does **not** support HTTP Range requests (the deployed GitHub Pages does).
+> The browser therefore downloads the whole WAV before playing, so scrubbing feels slightly
+> different locally. Functionality itself is unaffected.
 
 ---
 
-## 十二、新增一篇文章
+## Deployment to GitHub Pages
 
-1. 在 `content/` 新建 Markdown，文件名用**未占用的编号**：
+1. Make sure `python scripts/build.py && python scripts/validate.py && pytest -q` all pass.
+2. Commit and push — **the generated `index.html` and `src/*.html` must be committed too**.
+3. Open the repository's **Settings → Pages**.
+4. Set **Source** to *Deploy from a branch*.
+5. Set **Branch** to `main` and the folder to `/ (root)`.
+6. Save and wait for the deployment to finish.
+7. Open the published URL (<https://zc110747.github.io/DailyLingo/>) and check each item in turn:
+   homepage → expand/collapse a Chapter → article body → audio playback and speed → word table →
+   question grading → expand Answers → previous/next navigation.
+
+Adjust the branch or folder if this repository is configured differently.
+
+---
+
+## Adding a New Article
+
+1. Create a Markdown file in `content/` using an **unused number**:
 
    ```text
-   content/0005.My_Weekend.md
+   content/0007.My_Weekend.md
    ```
 
-2. 写原始标题与正文：`# My Weekend`、`## Article`。
-3. 填 `## Words`（3 列或 5 列均可）、`## Questions`、`## Answers`。
-4. 用 EnglishAudio 生成同编号 WAV 并放进 `sources/`（见 8.1）：
+2. Write the raw title and body: `# My Weekend`, then `## Article`.
+3. Fill in `## Words` (3 or 5 columns), `## Questions` and `## Answers`.
+4. Generate the same-named WAV with EnglishAudio and place it in `sources/` (see
+   [Generating Audio with EnglishAudio](#generating-audio-with-englishaudio)):
 
-   ```bash
+   ```bat
    "D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
-     "content\0006.A_Visit_to_the_Library.md" --dist="sources"
+     "content\0007.My_Weekend.md" --dist="sources"
    ```
 
-5. 重建与自检（也可以先开着 `python scripts/watch.py --audio`，保存 md 后自动完成 4 与 5）：
+5. Rebuild and self-check — or, better, leave `python scripts/watch.py --audio` running, in which
+   case saving the Markdown performs steps 4 and 5 for you:
 
    ```bash
    python scripts/build.py --verbose
@@ -463,41 +544,49 @@ python -m http.server 8000
    pytest -q
    ```
 
-6. 浏览器里检查页面与音频，然后提交推送。
+6. Check the page and the audio in a browser, then commit and push.
 
-> 命名注意：文件名用 `NNNN.Title_With_Underscores.md`，**不要出现空格**——
-> 空格会让 `sources/` 里的音频名、页面链接与 `href` 三处对不上。
+Adding an article **automatically** updates the homepage list, the Chapter grouping (creating a new
+group when needed), the page heading, the browser tab title, the previous/next navigation and the
+WAV association. You **never** edit `index.html`, the Chapter groups or another article's navigation
+by hand.
 
-新增后**自动完成**：首页文章列表、Chapter 分组（必要时新增分组）、文章主标题、
-浏览器标签标题、上一篇 / 下一篇导航、WAV 关联。
-**不需要**手工修改 `index.html`、Chapter 分组或其他文章的导航。
-
----
-
-## 十三、构建脚本的边界
-
-`scripts/build.py` 会做：
-
-扫描 `content/` → 解析 Markdown 与元数据 → 校验编号 / 标题 / 结构 / 重复编号 /
-文件名一致性 → 按编号升序 → 计算 Chapter 分组 → 只输出有真实文章的分组 →
-第一组默认展开 → 生成 `index.html` → 生成全部文章 HTML → 统一生成主标题与浏览器标签 →
-生成单词表 / 练习题 / 答案 → 关联 WAV → 生成上一篇与下一篇 → 检查导航目标与资源路径 →
-缺失音频输出警告 → 非法数据输出明确错误 → 输出构建摘要。
-
-`scripts/build.py` **不会**做：生成语音、调用 TTS、把 WAV 转成 MP3、
-生成没有真实文章的 Chapter、生成虚构文章或占位链接、在首页显示摘要 / 难度 / 音频状态、
-在各页面重复硬编码标题、因单篇缺音频而阻止其他页面构建。
-
-构建是**可重复**的：输入不变时多次构建的输出字节级一致（`validate.py` 会把站点
-重新构建到临时目录并与磁盘上的产物逐字节比对）。
+**Renaming or removing an article** — the build never deletes files, so also remove the orphaned
+`sources/<old name>.wav` and `src/<old name>.html` yourself. A rename means: `git mv` the source,
+update its `# ...` heading, update the cross-references in the neighbouring articles'
+`## Continues`, regenerate the WAV, delete the old artefacts and rebuild. The number itself never
+changes.
 
 ---
 
-## 十四、实际执行结果
+## Build Script Boundaries
 
-以下均为本机实测（Windows 10 19045 / Python 3.13.12 / Node 22.22.2）。
+`scripts/build.py` **does**:
 
-### 14.1 构建
+scan `content/` → parse Markdown and metadata → validate numbering / title / structure / duplicate
+numbers / filename consistency → sort ascending → compute Chapter groups → emit only non-empty
+groups → mark the first group as expanded → render `index.html` → render every article page →
+generate consistent headings and browser titles → render the word table, questions and answers →
+link the WAV → generate previous/next links → check navigation targets and asset paths → warn on
+missing audio → fail loudly on invalid data → print a build summary.
+
+`scripts/build.py` **never**:
+
+synthesises speech, calls a TTS engine, converts WAV to MP3, emits a Chapter with no real article,
+creates placeholder articles or links, shows summaries / difficulty / audio status on the homepage,
+duplicates titles across templates, or blocks the other pages when one article is missing audio.
+
+Builds are **reproducible**: identical input yields byte-identical output. `validate.py` proves this
+by rebuilding the whole site into a temporary directory and comparing it byte for byte with the
+files on disk.
+
+---
+
+## Verification Results
+
+All figures below were measured on this machine: Windows 10 19045 / Python 3.13.12 / Node 22.22.2.
+
+### Build
 
 ```text
 $ python scripts/build.py --verbose
@@ -514,34 +603,38 @@ DailyLingo 构建完成
   警告：0 条
 ```
 
-### 14.2 验证脚本
+*(The CLI output is currently in Chinese; the format is stable.)*
+
+### Validation
 
 ```text
 $ python scripts/validate.py
 结果：PASS 207 / FAIL 0 / WARN 0
 ```
 
-覆盖：文章数据、编号唯一性与升序、Chapter 区间边界与「只输出有真实文章的 Chapter」、
-首页只含品牌名与折叠目录（并检查不含摘要 / 难度 / 音频状态等）、
-第一个 Chapter 默认展开、五个区域顺序、浏览器标签与主标题一致性、
-单词表行数、题目数量、判分数据与 Answers 同源、Answers 默认折叠、
-上一篇 / 下一篇链接与标题、首末篇边界、无绝对根路径、静态资源存在性、重复构建字节级一致。
+Covers: article data; number uniqueness and ascending order; Chapter range boundaries and the
+"only non-empty Chapters" rule; the homepage containing nothing but the brand and the directory
+(including negative checks for summaries / difficulty / audio status); the first Chapter being
+expanded; the order of the five sections; browser title and heading consistency; word-table row
+counts; question counts; the grading key matching the Answers section; Answers being collapsed by
+default; previous/next links and titles; first/last article boundaries; absence of root-absolute
+paths; existence of static assets; byte-identical rebuilds.
 
-### 14.3 自动化测试
+### Automated tests
 
 ```text
 $ pytest -q
 99 passed in 14.52s
 ```
 
-| 文件 | 用例数 | 覆盖内容 |
+| File | Cases | Coverage |
 |---|---|---|
-| `tests/test_build.py` | 95 | 文章解析（含缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（0001/0100/0101/0200/0201/0300/301/9999/10001）、缺号仍正确分组、不存在的 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、GitHub Pages 子路径、构建可重复 |
-| `tests/test_frontend.py` | 4 | 在 Node 中真实执行 `assets/js/main.js`：单选正确 / 错误 / 空选、大小写不敏感、首尾空格、尾部标点、多个可接受答案、空白输入不判正确；并与 `build.normalize_answer` 做逐样本一致性比对 |
+| `tests/test_build.py` | 95 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, GitHub Pages subpath, reproducible builds |
+| `tests/test_frontend.py` | 4 | Executes `assets/js/main.js` for real in Node: correct / incorrect / empty single-choice selections, case insensitivity, leading and trailing whitespace, trailing punctuation, multiple acceptable answers, blank input never correct; plus a sample-by-sample consistency check against `build.normalize_answer` |
 
-测试全部使用临时目录，不会污染或覆盖真实的 `content/` 与 `sources/`。
+Every test uses temporary directories and never touches the real `content/` or `sources/`.
 
-### 14.4 本地静态服务器
+### Local static server
 
 ```text
 $ python -m http.server 8123
@@ -560,44 +653,74 @@ $ python -m http.server 8123
 200 1954552 audio/wav             <- /sources/0006.A_Visit_to_the_Library.wav
 ```
 
-### 14.5 开发过程中发现并修复的真实缺陷
+### Published site
 
-- **`______` 被 Markdown 强调规则吃掉**：`strip_markdown` 原本处理 `_斜体_`，
-  把填空题干的连续下划线替换掉了，题目文本变成 `very __.`。
-  已移除下划线强调规则（`**粗体**` / `*斜体*` 保留），并加了回归测试。
-- **`## Q1` 子标题把题目区提前截断**：章节切分原先只认二级标题，
-  遇到无法识别的 `## Q1` 就结束当前章节，导致扩展格式的文章「没有解析到任何题目」。
-  已改为「无法识别为章节的标题行保留在当前章节内」。
-- **编号答案列表解析不到答案**：新增的 `0006` 用 `1. **B. To the library.** 解释文字`
-  写答案，解析器只认紧凑字母串 / `QuestionN:` / 分块三种写法，导致
-  `Q1/Q2/Q3 缺少答案` 直接构建失败。已扩充 `apply_answers` 支持这种写法
-  （并新增 `extract_choice_key`，用严格的判据避免把 `cook`、`bamboo` 误判成 `C`、`B`），
-  加了 5 个回归测试 + 11 组参数化边界用例。
-- **文件名里出现空格**：`0006.A_Visit_to_the Library.md` 会让 `sources/` 的音频名与
-  页面链接对不上（生成的链接里也带空格）。已统一为下划线命名
-  （`0006.A_Visit_to_the_Library.md` / `.wav`），旧文件已删除。
+```text
+$ curl -I https://zc110747.github.io/DailyLingo/
+200                                  <- /
+200  text/css                       <- /assets/css/style.css
+200  application/javascript         <- /assets/js/main.js
+200  application/javascript         <- /assets/js/audio-player.js
+200  audio/wav                      <- /sources/0001.A_New_Hobby.wav
+200  audio/wav                      <- /sources/0005.A_Day_on_the_Farm.wav
+206  Partial Content (Range)        <- /sources/0001.A_New_Hobby.wav
+```
+
+The homepage served from GitHub Pages lists all six articles under `Chapter 0001–0100`. WAV
+responses support HTTP Range requests (`206 Partial Content`), so seeking works on the live site.
+
+### Real defects found and fixed during development
+
+- **`______` swallowed by the Markdown emphasis rule.** `strip_markdown` handled `_italics_` and
+  therefore stripped the underscore run in fill-in-the-blank stems, turning `very ______.` into
+  `very __.`. The underscore emphasis rule was removed (`**bold**` and `*italic*` are still
+  handled), and a regression test was added.
+- **A `## Q1` sub-heading truncated the question section.** Section splitting originally recognised
+  only level-2 headings, so an unrecognised `## Q1` ended the current section and articles using the
+  extended format reported "no questions parsed". Now, a heading that is not a known section is kept
+  inside the current section.
+- **Numbered answer lists were unparsable.** The new `0006` wrote its answers as
+  `1. **B. To the library.** explanation`, while the parser only understood the compact key string,
+  `QuestionN:` and block forms, so the build failed with `Q1/Q2/Q3 missing answer`. `apply_answers`
+  now supports this form (plus `extract_choice_key`, whose strict matching stops `cook` and `bamboo`
+  from being read as `C` and `B`), backed by 5 regression tests and 11 parameterised boundary cases.
+- **Spaces in filenames.** `0006.A_Visit_to_the Library.md` desynchronised the `sources/` audio
+  filename from the page links (the generated `href` contained a space too). The file was renamed to
+  underscore form (`0006.A_Visit_to_the_Library.md` / `.wav`) and the old files were removed.
+- **Article title not matching its body.** `0005` was titled *A Busy Morning* (duplicating `0002`)
+  while its body describes a Saturday on a farm. It was renamed to *A Day on the Farm* — number,
+  source filename, H1, audio and the neighbouring `## Continues` cross-references all updated.
+- **Stale audio after editing a body.** The `0005` WAV had been generated before the body was
+  edited, so the recording no longer matched the text. The watcher only fills in *missing* files, so
+  the audio had to be regenerated explicitly. This is now documented as a required step.
 
 ---
 
-## 十五、尚未完成或需要人工验证的事项
+## Known Limitations and Manual Verification
 
-自动化测试能证明的部分已在第十四节列出；以下项目**未**在本机执行，不做「已通过」的声明：
+Everything the automated tests can prove is listed above. The following items were **not** executed
+on this machine, so no "verified" claim is made for them:
 
-1. **真实浏览器交互未做端到端自动化**：本环境没有可用的浏览器自动化通道，
-   因此「点击 Chapter 展开收起、拖动进度条跳转、切换倍速、输入答案点检查答案」这些
-   交互没有跑过自动化用例。已做的是：判分规则在 Node 中逐条真实执行（14.3），
-   生成 HTML 的结构与语义（`<details>` / `<summary>` / `role="slider"` /
-   `aria-live` / `aria-controls`）由 `validate.py` 静态校验。
-   请按第十节的步骤在浏览器里手工过一遍。
-2. **实际听感未验证**：WAV 文件参数已用 Python `wave` 模块读出来核对（14.1 / 8.1），
-   但「播放是否真的出声」需要有声卡的浏览器会话，未由本工具执行。
-3. **移动端真机布局未验证**：响应式断点（640px）已实现，未在真机或设备模拟器中逐档核对；
-   单词表已放在 `.table-wrap`（`overflow-x: auto`）内以避免整页横向滚动。
-4. **GitHub Pages 实际发布未执行**：`git push` 由用户本人完成，因此
-   `https://zc110747.github.io/DailyLingo/` 尚未由本工具访问验证；
-   子路径兼容性由「无绝对根路径」检查 + 临时目录内的子路径模拟部署测试覆盖。
-5. **键盘无障碍仅做了代码层面的保障**（语义化标签、可见焦点、文本化反馈、
-   进度条可聚焦可操作），未使用读屏软件实测。
-6. **`src/` 中已删除文章的历史 HTML 不会被自动清理**：构建不删除文件，
-   避免误删非构建产物。若某篇文章被移除，请手工删除对应的
-   `src/xxxx.*.html` 与 `sources/xxxx.*.wav`。
+1. **No end-to-end browser-interaction automation.** This environment has no usable browser
+   automation channel, so "click a Chapter to expand, drag the progress bar to seek, switch playback
+   speed, type an answer and press Check" are not covered by automated cases. What *is* covered:
+   the grading rules are executed for real in Node (see above), and the structure and semantics of
+   the generated HTML (`<details>` / `<summary>` / `role="slider"` / `aria-live` / `aria-controls`)
+   are statically asserted by `validate.py`. Please walk through [Local Preview](#local-preview) by
+   hand in a browser.
+2. **Actual sound output not verified.** WAV parameters were read back and checked with Python's
+   `wave` module, but "does it really play through a speaker" needs a browser session with an audio
+   device, which this tool did not have.
+3. **Mobile layout not verified on a real device.** The responsive breakpoint (640 px) is in place
+   but has not been stepped through on hardware or in a device emulator. The word table sits inside
+   `.table-wrap` (`overflow-x: auto`) so the page never scrolls horizontally.
+4. **Keyboard accessibility is only guaranteed at the code level** — semantic elements, a visible
+   focus ring, textual feedback, a focusable and operable progress bar. No screen reader was used
+   for testing.
+5. **Orphaned HTML is not cleaned up automatically.** The build never deletes files, to avoid
+   touching anything that is not a build artefact. If an article is removed, delete the matching
+   `src/xxxx.*.html` and `sources/xxxx.*.wav` by hand.
+
+---
+
+**[English](README.md) | [简体中文](README-CH.md)**

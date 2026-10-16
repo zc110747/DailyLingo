@@ -23,6 +23,12 @@
 
 生成物（`index.html`、`src/*.html`）**必须提交**，Pages 以仓库根为站点根。
 
+## 文档语言约定
+**`README.md` 是英文（默认），`README-CH.md` 是简体中文**，两份内容必须**同步维护**、
+结构对齐；顶部与底部都有 `[English](README.md) | [简体中文](README-CH.md)` 切换链接。
+改任一份都要同步改另一份；改章节标题后记得顺手更新 `.gitignore` 与
+`tests/test_frontend.py` 里指向 README 章节的注释。
+
 ## 硬约定
 1. 编号是永久 ID：四位补零，超过四位不截断；文件名 = `NNNN.Title_With_Underscores.md`，
    **文件名里不要有空格**（否则 `sources/` 音频名、页面链接、`href` 三处对不上）；
@@ -84,6 +90,8 @@ md 必须是 UTF-8。本仓现有 6 个 WAV 均为单声道 / 16 bit / 22 050 Hz
 - 已验证：`python scripts/build.py`（6 篇 / 1 个 Chapter / 0 警告）、
   `python scripts/validate.py`（PASS 207 / FAIL 0 / WARN 0）、`pytest -q`（99 passed）、
   本地 `http.server` 全部资源 200、`watch.py` 实测 touch 后 1 s 内重建（23 ms）。
-- 待人工验证：真实浏览器交互（折叠、拖进度条、倍速、点检查答案）、真机出声、移动端布局、
-  GitHub Pages 实际发布后的访问（`git push` 由用户自己做）。
+- **GitHub Pages 已实际发布并验证**：`https://zc110747.github.io/DailyLingo/` 首页与
+  css/js/wav 全部 200，首页正确列出 6 篇；WAV 返回 **206 Partial Content（支持 Range）**，
+  所以**线上拖动进度条可跳转**，而本地 `python -m http.server` 不支持 Range。
+- 待人工验证：真实浏览器交互（折叠、拖进度条、倍速、点检查答案）、真机出声、移动端布局。
 - 已无待确认项（`tests/example.md` 用户已自行删除）。
