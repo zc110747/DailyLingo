@@ -3,13 +3,14 @@
    使用 HTML5 Audio API 播放真实 WAV 文件；所有显示状态均与真实播放状态同步，
    不存在模拟进度条或伪造播放状态。
    支持：播放/暂停、当前时间、总时长、实时进度、点击与拖动跳转、
-        后退/前进 5 秒、0.75x~2x 倍速、音量、加载状态、播放结束、加载失败。
+        0.75x / 1x / 1.25x 倍速、音量、加载状态、播放结束、加载失败；
+        进度条支持键盘左右键（Shift 加速）微调。
    ========================================================================== */
 
 (function () {
   "use strict";
 
-  var RATES = [0.75, 1, 1.25, 1.5, 2];
+  var RATES = [0.75, 1, 1.25];
 
   function formatTime(seconds) {
     if (!isFinite(seconds) || seconds < 0) {
@@ -223,18 +224,6 @@
     if (toggle) {
       toggle.addEventListener("click", togglePlay);
     }
-
-    root.querySelectorAll('[data-action="back"]').forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        seekBy(-5);
-      });
-    });
-
-    root.querySelectorAll('[data-action="forward"]').forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        seekBy(5);
-      });
-    });
 
     rateButtons.forEach(function (btn) {
       btn.addEventListener("click", function () {

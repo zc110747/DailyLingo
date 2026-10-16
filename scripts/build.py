@@ -929,19 +929,15 @@ def _render_player(article: Article) -> str:
             </div>
           </div>
           <div class="player-controls">
-            <button type="button" class="btn btn-ghost" data-action="back" aria-label="后退 5 秒">&minus;5s</button>
-            <button type="button" class="btn btn-ghost" data-action="forward" aria-label="前进 5 秒">+5s</button>
-            <div class="player-rates" role="group" aria-label="播放速度">
-              <button type="button" class="rate" data-rate="0.75">0.75&times;</button>
-              <button type="button" class="rate is-active" data-rate="1">1&times;</button>
-              <button type="button" class="rate" data-rate="1.25">1.25&times;</button>
-              <button type="button" class="rate" data-rate="1.5">1.5&times;</button>
-              <button type="button" class="rate" data-rate="2">2&times;</button>
-            </div>
             <label class="player-volume">
               <span>音量</span>
               <input type="range" min="0" max="1" step="0.05" value="1" data-action="volume" aria-label="音量">
             </label>
+            <div class="player-rates" role="group" aria-label="播放速度">
+              <button type="button" class="rate" data-rate="0.75">0.75&times;</button>
+              <button type="button" class="rate is-active" data-rate="1">1&times;</button>
+              <button type="button" class="rate" data-rate="1.25">1.25&times;</button>
+            </div>
           </div>
         </div>"""
 
@@ -993,6 +989,7 @@ def render_article_page(article: Article) -> str:
     <section class="section section-article" id="article">
       <h2 class="section-title">Article</h2>
 {player_html}
+        <hr class="player-divider">
 {paragraph_html}
     </section>
 

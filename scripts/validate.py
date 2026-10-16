@@ -220,6 +220,24 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
             f"article={article_at} player={player_at} words={words_at} first_p={first_p}",
         )
 
+        # 播放器与正文之间的分隔线
+        divider_at = html.find('<hr class="player-divider">')
+        report.check(
+            f"{article.html_name} 播放器与正文之间有分隔线",
+            divider_at > player_at and (first_p < 0 or divider_at < first_p),
+            f"player={player_at} divider={divider_at} first_p={first_p}",
+        )
+
+        # 播放器控件：±5s 已移除，倍速只保留 0.75x / 1x / 1.25x
+        rates = re.findall(r'data-rate="([0-9.]+)"', html)
+        report.check(
+            f"{article.html_name} 播放器控件为音量 + 三档倍速（无 ±5s）",
+            rates == ["0.75", "1", "1.25"]
+            and 'data-action="back"' not in html
+            and 'data-action="forward"' not in html,
+            f"rates={rates}",
+        )
+
         # 音频
         audio_file = sources_dir / article.audio_name
         if audio_file.is_file():

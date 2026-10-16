@@ -11,7 +11,7 @@ committed as-is and served straight from GitHub Pages.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#quick-start)
 [![Runtime dependencies: none](https://img.shields.io/badge/runtime%20dependencies-none-success.svg)](#quick-start)
-[![Tests: 103 passed](https://img.shields.io/badge/tests-103%20passed-success.svg)](#verification-results)
+[![Tests: 106 passed](https://img.shields.io/badge/tests-106%20passed-success.svg)](#verification-results)
 [![Deploy: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#deployment-to-github-pages)
 
 **Live site:** <https://zc110747.github.io/DailyLingo/>
@@ -60,11 +60,12 @@ committed as-is and served straight from GitHub Pages.
 - **Five fixed sections per article** — `Article` / `Words` / `Questions` / `Answers` / `Continue`,
   always in that order, sharing one template, one stylesheet and one script.
 - **Real audio, not a mock** — an HTML5 Audio player wired to the actual WAV file. Play/pause,
-  elapsed time, duration, live progress, click-to-seek, drag-to-seek, ±5 s, `0.75x`–`2x` speed,
-  volume, loading/finished/error states — every indicator is driven by real playback events.
+  elapsed time, duration, live progress, click-to-seek, drag-to-seek, `0.75x` / `1x` / `1.25x`
+  speed, volume, loading/finished/error states — every indicator is driven by real playback events.
 - **Play first, then read** — the player sits directly under the `Article` heading and **above the
-  body text**, and sticks to the top of the viewport while you scroll, so you can start the audio
-  and then read along without ever scrolling back to the controls.
+  body text**, separated from it by a thin divider with breathing room on both sides, and sticks
+  to the top of the viewport while you scroll, so you can start the audio and then read along
+  without ever scrolling back to the controls.
 - **A real site icon** — a hand-authored SVG (open book + sound bars) with raster fallbacks, wired
   into every page. No CDN, no icon font, no build step: the files are committed as-is.
 - **Instant grading with no backend** — single-choice and fill-in-the-blank questions graded in the
@@ -415,8 +416,7 @@ actual playback** — there is no simulated progress bar and no faked play state
 - Click the progress bar to seek; press and drag to scrub (Pointer Events, so touch works)
 - Keyboard control of the progress bar: `←` / `→` 5 s (`Shift` 10 s), `Home` / `End`,
   `Space` / `Enter` to toggle playback
-- Back 5 s / forward 5 s
-- `0.75x` / `1x` / `1.25x` / `1.5x` / `2x` playback rate
+- `0.75x` / `1x` / `1.25x` playback rate
 - Volume control
 - Status messages: loading / buffering / ready / playing / paused / finished
 - An explicit error message when the audio file is missing or fails to load
@@ -646,14 +646,16 @@ DailyLingo 构建完成
 
 ```text
 $ python scripts/validate.py
-结果：PASS 227 / FAIL 0 / WARN 0
+结果：PASS 239 / FAIL 0 / WARN 0
 ```
 
 Covers: article data; number uniqueness and ascending order; Chapter range boundaries and the
 "only non-empty Chapters" rule; the homepage containing nothing but the brand and the directory
 (including negative checks for summaries / difficulty / audio status); the first Chapter being
 expanded; the order of the five sections; **the player sitting inside `Article`, under the heading
-and above the first paragraph**; **the icon files existing, being valid PNG/SVG, and being declared
+and above the first paragraph**; **a divider between the player and the body text**; **the player
+controls being volume plus exactly three speed buttons (`0.75x` / `1x` / `1.25x`, no ±5 s)**;
+**the icon files existing, being valid PNG/SVG, and being declared
 on every page with the right relative prefix**; browser title and heading consistency; word-table
 row counts; question counts; the grading key matching the Answers section; Answers being collapsed
 by default; previous/next links and titles; first/last article boundaries; absence of
@@ -663,12 +665,12 @@ root-absolute paths; existence of static assets; byte-identical rebuilds.
 
 ```text
 $ pytest -q
-103 passed in 12.24s
+106 passed in 2.16s
 ```
 
 | File | Cases | Coverage |
 |---|---|---|
-| `tests/test_build.py` | 99 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, **the player rendered above the body text (with and without a WAV)**, **icon declarations carrying the correct relative prefix, home page icon next to the brand, icon assets valid PNG/SVG with the expected dimensions**, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, GitHub Pages subpath, reproducible builds |
+| `tests/test_build.py` | 102 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, **the player rendered above the body text (with and without a WAV)**, **a divider between the player and the body text**, **no ±5 s buttons and exactly three speed buttons**, **icon declarations carrying the correct relative prefix, home page icon next to the brand, icon assets valid PNG/SVG with the expected dimensions**, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, GitHub Pages subpath, reproducible builds |
 | `tests/test_frontend.py` | 4 | Executes `assets/js/main.js` for real in Node: correct / incorrect / empty single-choice selections, case insensitivity, leading and trailing whitespace, trailing punctuation, multiple acceptable answers, blank input never correct; plus a sample-by-sample consistency check against `build.normalize_answer` |
 
 Every test uses temporary directories and never touches the real `content/` or `sources/`.
@@ -678,15 +680,15 @@ Every test uses temporary directories and never touches the real `content/` or `
 ```text
 $ python -m http.server 8123
 200 2055   text/html              <- /
-200 9984   text/html              <- /src/0001.A_New_Hobby.html
-200 13213  text/html              <- /src/0002.A_Busy_Morning.html
-200 12927  text/html              <- /src/0003.Helping_a_Neighbor.html
-200 15073  text/html              <- /src/0004.A_Day_at_the_Beach.html
-200 17558  text/html              <- /src/0005.A_Day_on_the_Farm.html
-200 11435  text/html              <- /src/0006.A_Visit_to_the_Library.html
-200 16371  text/css               <- /assets/css/style.css
+200 9617   text/html              <- /src/0001.A_New_Hobby.html
+200 12846  text/html              <- /src/0002.A_Busy_Morning.html
+200 12560  text/html              <- /src/0003.Helping_a_Neighbor.html
+200 14706  text/html              <- /src/0004.A_Day_at_the_Beach.html
+200 17191  text/html              <- /src/0005.A_Day_on_the_Farm.html
+200 11068  text/html              <- /src/0006.A_Visit_to_the_Library.html
+200 16857  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
-200 9894   application/javascript <- /assets/js/audio-player.js
+200 9610   application/javascript <- /assets/js/audio-player.js
 200 919    image/svg+xml          <- /assets/images/favicon.svg
 200 942    image/png              <- /assets/images/favicon-32.png
 200 4682   image/png              <- /assets/images/favicon-180.png

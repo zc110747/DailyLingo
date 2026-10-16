@@ -251,12 +251,20 @@ summary:focus-visible,
 /* -------------------------------------------------------------- 播放器 */
 
 .player {
-  margin: 0 0 16px;
-  padding: 8px 11px;
+  margin: 0;
+  padding: 12px 14px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+}
+
+/* 音频动作条与正文之间的分隔线：上下各留距离（下边距大于上边距，
+   让线更贴近播放器、正文更好起读）。不想要分隔线删掉这条即可。 */
+.player-divider {
+  margin: 16px 0 20px;
+  border: 0;
+  border-top: 1px solid var(--border);
 }
 
 /* 播放器位于 Article 标题之下、正文之上：先按播放再读文字。
@@ -419,12 +427,6 @@ summary:focus-visible,
   margin-top: 6px;
   padding-top: 6px;
   border-top: 1px solid var(--border);
-}
-
-/* 播放器内的按钮比全站 .btn 更紧凑 */
-.player-controls .btn {
-  padding: 2px 8px;
-  font-size: 11.5px;
 }
 
 .player-rates {
@@ -915,14 +917,6 @@ summary:focus-visible,
 
   .player-body {
     flex-basis: 100%;
-  }
-
-  .player-rates {
-    margin-left: 0;
-  }
-
-  .player-volume {
-    margin-left: auto;
   }
 
   .words-table th,

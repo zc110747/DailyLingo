@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#快速开始)
 [![运行期依赖: 无](https://img.shields.io/badge/%E8%BF%90%E8%A1%8C%E6%9C%9F%E4%BE%9D%E8%B5%96-none-success.svg)](#快速开始)
-[![测试: 103 passed](https://img.shields.io/badge/tests-103%20passed-success.svg)](#验证结果)
+[![测试: 106 passed](https://img.shields.io/badge/tests-106%20passed-success.svg)](#验证结果)
 [![部署: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#部署到-github-pages)
 
 **线上站点：** <https://zc110747.github.io/DailyLingo/>
@@ -59,10 +59,10 @@
 - **每篇文章五个固定区域** —— `Article` / `Words` / `Questions` / `Answers` / `Continue`，
   顺序恒定，所有文章共用同一套模板、样式与脚本。
 - **真实音频，不是模拟** —— HTML5 Audio 播放器直连真实 WAV。播放暂停、已播时间、总时长、
-  实时进度、点击跳转、拖动定位、±5 秒、`0.75x`–`2x` 倍速、音量、加载 / 结束 / 失败状态，
+  实时进度、点击跳转、拖动定位、`0.75x` / `1x` / `1.25x` 倍速、音量、加载 / 结束 / 失败状态，
   全部由真实播放事件驱动。
-- **先播放，再阅读** —— 播放器位于 `Article` 标题之下、**正文之上**，阅读长文时吸顶，
-  可以先点开音频，再顺着往下读，不必滚回顶部找控件。
+- **先播放，再阅读** —— 播放器位于 `Article` 标题之下、**正文之上**，与正文之间有一条细分隔线
+  且上下留出距离；阅读长文时吸顶，可以先点开音频，再顺着往下读，不必滚回顶部找控件。
 - **自带站点图标** —— 手写的 SVG（打开的书 + 声波）加光栅回退，全站每个页面都声明。
   不依赖 CDN、不用图标字体、没有构建步骤：文件原样提交。
 - **无需后端的即时判分** —— 单选与填空在浏览器内判分。忽略大小写、忽略首尾空白、容忍尾部标点；
@@ -394,8 +394,7 @@ end   = start + 99
 - 点击进度条跳转；按住拖动定位（Pointer Events，触屏可用）
 - 进度条键盘操作：`←` / `→` 5 秒（`Shift` 10 秒）、`Home` / `End`、
   `Space` / `Enter` 切换播放
-- 后退 5 秒 / 前进 5 秒
-- `0.75x` / `1x` / `1.25x` / `1.5x` / `2x` 倍速
+- `0.75x` / `1x` / `1.25x` 倍速
 - 音量调节
 - 状态提示：正在加载 / 缓冲中 / 已就绪 / 正在播放 / 已暂停 / 播放结束
 - 音频缺失或加载失败时的明确错误提示
@@ -608,12 +607,13 @@ DailyLingo 构建完成
 
 ```text
 $ python scripts/validate.py
-结果：PASS 227 / FAIL 0 / WARN 0
+结果：PASS 239 / FAIL 0 / WARN 0
 ```
 
 覆盖：文章数据；编号唯一性与升序；Chapter 区间边界与「只输出有真实文章的 Chapter」；
 首页只含品牌名与折叠目录（并做摘要 / 难度 / 音频状态的**反向**检查）；第一个 Chapter 默认展开；
-五个区域顺序；**播放器位于 `Article` 区内、标题之下、第一段正文之上**；
+五个区域顺序；**播放器位于 `Article` 区内、标题之下、第一段正文之上**；**播放器与正文之间有分隔线**；
+**播放器控件为音量 + 恰好三档倍速（`0.75x` / `1x` / `1.25x`，无 ±5 秒）**；
 **图标文件存在、PNG/SVG 有效、每个页面都以正确相对前缀声明**；浏览器标签与主标题一致性；
 单词表行数；题目数量；判分数据与 Answers 同源；Answers 默认折叠；上一篇 / 下一篇链接与标题；
 首末篇边界；无绝对根路径；静态资源存在性；重复构建字节级一致。
@@ -622,12 +622,12 @@ $ python scripts/validate.py
 
 ```text
 $ pytest -q
-103 passed in 12.24s
+106 passed in 2.16s
 ```
 
 | 文件 | 用例数 | 覆盖内容 |
 |---|---|---|
-| `tests/test_build.py` | 99 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、GitHub Pages 子路径、构建可重复 |
+| `tests/test_build.py` | 102 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**播放器与正文之间有分隔线**、**无 ±5 秒按钮且恰好三档倍速**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、GitHub Pages 子路径、构建可重复 |
 | `tests/test_frontend.py` | 4 | 在 Node 中真实执行 `assets/js/main.js`：单选正确 / 错误 / 空选、大小写不敏感、首尾空格、尾部标点、多个可接受答案、空白输入不判正确；并与 `build.normalize_answer` 做逐样本一致性比对 |
 
 测试全部使用临时目录，不会污染或覆盖真实的 `content/` 与 `sources/`。
@@ -637,15 +637,15 @@ $ pytest -q
 ```text
 $ python -m http.server 8123
 200 2055   text/html              <- /
-200 9984   text/html              <- /src/0001.A_New_Hobby.html
-200 13213  text/html              <- /src/0002.A_Busy_Morning.html
-200 12927  text/html              <- /src/0003.Helping_a_Neighbor.html
-200 15073  text/html              <- /src/0004.A_Day_at_the_Beach.html
-200 17558  text/html              <- /src/0005.A_Day_on_the_Farm.html
-200 11435  text/html              <- /src/0006.A_Visit_to_the_Library.html
-200 16371  text/css               <- /assets/css/style.css
+200 9617   text/html              <- /src/0001.A_New_Hobby.html
+200 12846  text/html              <- /src/0002.A_Busy_Morning.html
+200 12560  text/html              <- /src/0003.Helping_a_Neighbor.html
+200 14706  text/html              <- /src/0004.A_Day_at_the_Beach.html
+200 17191  text/html              <- /src/0005.A_Day_on_the_Farm.html
+200 11068  text/html              <- /src/0006.A_Visit_to_the_Library.html
+200 16857  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
-200 9894   application/javascript <- /assets/js/audio-player.js
+200 9610   application/javascript <- /assets/js/audio-player.js
 200 919    image/svg+xml          <- /assets/images/favicon.svg
 200 942    image/png              <- /assets/images/favicon-32.png
 200 4682   image/png              <- /assets/images/favicon-180.png

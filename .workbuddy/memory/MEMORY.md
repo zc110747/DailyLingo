@@ -54,20 +54,25 @@
    构建脚本与 `watch.py` 都遵守「不删文件」，只会提示。
    改名的配套动作：`git mv content/...` → 改 H1 → 改相邻文章 `## Continues` 里的交叉引用
    → 重新生成 WAV → 删旧产物 → 重新构建。编号**永不**随标题变化。
-12. 文章页 Article 区内顺序为 **`<h2>Article</h2>` → 播放器 → 正文段落**（诉求：先点开播放再读文字）；
+12. 文章页 Article 区内顺序为 **`<h2>Article</h2>` → 播放器 → `<hr class="player-divider">` → 正文段落**
+    （诉求：先点开播放再读文字；分隔线由用户要求，上下各有 16 / 20 px 间距）。
     播放器另加 `.section-article .player { position: sticky; top: 8px }` 在阅读长文时吸顶，
-    不想要吸顶删掉这条规则即可。`validate.py` 会断言这个顺序（有 / 无 WAV 两种情形都测）。
+    不想要吸顶删掉这条规则即可。`validate.py` 会断言顺序（有 / 无 WAV 两种情形都测）。
 13. 站点图标是**静态资产、随仓库提交**（不是构建产物，删不掉也不用生成）：
     `assets/images/favicon.svg`（设计源，打开的书 + 声波）、`favicon-32.png`、`favicon-180.png`；
     由 `build._render_icons(prefix)` 在每页 head 声明三条 link + `<meta name="theme-color">`
     （首页前缀 `""`、文章页 `"../"`），`build.THEME_COLOR = "#3166a4"`；首页品牌名左侧另有
     `class="brand-icon"`。**PNG 的光栅化脚本是一次性的，已删除**——要改图标需重写一个
     （纯标准库手写 PNG 编码 + 超采样即可，几何与 SVG 保持一致）。
-14. 播放器尺寸是「紧凑款」（用户要求整体约 1/2）：卡片高实测 136→78.7 px，进度条视觉高
-    **5 px**，靠 `.player-track::before`（18 px 高、`top:50%` + `margin-top:-9px`）把可点区域
-    撑到 **±9 px**。伪元素不是独立事件目标，`event.currentTarget` 仍是 `.player-track`。
-    **改这条命中区等于改可点范围**（实测：±7 px 有效、±11 px 无效）；
-    `.player-controls .btn` 有局部收窄，别误改全站 `.btn`。
+14. 播放器是「紧凑款」且**控件刻意做减法**（都是用户明确要求，别自行加回）：
+    - 尺寸：卡片高实测 136 → 85.7 px（padding `12px 14px`，留白是用户后来的要求）；
+      进度条视觉高 **5 px**，靠 `.player-track::before`（18 px 高、`top:50%` + `margin-top:-9px`）
+      把可点区域撑到 **±9 px**（实测 ±7 px 有效、±11 px 无效）。伪元素不是独立事件目标，
+      `event.currentTarget` 仍是 `.player-track`。
+    - **无 ±5 秒按钮**（`data-action="back"/"forward"` 已删除，JS 里的绑定也删了）；
+      跳转只靠点击 / 拖动进度条与键盘方向键（`←`/`→`）。
+    - **倍速只有 0.75x / 1x / 1.25x** 三档（`RATES` 数组与页面按钮同步），1x 默认激活。
+    - 控件行布局：`<label 音量>` 在前、`.player-rates` 在后靠 `margin-left: auto` 右对齐。
 
 ## 本机预览
 IDE 内置预览把 **文件所在目录**当站点根：`index.html`（仓库根）预览正常，而 `src/` 下的

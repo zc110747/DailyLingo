@@ -745,6 +745,35 @@ def test_player_placeholder_also_above_article_body(tmp_path):
     assert placeholder_at < html.index("My name is David.")
 
 
+def test_divider_between_player_and_article_body(tmp_path):
+    """播放器与正文之间必须有一条分隔线（有音频 / 缺音频两种情形都要有）。"""
+    # 先测「缺音频」再测「有音频」：两次 make_site 共用同一个 sources/ 目录，
+    # 已写入的 WAV 不会被清掉，顺序颠倒会让「缺音频」那条断言失真。
+    for audio, marker in (([], "player-unavailable"), (["0001.A.wav"], "data-player")):
+        result, out, _, _ = make_site(tmp_path, {"0001.A.md": article_md("A")}, audio=audio)
+        html = read(out / "src" / result.articles[0].html_name)
+        player_at = html.index(marker)
+        divider_at = html.index('<hr class="player-divider">')
+        assert player_at < divider_at < html.index("My name is David.")
+
+
+def test_player_has_no_plus_minus_five_second_buttons(tmp_path):
+    """±5s 按钮已按要求移除；跳转只靠点击 / 拖动进度条与键盘方向键。"""
+    result, out, _, _ = make_site(tmp_path, {"0001.A.md": article_md("A")}, audio=["0001.A.wav"])
+    html = read(out / "src" / result.articles[0].html_name)
+    assert 'data-action="back"' not in html
+    assert 'data-action="forward"' not in html
+
+
+def test_player_rate_buttons_are_the_three_requested_values(tmp_path):
+    """倍速只保留 0.75x / 1x / 1.25x，默认 1x 激活。"""
+    result, out, _, _ = make_site(tmp_path, {"0001.A.md": article_md("A")}, audio=["0001.A.wav"])
+    html = read(out / "src" / result.articles[0].html_name)
+    rates = re.findall(r'data-rate="([0-9.]+)"', html)
+    assert rates == ["0.75", "1", "1.25"]
+    assert re.search(r'class="rate is-active" data-rate="1"', html)
+
+
 def test_icons_declared_with_correct_relative_prefix(tmp_path):
     result, out, _, _ = make_site(tmp_path, {"0001.A.md": article_md("A")}, audio=["0001.A.wav"])
     index = read(out / "index.html")
