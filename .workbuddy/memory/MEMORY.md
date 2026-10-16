@@ -91,6 +91,9 @@ IDE 内置预览把 **文件所在目录**当站点根：`index.html`（仓库�
 - **答案四种写法可混用**：① 紧凑字母串（`BAC`，按题目顺序）；② `Question5: …`；
   ③ 分块；④ 编号答案列表 `1. **B. To the library.** 解释文字`（粗体里的选项字母当答案，
   粗体后的文字当解释；填空题同样适用）。
+  ④ 的序号点**允许被反斜杠转义**（`1\. **B. …**`）：编辑器为防自动有序列表常这么写，
+  CommonMark 里 `\.` 就是字面句点，两种写法等价。题干同理（`1. 题干` / `1\. 题干`）。
+  正则里写成 `\\?` 即可，别去全局删反斜杠。
 - 选项字母提取走 `build.extract_choice_key()`，判据严格：`cook`/`bamboo` 不会被误判成 `C`/`B`。
 - 题干里的 `______` 是内容，`strip_markdown` **不得**处理下划线强调。
 
@@ -100,9 +103,11 @@ WAV 由 **EnglishAudio**（Piper + ONNX，离线）生成：
 `watch.py --audio` 的定位顺序：`--audio-tool` > `DAILYLINGO_AUDIO_TOOL` >
 `<仓库>/tools/eaudio.cmd` > 上面那个 publisher 路径；都找不到只提示不中断。
 只朗读 `## Article` 章节，输出与 md 同名的 WAV，正文含非英文会被拒绝（退出码 4），
-md 必须是 UTF-8。本仓现有 6 个 WAV 均为单声道 / 16 bit / 22 050 Hz。
+md 必须是 UTF-8。本仓现有 7 个 WAV 均为单声道 / 16 bit / 22 050 Hz。
+直接跑 `EnglishAudio.exe <md> --dist=sources`（`MSYS_NO_PATHCONV=1`，从仓库根执行）比走
+`.cmd` 包装更省事：stdout 能正常看到它自己的 banner（含字数 / 时长 / 字节数 / RTF）。
 
-## 文章清单（6 篇，全部在 Chapter 0001–0100）
+## 文章清单（7 篇，全部在 Chapter 0001–0100）
 | 编号 | 文件 | 标题 |
 |---|---|---|
 | 0001 | `0001.A_New_Hobby.md` | A New Hobby |
@@ -111,18 +116,22 @@ md 必须是 UTF-8。本仓现有 6 个 WAV 均为单声道 / 16 bit / 22 050 Hz
 | 0004 | `0004.A_Day_at_the_Beach.md` | A Day at the Beach |
 | 0005 | `0005.A_Day_on_the_Farm.md` | A Day on the Farm（原名 A Busy Morning，与 0002 撞名，已改） |
 | 0006 | `0006.A_Visit_to_the_Library.md` | A Visit to the Library |
+| 0007 | `0007.A_Day_at_the_Market.md` | A Day at the Market |
 
 ## 已验证 / 待验证
-- 已验证：`python scripts/build.py`（6 篇 / 1 个 Chapter / 0 警告）、
-  `python scripts/validate.py`（PASS 227 / FAIL 0 / WARN 0）、`pytest -q`（103 passed）、
-  本地 `http.server` 16 条路径全 200（含 `image/svg+xml`、`image/png`）、
+- 已验证：`python scripts/build.py`（7 篇 / 1 个 Chapter / 0 警告）、
+  `python scripts/validate.py`（PASS 274 / FAIL 0 / WARN 0）、`pytest -q`（108 passed）、
+  本地 `http.server` 22 条路径全 200（含 `image/svg+xml`、`image/png`、Range 206）、
   `watch.py` 实测 touch 后 1 s 内重建（23 ms）。
 - **GitHub Pages 已实际发布并验证**：`https://zc110747.github.io/DailyLingo/` 首页与
-  css/js/wav 全部 200，首页正确列出 6 篇；WAV 返回 **206 Partial Content（支持 Range）**，
+  css/js/wav 全部 200；WAV 返回 **206 Partial Content（支持 Range）**，
   所以**线上拖动进度条可跳转**，而本地 `python -m http.server` 不支持 Range。
 - 待人工验证：真实浏览器交互（折叠、拖进度条、倍速、点检查答案）、真机出声、移动端布局。
 - 播放器尺寸/命中区已用 headless Chromium 实测（`getBoundingClientRect()` + 真实点按/拖动）：
-  卡片 136→78.7 px、滑柄中心偏移 0.00 px、点按 ±7 px 命中而 ±11 px 不命中、拖到 60% 得 22 s。
+  卡片 136 → **85.7 px**（早期一版 78.7 px，后因「第一行与外框要留白」加了 padding）、
+  滑柄中心偏移 0.00 px、点按 ±7 px 命中而 ±11 px 不命中、拖到 60% 得 22 s。
+- 一次性验证脚本（playwright 截图、进程内 `http.server` 探测）放 `.workbuddy/tmp/`，
+  **已 gitignore，跑完即删**，不要留在仓库里。
   测法：`NODE_PATH=~/.workbuddy/binaries/node/workspace/node_modules` 跑 playwright，
   直接开 `file:///…/src/xxx.html`（**不用起 http 服务**）；`<audio>` 不在 DOM 里，取状态看
   `aria-valuenow` / `aria-valuemax` / `[data-role=current]` 文本。

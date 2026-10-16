@@ -544,6 +544,52 @@ def test_numbered_answer_list_with_bold_option_and_explanation(tmp_path):
     assert "Emma goes to the library." in html
 
 
+def test_numbered_answer_list_with_escaped_dot(tmp_path):
+    """``1\\. **B. …** 解释`` —— 序号点被反斜杠转义时同样要能解析。
+
+    编辑器常把 ``1.`` 自动写成 ``1\\.`` 以免被转成有序列表（CommonMark 里 ``\\.`` 就是
+    字面句点），所以这是等价的合法写法，不能被判成「缺少答案」。
+    """
+    questions = (
+        "Question 1：Where does Emma go?\n\nA. To the supermarket.\n\nB. To the library.\n\nC. To the park.\n\n"
+        "Question 2：Which floor are the books on?\n\nA. The first floor.\n\nB. The second floor.\n\nC. The third floor."
+    )
+    answers = (
+        "1\\. **B. To the library.** Emma goes to the library.\n\n"
+        "2\\. **B. The second floor.** The woman tells Emma."
+    )
+    result, out, _, _ = make_site(
+        tmp_path, {"0001.A.md": article_md("A", questions=questions, answers=answers)}
+    )
+    parsed = result.articles[0].questions
+    assert [q.answer for q in parsed] == ["B", "B"]
+    assert [q.explanation for q in parsed] == [
+        "Emma goes to the library.",
+        "The woman tells Emma.",
+    ]
+    html = read(out / "src" / result.articles[0].html_name)
+    assert "1\\." not in html          # 转义反斜杠不能漏到页面上
+    assert "Emma goes to the library." in html
+
+
+def test_numbered_question_with_escaped_dot(tmp_path):
+    """题干写成 ``1\\. **…**`` 时也要被识别成第 1 题。"""
+    questions = (
+        "1\\. **Where does Emma go?**\n\nA. To the supermarket.\n\nB. To the library.\n\nC. To the park.\n\n"
+        "2\\. **Which floor are the books on?**\n\nA. The first floor.\n\nB. The second floor.\n\nC. The third floor."
+    )
+    result, _, _, _ = make_site(
+        tmp_path, {"0001.A.md": article_md("A", questions=questions, answers="BA")}
+    )
+    parsed = result.articles[0].questions
+    assert len(parsed) == 2
+    assert [q.text for q in parsed] == [
+        "Where does Emma go?",
+        "Which floor are the books on?",
+    ]
+    assert [q.answer for q in parsed] == ["B", "A"]
+
+
 def test_numbered_answer_without_explanation_uses_option_text(tmp_path):
     """粗体后没有解释时，把选项原文当解释，Answers 区不会只剩一个字母。"""
     result, _, _, _ = make_site(tmp_path, {"0001.A.md": article_md("A", answers="1. **B. How to cook**")})

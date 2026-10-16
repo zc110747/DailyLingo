@@ -25,6 +25,9 @@ desktop.ini
 # 供 IDE 内置预览（以文件所在目录为站点根）直接看到带样式的页面。纯本机用，不入库。
 .workbuddy/preview/
 
+# 一次性验证脚本（playwright 截图、进程内 http.server 探测等）：跑完即删，不留仓库。
+.workbuddy/tmp/
+
 # ---- 本地语音工具（不进仓库） ----
 # EnglishAudio 打包产物约 100 MB（含 63 MB 语音模型），且已在其它仓库维护，
 # 因此不在本仓库再存一份。放到 tools/ 下仅本机可用，不会污染 Git 状态。

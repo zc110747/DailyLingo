@@ -11,7 +11,7 @@ committed as-is and served straight from GitHub Pages.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#quick-start)
 [![Runtime dependencies: none](https://img.shields.io/badge/runtime%20dependencies-none-success.svg)](#quick-start)
-[![Tests: 106 passed](https://img.shields.io/badge/tests-106%20passed-success.svg)](#verification-results)
+[![Tests: 108 passed](https://img.shields.io/badge/tests-108%20passed-success.svg)](#verification-results)
 [![Deploy: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#deployment-to-github-pages)
 
 **Live site:** <https://zc110747.github.io/DailyLingo/>
@@ -125,15 +125,16 @@ DailyLingo/
 │   ├── 0003.Helping_a_Neighbor.html
 │   ├── 0004.A_Day_at_the_Beach.html
 │   ├── 0005.A_Day_on_the_Farm.html
-│   └── 0006.A_Visit_to_the_Library.html
+│   ├── 0006.A_Visit_to_the_Library.html
+│   └── 0007.A_Day_at_the_Market.html
 ├── content/                    # Article source of truth (Markdown)
 │   ├── 0001.A_New_Hobby.md
 │   ├── …
-│   └── 0006.A_Visit_to_the_Library.md
+│   └── 0007.A_Day_at_the_Market.md
 ├── sources/                    # WAV files from the external TTS tool (same basename as the .md)
 │   ├── 0001.A_New_Hobby.wav
 │   ├── …
-│   └── 0006.A_Visit_to_the_Library.wav
+│   └── 0007.A_Day_at_the_Market.wav
 ├── assets/
 │   ├── css/style.css           # Site-wide styles (desktop + mobile)
 │   ├── js/audio-player.js      # Audio player
@@ -297,8 +298,11 @@ Notes:
      The letter detector is deliberately strict, so words such as `cook` or `bamboo` are never
      misread as option `C` or `B` (see `build.extract_choice_key` and
      `tests/test_build.py::test_extract_choice_key`).
+     The period after the number may be **escaped** — `1\. **B. …**`, which is what editors emit to
+     stop the line from turning into an ordered list. In CommonMark `\.` is just a literal period,
+     so both spellings are accepted and produce identical output.
 - Question stems may be written as `Question 1：…` (half- or full-width colon), `**stem**`,
-  `## Q1`, or `1. stem`.
+  `## Q1`, or `1. stem` (again with either `1.` or `1\.`).
 - `## Continues` (or `## Continue`) is ignored by the build — previous/next links and the table of
   contents are always generated, never maintained by hand.
 
@@ -342,6 +346,7 @@ DailyLingo
     0004. A Day at the Beach
     0005. A Day on the Farm
     0006. A Visit to the Library
+    0007. A Day at the Market
 ```
 
 ### Grouping algorithm (`build.chapter_bounds` / `build.group_chapters`)
@@ -467,7 +472,7 @@ The tool only reads the `## Article` section — `## Words`, `## Questions`, `##
 > not detect that the text changed, so an edited article keeps a stale recording until you re-run
 > the tool.
 
-All six WAV files in this repository were produced by that tool. Measured parameters (read back with
+All seven WAV files in this repository were produced by that tool. Measured parameters (read back with
 Python's `wave` module):
 
 | File | Channels / bit depth / sample rate | Duration | Size |
@@ -478,6 +483,7 @@ Python's `wave` module):
 | `0004.A_Day_at_the_Beach.wav` | mono / 16 bit / 22 050 Hz | 56.23 s | 2 479 932 B |
 | `0005.A_Day_on_the_Farm.wav` | mono / 16 bit / 22 050 Hz | 81.22 s | 3 581 660 B |
 | `0006.A_Visit_to_the_Library.wav` | mono / 16 bit / 22 050 Hz | 44.32 s | 1 954 552 B |
+| `0007.A_Day_at_the_Market.wav` | mono / 16 bit / 22 050 Hz | 54.75 s | 2 414 676 B |
 
 ### Auto-Rebuild on Markdown Changes
 
@@ -495,7 +501,7 @@ removed.
 
 Behaviour:
 
-- **Full rebuild** (six articles in under 0.2 s): adding or removing an article changes the
+- **Full rebuild** (seven articles in under 0.2 s): adding or removing an article changes the
   previous/next links of its neighbours, so rewriting only the changed page would leave the site
   subtly inconsistent.
 - A malformed Markdown file **prints an error and keeps watching** — fix it and save again.
@@ -559,7 +565,7 @@ Adjust the branch or folder if this repository is configured differently.
 1. Create a Markdown file in `content/` using an **unused number**:
 
    ```text
-   content/0007.My_Weekend.md
+   content/0008.My_Weekend.md
    ```
 
 2. Write the raw title and body: `# My Weekend`, then `## Article`.
@@ -569,7 +575,7 @@ Adjust the branch or folder if this repository is configured differently.
 
    ```bat
    "D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
-     "content\0007.My_Weekend.md" --dist="sources"
+     "content\0008.My_Weekend.md" --dist="sources"
    ```
 
 5. Rebuild and self-check — or, better, leave `python scripts/watch.py --audio` running, in which
@@ -633,10 +639,11 @@ $ python scripts/build.py --verbose
   文章 0004  A Day at the Beach  |  7 词  6 题  |  音频 有
   文章 0005  A Day on the Farm  |  11 词  7 题  |  音频 有
   文章 0006  A Visit to the Library  |  9 词  3 题  |  音频 有
+  文章 0007  A Day at the Market  |  8 词  5 题  |  音频 有
 DailyLingo 构建完成
-  文章总数：6
+  文章总数：7
   Chapter 分组：1
-    Chapter 0001–0100（默认展开）：6 篇
+    Chapter 0001–0100（默认展开）：7 篇
   警告：0 条
 ```
 
@@ -646,7 +653,7 @@ DailyLingo 构建完成
 
 ```text
 $ python scripts/validate.py
-结果：PASS 239 / FAIL 0 / WARN 0
+结果：PASS 274 / FAIL 0 / WARN 0
 ```
 
 Covers: article data; number uniqueness and ascending order; Chapter range boundaries and the
@@ -665,12 +672,12 @@ root-absolute paths; existence of static assets; byte-identical rebuilds.
 
 ```text
 $ pytest -q
-106 passed in 2.16s
+108 passed in 2.39s
 ```
 
 | File | Cases | Coverage |
 |---|---|---|
-| `tests/test_build.py` | 102 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, **the player rendered above the body text (with and without a WAV)**, **a divider between the player and the body text**, **no ±5 s buttons and exactly three speed buttons**, **icon declarations carrying the correct relative prefix, home page icon next to the brand, icon assets valid PNG/SVG with the expected dimensions**, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, GitHub Pages subpath, reproducible builds |
+| `tests/test_build.py` | 104 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`, both the plain and the escaped `1\.` spelling, for stems and answers alike), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, **the player rendered above the body text (with and without a WAV)**, **a divider between the player and the body text**, **no ±5 s buttons and exactly three speed buttons**, **icon declarations carrying the correct relative prefix, home page icon next to the brand, icon assets valid PNG/SVG with the expected dimensions**, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, GitHub Pages subpath, reproducible builds |
 | `tests/test_frontend.py` | 4 | Executes `assets/js/main.js` for real in Node: correct / incorrect / empty single-choice selections, case insensitivity, leading and trailing whitespace, trailing punctuation, multiple acceptable answers, blank input never correct; plus a sample-by-sample consistency check against `build.normalize_answer` |
 
 Every test uses temporary directories and never touches the real `content/` or `sources/`.
@@ -679,13 +686,14 @@ Every test uses temporary directories and never touches the real `content/` or `
 
 ```text
 $ python -m http.server 8123
-200 2055   text/html              <- /
+200 2169   text/html              <- /
 200 9617   text/html              <- /src/0001.A_New_Hobby.html
 200 12846  text/html              <- /src/0002.A_Busy_Morning.html
 200 12560  text/html              <- /src/0003.Helping_a_Neighbor.html
 200 14706  text/html              <- /src/0004.A_Day_at_the_Beach.html
 200 17191  text/html              <- /src/0005.A_Day_on_the_Farm.html
-200 11068  text/html              <- /src/0006.A_Visit_to_the_Library.html
+200 11117  text/html              <- /src/0006.A_Visit_to_the_Library.html
+200 14214  text/html              <- /src/0007.A_Day_at_the_Market.html
 200 16857  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
 200 9610   application/javascript <- /assets/js/audio-player.js
@@ -693,8 +701,13 @@ $ python -m http.server 8123
 200 942    image/png              <- /assets/images/favicon-32.png
 200 4682   image/png              <- /assets/images/favicon-180.png
 200 1641488 audio/wav             <- /sources/0001.A_New_Hobby.wav
+200 2044944 audio/wav             <- /sources/0002.A_Busy_Morning.wav
+200 2224164 audio/wav             <- /sources/0003.Helping_a_Neighbor.wav
+200 2479932 audio/wav             <- /sources/0004.A_Day_at_the_Beach.wav
 200 3581660 audio/wav             <- /sources/0005.A_Day_on_the_Farm.wav
 200 1954552 audio/wav             <- /sources/0006.A_Visit_to_the_Library.wav
+200 2414676 audio/wav             <- /sources/0007.A_Day_at_the_Market.wav
+206 audio/wav (Range)          <- /sources/0007.A_Day_at_the_Market.wav
 ```
 
 ### Published site
@@ -710,7 +723,7 @@ $ curl -I https://zc110747.github.io/DailyLingo/
 206  Partial Content (Range)        <- /sources/0001.A_New_Hobby.wav
 ```
 
-The homepage served from GitHub Pages lists all six articles under `Chapter 0001–0100`. WAV
+The homepage served from GitHub Pages lists all seven articles under `Chapter 0001–0100`. WAV
 responses support HTTP Range requests (`206 Partial Content`), so seeking works on the live site.
 
 ### Real defects found and fixed during development
@@ -728,6 +741,14 @@ responses support HTTP Range requests (`206 Partial Content`), so seeking works 
   `QuestionN:` and block forms, so the build failed with `Q1/Q2/Q3 missing answer`. `apply_answers`
   now supports this form (plus `extract_choice_key`, whose strict matching stops `cook` and `bamboo`
   from being read as `C` and `B`), backed by 5 regression tests and 11 parameterised boundary cases.
+- **Escaped list markers made the answers unparsable.** The new `0007` wrote its answers as
+  `1\. **B. Her mother.** …` — the period escaped with a backslash, which is what markdown editors
+  emit to avoid auto-numbering, and in CommonMark it is simply a literal period. The numbered-list
+  pattern expected a bare `.`, so no answer was matched and the build aborted with
+  `Q1…Q5 missing answer`. `_ANS_NUMBERED_RE`, `_Q_NUMBERED_RE` and `_ANS_CHOICE_KEY_RE` now accept
+  an optional backslash before the separator, so `1.` and `1\.` are interchangeable for both stems
+  and answers; two regression tests cover it, including a check that the backslash never leaks into
+  the rendered page.
 - **Spaces in filenames.** `0006.A_Visit_to_the Library.md` desynchronised the `sources/` audio
   filename from the page links (the generated `href` contained a space too). The file was renamed to
   underscore form (`0006.A_Visit_to_the_Library.md` / `.wav`) and the old files were removed.

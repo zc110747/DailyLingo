@@ -112,7 +112,9 @@ _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 _Q_HEAD_RE = re.compile(r"^#{2,6}\s*Q(\d+)\s*[:：.]?\s*(.*)$", re.I)
 _Q_LABEL_RE = re.compile(r"^Question\s+(\d+)\s*[:：.]\s*(.*)$", re.I)
 _Q_BOLD_RE = re.compile(r"^\*\*(.+?)\*\*\s*$")
-_Q_NUMBERED_RE = re.compile(r"^(\d+)\s*[.、)]\s+(.+)$")
+# 序号后的分隔点允许被反斜杠转义：``1. 题干`` 与 ``1\. 题干`` 等价
+# （CommonMark 里 ``\.`` 就是字面句点，编辑器常为防自动列表而自动加上）
+_Q_NUMBERED_RE = re.compile(r"^(\d+)\\?\s*[.、)]\s+(.+)$")
 _OPTION_RE = re.compile(r"^[-*+]?\s*([A-Za-z])\s*[.、)]\s*(.+)$")
 _TYPE_RE = re.compile(r"^(?:题型|类型|type)\s*[:：]\s*(.+?)\s*$", re.I)
 _BLANK_RE = re.compile(r"_{2,}|…{2,}|\.{4,}")
@@ -125,9 +127,10 @@ _ANS_EXPLAIN_RE = re.compile(r"^(?:解释|说明|explanation|解析)\s*[:：]\s*
 _COMPACT_KEY_RE = re.compile(r"^[A-Da-d]+$")
 _ACCEPT_SPLIT_RE = re.compile(r"\s*[,，、;；/|]\s*")
 # 编号答案列表：``1. **B. To the library.** 解释文字``
-_ANS_NUMBERED_RE = re.compile(r"^(\d+)\s*[.、)]\s+(.*)$")
+# 分隔点同样允许 ``1\.`` 这种被转义的写法。
+_ANS_NUMBERED_RE = re.compile(r"^(\d+)\\?\s*[.、)]\s+(.*)$")
 _ANS_BOLD_HEAD_RE = re.compile(r"^\*\*(.+?)\*\*\s*(.*)$")
-_ANS_CHOICE_KEY_RE = re.compile(r"^([A-Za-z])\s*[.、)]\s*(.*)$")
+_ANS_CHOICE_KEY_RE = re.compile(r"^([A-Za-z])\\?\s*[.、)]\s*(.*)$")
 _ANS_SINGLE_LETTER_RE = re.compile(r"^([A-Za-z])$")
 
 TYPE_CHOICE = "choice"
@@ -512,7 +515,8 @@ def apply_answers(questions: list[Question], lines: Sequence[str]) -> None:
       * 单题行         ``Question5: ...``   → 赋给第 5 题
       * 分块           ``## Q1`` + ``答案：B`` / ``可接受答案：…`` / ``解释：…``
       * 编号答案列表   ``1. **B. To the library.** 解释`` → 赋给第 1 题，
-                       粗体里的选项字母作为答案，粗体后的文字作为解释
+                       粗体里的选项字母作为答案，粗体后的文字作为解释；
+                       序号点被转义成 ``1\\.`` 的写法同样识别
     """
     entries: dict[int, dict] = {}
     compact: str | None = None

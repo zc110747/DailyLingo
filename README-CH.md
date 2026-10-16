@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#快速开始)
 [![运行期依赖: 无](https://img.shields.io/badge/%E8%BF%90%E8%A1%8C%E6%9C%9F%E4%BE%9D%E8%B5%96-none-success.svg)](#快速开始)
-[![测试: 106 passed](https://img.shields.io/badge/tests-106%20passed-success.svg)](#验证结果)
+[![测试: 108 passed](https://img.shields.io/badge/tests-108%20passed-success.svg)](#验证结果)
 [![部署: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#部署到-github-pages)
 
 **线上站点：** <https://zc110747.github.io/DailyLingo/>
@@ -119,15 +119,16 @@ DailyLingo/
 │   ├── 0003.Helping_a_Neighbor.html
 │   ├── 0004.A_Day_at_the_Beach.html
 │   ├── 0005.A_Day_on_the_Farm.html
-│   └── 0006.A_Visit_to_the_Library.html
+│   ├── 0006.A_Visit_to_the_Library.html
+│   └── 0007.A_Day_at_the_Market.html
 ├── content/                    # 文章唯一维护源（Markdown）
 │   ├── 0001.A_New_Hobby.md
 │   ├── …
-│   └── 0006.A_Visit_to_the_Library.md
+│   └── 0007.A_Day_at_the_Market.md
 ├── sources/                    # 外部 TTS 工具生成的 WAV（与 md 同名）
 │   ├── 0001.A_New_Hobby.wav
 │   ├── …
-│   └── 0006.A_Visit_to_the_Library.wav
+│   └── 0007.A_Day_at_the_Market.wav
 ├── assets/
 │   ├── css/style.css           # 全站统一样式（桌面 + 移动）
 │   ├── js/audio-player.js      # 音频播放器
@@ -284,7 +285,10 @@ BAC
      （`1. cook` / `1. **cook**`）。
      字母判据刻意从严，`cook`、`bamboo` 这类单词不会被误判成选项 `C` / `B`
      （见 `build.extract_choice_key` 与 `tests/test_build.py::test_extract_choice_key`）。
-- 题干支持 `Question 1：…`（半角/全角冒号均可）、`**题干**`、`## Q1`、`1. 题干` 等写法。
+     序号后的点**允许被反斜杠转义** —— `1\. **B. …**`，这是编辑器为了不让该行变成有序列表而
+     自动写的形态；CommonMark 里 `\.` 就是字面句点，所以两种写法等价，输出完全一致。
+- 题干支持 `Question 1：…`（半角/全角冒号均可）、`**题干**`、`## Q1`、`1. 题干`
+  （序号点写成 `1\.` 同样可以）等写法。
 - `## Continues`（或 `## Continue`）会被构建忽略 —— 上一篇 / 下一篇与目录始终自动生成，
   不需要人工维护。
 
@@ -327,6 +331,7 @@ DailyLingo
     0004. A Day at the Beach
     0005. A Day on the Farm
     0006. A Visit to the Library
+    0007. A Day at the Market
 ```
 
 ### 分组算法（`build.chapter_bounds` / `build.group_chapters`）
@@ -439,7 +444,7 @@ python scripts/watch.py --audio
 > **改了正文就必须重新生成 WAV。** 同步脚本只在文件**缺失**时补齐，不检测内容过期，
 > 所以改过正文的文章会一直保留过期录音，直到你重跑一次工具。
 
-本仓库 6 个 WAV 均由该工具生成，参数用 Python `wave` 模块读出核对：
+本仓库 7 个 WAV 均由该工具生成，参数用 Python `wave` 模块读出核对：
 
 | 文件 | 声道 / 位深 / 采样率 | 时长 | 大小 |
 |---|---|---|---|
@@ -449,6 +454,7 @@ python scripts/watch.py --audio
 | `0004.A_Day_at_the_Beach.wav` | 单声道 / 16 bit / 22 050 Hz | 56.23 s | 2 479 932 B |
 | `0005.A_Day_on_the_Farm.wav` | 单声道 / 16 bit / 22 050 Hz | 81.22 s | 3 581 660 B |
 | `0006.A_Visit_to_the_Library.wav` | 单声道 / 16 bit / 22 050 Hz | 44.32 s | 1 954 552 B |
+| `0007.A_Day_at_the_Market.wav` | 单声道 / 16 bit / 22 050 Hz | 54.75 s | 2 414 676 B |
 
 ### 改完 Markdown 自动重建
 
@@ -465,7 +471,7 @@ python scripts/watch.py --audio
 
 行为约定：
 
-- **全量重建**（6 篇 < 0.2 s）：新增或删除一篇文章会改变相邻文章的上一篇 / 下一篇，
+- **全量重建**（7 篇 < 0.2 s）：新增或删除一篇文章会改变相邻文章的上一篇 / 下一篇，
   只重写「变化的那一页」会留下不一致的假象。
 - Markdown 写坏时**只打印错误并继续监听**，不会退出；修好再保存即可重建成功。
 - 被删除文章遗留的 `src/*.html` 只提示、**不自动删除**（构建脚本同样不删文件）。
@@ -526,7 +532,7 @@ python -m http.server 8000
 1. 在 `content/` 新建 Markdown，文件名用**未占用的编号**：
 
    ```text
-   content/0007.My_Weekend.md
+   content/0008.My_Weekend.md
    ```
 
 2. 写原始标题与正文：`# My Weekend`，然后 `## Article`。
@@ -536,7 +542,7 @@ python -m http.server 8000
 
    ```bat
    "D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
-     "content\0007.My_Weekend.md" --dist="sources"
+     "content\0008.My_Weekend.md" --dist="sources"
    ```
 
 5. 重建与自检 —— 或者更省事：先开着 `python scripts/watch.py --audio`，
@@ -596,10 +602,11 @@ $ python scripts/build.py --verbose
   文章 0004  A Day at the Beach  |  7 词  6 题  |  音频 有
   文章 0005  A Day on the Farm  |  11 词  7 题  |  音频 有
   文章 0006  A Visit to the Library  |  9 词  3 题  |  音频 有
+  文章 0007  A Day at the Market  |  8 词  5 题  |  音频 有
 DailyLingo 构建完成
-  文章总数：6
+  文章总数：7
   Chapter 分组：1
-    Chapter 0001–0100（默认展开）：6 篇
+    Chapter 0001–0100（默认展开）：7 篇
   警告：0 条
 ```
 
@@ -607,7 +614,7 @@ DailyLingo 构建完成
 
 ```text
 $ python scripts/validate.py
-结果：PASS 239 / FAIL 0 / WARN 0
+结果：PASS 274 / FAIL 0 / WARN 0
 ```
 
 覆盖：文章数据；编号唯一性与升序；Chapter 区间边界与「只输出有真实文章的 Chapter」；
@@ -622,12 +629,12 @@ $ python scripts/validate.py
 
 ```text
 $ pytest -q
-106 passed in 2.16s
+108 passed in 2.39s
 ```
 
 | 文件 | 用例数 | 覆盖内容 |
 |---|---|---|
-| `tests/test_build.py` | 102 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**播放器与正文之间有分隔线**、**无 ±5 秒按钮且恰好三档倍速**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、GitHub Pages 子路径、构建可重复 |
+| `tests/test_build.py` | 104 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`，含被转义的 `1\.` 写法，题干与答案都测）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**播放器与正文之间有分隔线**、**无 ±5 秒按钮且恰好三档倍速**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、GitHub Pages 子路径、构建可重复 |
 | `tests/test_frontend.py` | 4 | 在 Node 中真实执行 `assets/js/main.js`：单选正确 / 错误 / 空选、大小写不敏感、首尾空格、尾部标点、多个可接受答案、空白输入不判正确；并与 `build.normalize_answer` 做逐样本一致性比对 |
 
 测试全部使用临时目录，不会污染或覆盖真实的 `content/` 与 `sources/`。
@@ -636,13 +643,14 @@ $ pytest -q
 
 ```text
 $ python -m http.server 8123
-200 2055   text/html              <- /
+200 2169   text/html              <- /
 200 9617   text/html              <- /src/0001.A_New_Hobby.html
 200 12846  text/html              <- /src/0002.A_Busy_Morning.html
 200 12560  text/html              <- /src/0003.Helping_a_Neighbor.html
 200 14706  text/html              <- /src/0004.A_Day_at_the_Beach.html
 200 17191  text/html              <- /src/0005.A_Day_on_the_Farm.html
-200 11068  text/html              <- /src/0006.A_Visit_to_the_Library.html
+200 11117  text/html              <- /src/0006.A_Visit_to_the_Library.html
+200 14214  text/html              <- /src/0007.A_Day_at_the_Market.html
 200 16857  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
 200 9610   application/javascript <- /assets/js/audio-player.js
@@ -650,8 +658,13 @@ $ python -m http.server 8123
 200 942    image/png              <- /assets/images/favicon-32.png
 200 4682   image/png              <- /assets/images/favicon-180.png
 200 1641488 audio/wav             <- /sources/0001.A_New_Hobby.wav
+200 2044944 audio/wav             <- /sources/0002.A_Busy_Morning.wav
+200 2224164 audio/wav             <- /sources/0003.Helping_a_Neighbor.wav
+200 2479932 audio/wav             <- /sources/0004.A_Day_at_the_Beach.wav
 200 3581660 audio/wav             <- /sources/0005.A_Day_on_the_Farm.wav
 200 1954552 audio/wav             <- /sources/0006.A_Visit_to_the_Library.wav
+200 2414676 audio/wav             <- /sources/0007.A_Day_at_the_Market.wav
+206 audio/wav (Range)          <- /sources/0007.A_Day_at_the_Market.wav
 ```
 
 ### 线上发布
@@ -667,7 +680,7 @@ $ curl -I https://zc110747.github.io/DailyLingo/
 206  Partial Content (Range)        <- /sources/0001.A_New_Hobby.wav
 ```
 
-GitHub Pages 上返回的首页列出的正是全部 6 篇文章，归属于 `Chapter 0001–0100`。
+GitHub Pages 上返回的首页列出的正是全部 7 篇文章，归属于 `Chapter 0001–0100`。
 WAV 响应支持 HTTP Range 请求（`206 Partial Content`），因此线上拖动进度条可正常跳转。
 
 ### 开发过程中发现并修复的真实缺陷
@@ -683,6 +696,12 @@ WAV 响应支持 HTTP Range 请求（`206 Partial Content`），因此线上拖�
   `Q1/Q2/Q3 缺少答案` 构建失败。`apply_answers` 已支持这种写法
   （并新增 `extract_choice_key`，用严格判据避免把 `cook`、`bamboo` 误判成 `C`、`B`），
   附 5 个回归测试 + 11 组参数化边界用例。
+- **转义过的列表序号让答案解析不到**：新增的 `0007` 把答案写成 `1\. **B. Her mother.** …`，
+  序号后的点被反斜杠转义（编辑器为了不让该行被自动编号成有序列表就常这么写，CommonMark 里
+  `\.` 就是字面句点）。编号列表的正则只认裸 `.`，于是一个答案都没绑定上，构建直接以
+  `Q1…Q5 缺少答案` 中止。现在 `_ANS_NUMBERED_RE`、`_Q_NUMBERED_RE`、`_ANS_CHOICE_KEY_RE`
+  都允许分隔符前多一个反斜杠，题干与答案的 `1.` / `1\.` 完全等价；补了 2 条回归测试，
+  其中一条专门断言这个反斜杠不会漏进渲染后的页面。
 - **文件名里出现空格**：`0006.A_Visit_to_the Library.md` 会让 `sources/` 的音频名与页面链接
   对不上（生成的 `href` 里也带空格）。已统一为下划线命名
   （`0006.A_Visit_to_the_Library.md` / `.wav`），旧文件已删除。
