@@ -33,6 +33,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import html
 import json
 import re
@@ -60,6 +61,30 @@ FAVICON_SVG = "assets/images/favicon.svg"
 FAVICON_PNG32 = "assets/images/favicon-32.png"
 FAVICON_PNG180 = "assets/images/favicon-180.png"
 THEME_COLOR = "#3166a4"  # 与图标底色中值一致
+
+# CSS / JS：URL 上挂内容指纹。GitHub Pages 对这些文件回的是
+# ``Cache-Control: max-age=600``，只改文件内容不改文件名的话，手机上最长 10 分钟
+# 仍旧拿缓存（曾因此误判「移动端样式修复没生效」）。内容一变 URL 就变 ⇒ 必然重新拉取。
+STYLE_CSS = "assets/css/style.css"
+MAIN_JS = "assets/js/main.js"
+PLAYER_JS = "assets/js/audio-player.js"
+
+
+def asset_version(rel: str) -> str:
+    """静态资源内容指纹（sha256 前 8 位十六进制）。文件缺失时返回 ``"0"``。
+
+    只依赖文件内容，所以构建仍然字节级可复现。
+    """
+    try:
+        data = (ROOT / rel).read_bytes()
+    except OSError:
+        return "0"
+    return hashlib.sha256(data).hexdigest()[:8]
+
+
+def asset_url(rel: str) -> str:
+    """带缓存指纹的相对资源 URL，如 ``assets/css/style.css?v=1a2b3c4d``。"""
+    return f"{rel}?v={asset_version(rel)}"
 
 # Markdown 章节名（大小写不敏感）→ 内部键
 SECTION_ALIASES = {
@@ -760,7 +785,7 @@ def render_index(chapters: Sequence[Chapter]) -> str:
   <title>{esc(BRAND)}</title>
   <meta name="description" content="{esc(BRAND)} 每日英语学习：英文阅读、音频朗读、重点单词与阅读理解练习。">
 {_render_icons("")}
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="{asset_url(STYLE_CSS)}">
 </head>
 <body class="page page-index">
   <main class="container">
@@ -774,7 +799,7 @@ def render_index(chapters: Sequence[Chapter]) -> str:
 {chapters_html}
     </nav>
   </main>
-  <script src="assets/js/main.js" defer></script>
+  <script src="{asset_url(MAIN_JS)}" defer></script>
 </body>
 </html>
 """
@@ -981,7 +1006,7 @@ def render_article_page(article: Article) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{esc(article.page_title)}</title>
 {_render_icons("../")}
-  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../{asset_url(STYLE_CSS)}">
 </head>
 <body class="page page-article">
   <main class="container">
@@ -1021,8 +1046,8 @@ def render_article_page(article: Article) -> str:
   <script type="application/json" id="quiz-data">
 {quiz_json}
   </script>
-  <script src="../assets/js/audio-player.js" defer></script>
-  <script src="../assets/js/main.js" defer></script>
+  <script src="../{asset_url(PLAYER_JS)}" defer></script>
+  <script src="../{asset_url(MAIN_JS)}" defer></script>
 </body>
 </html>
 """

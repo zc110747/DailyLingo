@@ -163,6 +163,11 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
             f">{build.esc(article.display_title)}</a>" in index_html,
         )
     report.check("首页无绝对根路径", not ABS_PATH_RE.search(index_html))
+    report.check(
+        "首页 CSS/JS 带内容指纹",
+        f'href="{build.asset_url(build.STYLE_CSS)}"' in index_html
+        and f'src="{build.asset_url(build.MAIN_JS)}"' in index_html,
+    )
 
     print("== 4. 文章页 ==")
     for article in articles:
@@ -189,9 +194,9 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
         report.check(f"{article.html_name} 无绝对根路径", not ABS_PATH_RE.search(html))
         report.check(
             f"{article.html_name} 引用的 CSS/JS 路径正确",
-            'href="../assets/css/style.css"' in html
-            and 'src="../assets/js/main.js"' in html
-            and 'src="../assets/js/audio-player.js"' in html,
+            f'href="../{build.asset_url(build.STYLE_CSS)}"' in html
+            and f'src="../{build.asset_url(build.MAIN_JS)}"' in html
+            and f'src="../{build.asset_url(build.PLAYER_JS)}"' in html,
         )
         report.check(
             f"{article.html_name} 返回目录链接存在",

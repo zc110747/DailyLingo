@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import struct
@@ -762,10 +763,37 @@ def test_css_and_js_paths_are_relative(tmp_path):
     result, out, _, _ = make_site(tmp_path, {"0001.A.md": article_md("A")}, audio=["0001.A.wav"])
     index = read(out / "index.html")
     page = read(out / "src" / result.articles[0].html_name)
-    assert 'href="assets/css/style.css"' in index
-    assert 'src="assets/js/main.js"' in index
-    assert 'href="../assets/css/style.css"' in page
-    assert 'src="../assets/js/audio-player.js"' in page
+    assert re.search(r'href="assets/css/style\.css(\?v=[0-9a-f]{8})?"', index)
+    assert re.search(r'src="assets/js/main\.js(\?v=[0-9a-f]{8})?"', index)
+    assert re.search(r'href="\.\./assets/css/style\.css(\?v=[0-9a-f]{8})?"', page)
+    assert re.search(r'src="\.\./assets/js/audio-player\.js(\?v=[0-9a-f]{8})?"', page)
+
+
+def test_assets_carry_content_hash(tmp_path):
+    """CSS/JS 的 URL 必须带内容指纹。
+
+    GitHub Pages 对这两个文件回 ``Cache-Control: max-age=600``，只改内容不改 URL 的话
+    手机上最长 10 分钟还吃旧文件（移动端 Continue 标签修复曾因此「看起来没生效」）。
+    """
+    result, out, _, _ = make_site(tmp_path, {"0001.A.md": article_md("A")}, audio=["0001.A.wav"])
+    index = read(out / "index.html")
+    page = read(out / "src" / result.articles[0].html_name)
+
+    css_ver = hashlib.sha256((build.ROOT / build.STYLE_CSS).read_bytes()).hexdigest()[:8]
+    assert build.asset_version(build.STYLE_CSS) == css_ver != "0"
+    assert f'href="assets/css/style.css?v={css_ver}"' in index
+    assert f'href="../assets/css/style.css?v={css_ver}"' in page
+
+    player_ver = build.asset_version(build.PLAYER_JS)
+    main_ver = build.asset_version(build.MAIN_JS)
+    assert re.search(rf'src="\.\./assets/js/audio-player\.js\?v={player_ver}"', page)
+    assert re.search(rf'src="\.\./assets/js/main\.js\?v={main_ver}"', page)
+    assert re.search(rf'src="assets/js/main\.js\?v={main_ver}"', index)
+
+    # 指纹必须是 8 位小写十六进制，不能把查询串写成别的东西
+    for text in (index, page):
+        for ver in re.findall(r"assets/(?:css|js)/[\w.\-]+\?v=(\w+)", text):
+            assert re.fullmatch(r"[0-9a-f]{8}", ver), ver
 
 
 def test_player_sits_above_article_body(tmp_path):

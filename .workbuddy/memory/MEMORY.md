@@ -81,14 +81,21 @@
       跳转只靠点击 / 拖动进度条与键盘方向键（`←`/`→`）。
     - **倍速只有 0.75x / 1x / 1.25x** 三档（`RATES` 数组与页面按钮同步），1x 默认激活。
     - 控件行布局：`<label 音量>` 在前、`.player-rates` 在后靠 `margin-left: auto` 右对齐。
-15. **写 `flex-direction: column` 前先检查子项的 `flex-basis` 是不是长度值。**
-    `.nav-link/.nav-disabled` 的共享规则是 `flex: 1 1 200px`（桌面横向排时 200px 落在**宽度**上，
-    两个一行）；移动端 `@media (max-width: 640px)` 把 `.continue-nav` 翻成竖排后，
-    **200px 就变成每个标签的高度**，卡片被撑到 200px 高（实测 366×200）。
-    已在移动端加 `.continue-nav { .nav-link / .nav-disabled / .nav-home } { flex: 0 0 auto }` 修掉
-    （366×52.6），桌面端不受影响 —— **修法必须落在媒体查询里，别去改共享规则**。
-    百分比（`1 1 60%`）与 `auto` 不会踩这个坑；`.fill-input`（`1 1 220px`）的父 `.fill-row`
+15. **`flex-basis` 不要写长度值（px）：容器一翻成竖排，它就变成「高度」。**
+    `.nav-link/.nav-disabled` 原本是 `flex: 1 1 200px`，移动端 `.continue-nav` 翻成
+    `flex-direction: column` 后每个标签被撑到 200px 高（实测 366×200）。
+    **2026-10-16 已把共享规则直接改成 `flex: 1 1 0; min-width: 200px`**，媒体查询里那条
+    `flex: 0 0 auto` 补丁已删除。横向排与原先逐像素一致（641/700/900px 实测 299.5 / 329 / 405）；
+    竖排时靠 flex item 默认的 `min-height: auto` 回到内容高 **52.6px**。
+    百分比（`1 1 60%`）与 `auto` 不踩这个坑；`.fill-input`（`1 1 220px`）的父 `.fill-row`
     是 row + wrap 且移动端不翻转，所以没问题。
+16. **CSS / JS 的 URL 必须带内容指纹 `?v=<sha256 前 8 位>`**（`build.asset_version()` /
+    `build.asset_url()` 生成，只按文件内容算 ⇒ 构建仍字节级可复现）。
+    GitHub Pages 给这两个文件回 `Cache-Control: max-age=600`：只改内容不改 URL，手机端最长
+    10 分钟还拿旧文件 —— 已把「已修好并部署」误判成「修复没生效」一次。HTML 自身也有
+    10 分钟强缓存，所以改完样式手机上仍有 ≤10 分钟延迟，属 Pages 固有行为，不是构建问题。
+    断言路径时用 `build.asset_url()`，别再写死 `assets/css/style.css`。
+    诊断手法：`curl -D - <线上 css>` 看 `Last-Modified` + 本地/线上字节数比对。
 
 ## 本机预览
 IDE 内置预览把 **文件所在目录**当站点根：`index.html`（仓库根）预览正常，而 `src/` 下的
@@ -137,7 +144,7 @@ md 必须是 UTF-8。本仓现有 8 个 WAV 均为单声道 / 16 bit / 22 050 Hz
 
 ## 已验证 / 待验证
 - 已验证：`python scripts/build.py`（8 篇 / 1 个 Chapter / 0 警告）、
-  `python scripts/validate.py`（PASS 309 / FAIL 0 / WARN 0）、`pytest -q`（108 passed）、
+  `python scripts/validate.py`（PASS 310 / FAIL 0 / WARN 0）、`pytest -q`（109 passed）、
   本地 `http.server` 23 条路径全 200（8 HTML + 8 WAV + 首页 + CSS/JS + 3 图标）、
   `watch.py` 实测 touch 后 1 s 内重建（23 ms）。
 - **GitHub Pages 已实际发布并验证**：`https://zc110747.github.io/DailyLingo/` 首页与

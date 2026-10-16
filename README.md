@@ -11,7 +11,7 @@ committed as-is and served straight from GitHub Pages.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#quick-start)
 [![Runtime dependencies: none](https://img.shields.io/badge/runtime%20dependencies-none-success.svg)](#quick-start)
-[![Tests: 108 passed](https://img.shields.io/badge/tests-108%20passed-success.svg)](#verification-results)
+[![Tests: 109 passed](https://img.shields.io/badge/tests-109%20passed-success.svg)](#verification-results)
 [![Deploy: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#deployment-to-github-pages)
 
 **Live site:** <https://zc110747.github.io/DailyLingo/>
@@ -504,9 +504,15 @@ The site is deployed under a **project subpath**, for example `https://zc110747.
 - Every link and asset reference is **relative**; there is not a single root-absolute path:
   - homepage → article: `src/0001.A_New_Hobby.html`
   - article → homepage: `../index.html`
-  - article → assets: `../assets/css/style.css`, `../assets/js/*.js`
+  - article → assets: `../assets/css/style.css?v=<hash>`, `../assets/js/*.js?v=<hash>`
   - article → audio: `../sources/0001.A_New_Hobby.wav`
   - previous / next: plain filenames in the same directory
+- **CSS and JS carry a content fingerprint** — `?v=` plus the first eight hex digits of the file's
+  SHA-256. GitHub Pages answers these files with `Cache-Control: max-age=600`, so editing a
+  stylesheet without changing its URL leaves phones on the previous copy for up to ten minutes,
+  which looks exactly like "the fix did not work". Changing the content changes the URL, which
+  forces a refetch. The fingerprint comes from `build.asset_version()` (file contents only), so
+  builds stay byte-for-byte reproducible.
 - `scripts/validate.py` asserts that no `href="/..."` or `src="/..."` appears in the generated HTML.
 - No backend routing, server rewrite or dynamic API is involved, so a local static server and GitHub
   Pages behave identically.
@@ -636,7 +642,7 @@ every title under its Chapter. The CLI output is currently in Chinese; the forma
 
 ```text
 $ python scripts/validate.py
-结果：PASS 309 / FAIL 0 / WARN 0
+结果：PASS 310 / FAIL 0 / WARN 0
 ```
 
 Covers: article data; number uniqueness and ascending order; Chapter range boundaries and the
@@ -655,12 +661,12 @@ root-absolute paths; existence of static assets; byte-identical rebuilds.
 
 ```text
 $ pytest -q
-108 passed in 2.93s
+109 passed in 2.31s
 ```
 
 | File | Cases | Coverage |
 |---|---|---|
-| `tests/test_build.py` | 104 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`, both the plain and the escaped `1\.` spelling, for stems and answers alike), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, **the player rendered above the body text (with and without a WAV)**, **a divider between the player and the body text**, **no ±5 s buttons and exactly three speed buttons**, **icon declarations carrying the correct relative prefix, home page icon next to the brand, icon assets valid PNG/SVG with the expected dimensions**, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, GitHub Pages subpath, reproducible builds |
+| `tests/test_build.py` | 105 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`, both the plain and the escaped `1\.` spelling, for stems and answers alike), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, **the player rendered above the body text (with and without a WAV)**, **a divider between the player and the body text**, **no ±5 s buttons and exactly three speed buttons**, **icon declarations carrying the correct relative prefix, home page icon next to the brand, icon assets valid PNG/SVG with the expected dimensions**, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, **CSS/JS URLs carrying a content fingerprint (`?v=` + 8 hex digits)**, GitHub Pages subpath, reproducible builds |
 | `tests/test_frontend.py` | 4 | Executes `assets/js/main.js` for real in Node: correct / incorrect / empty single-choice selections, case insensitivity, leading and trailing whitespace, trailing punctuation, multiple acceptable answers, blank input never correct; plus a sample-by-sample consistency check against `build.normalize_answer` |
 
 Every test uses temporary directories and never touches the real `content/` or `sources/`.
@@ -669,10 +675,10 @@ Every test uses temporary directories and never touches the real `content/` or `
 
 ```text
 $ python -m http.server 8123
-200 2275   text/html              <- /
-200 9617   text/html              <- /src/0001.A_New_Hobby.html
+200 2297   text/html              <- /
+200 9650   text/html              <- /src/0001.A_New_Hobby.html
 200 …                               <- /src/0002 … 0008  (one page per article)
-200 16857  text/css               <- /assets/css/style.css
+200 17162  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
 200 9610   application/javascript <- /assets/js/audio-player.js
 200 919    image/svg+xml          <- /assets/images/favicon.svg
@@ -739,6 +745,15 @@ live site.
 - **Stale audio after editing a body.** The `0005` WAV had been generated before the body was
   edited, so the recording no longer matched the text. The watcher only fills in *missing* files, so
   the audio had to be regenerated explicitly. This is now documented as a required step.
+- **A pushed CSS fix that a phone refused to show.** The 200 px-tall mobile Continue cards were
+  fixed and deployed, yet the phone still rendered them tall. The deployed stylesheet was in fact
+  correct — GitHub Pages serves CSS with `Cache-Control: max-age=600`, and the phone had fetched
+  the previous copy minutes before the deploy, so it kept using the cached one. Two changes came
+  out of this: `?v=<content hash>` on the CSS/JS URLs (see *GitHub Pages Path Compatibility*), and
+  the layout fix moved out of the media query. `flex: 1 1 200px` on a shared rule becomes a
+  **height** of 200 px the moment a container switches to `flex-direction: column`; the rule is now
+  `flex: 1 1 0` + `min-width: 200px`, which is pixel-identical in the row layout and safe in the
+  column layout.
 
 ---
 

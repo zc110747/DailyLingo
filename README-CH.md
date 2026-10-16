@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#快速开始)
 [![运行期依赖: 无](https://img.shields.io/badge/%E8%BF%90%E8%A1%8C%E6%9C%9F%E4%BE%9D%E8%B5%96-none-success.svg)](#快速开始)
-[![测试: 108 passed](https://img.shields.io/badge/tests-108%20passed-success.svg)](#验证结果)
+[![测试: 109 passed](https://img.shields.io/badge/tests-109%20passed-success.svg)](#验证结果)
 [![部署: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#部署到-github-pages)
 
 **线上站点：** <https://zc110747.github.io/DailyLingo/>
@@ -471,9 +471,13 @@ python scripts/watch.py --audio
 - 全部链接与资源引用都是**相对路径**，没有任何以 `/` 开头的站点根路径：
   - 首页 → 文章：`src/0001.A_New_Hobby.html`
   - 文章 → 首页：`../index.html`
-  - 文章 → 资源：`../assets/css/style.css`、`../assets/js/*.js`
+  - 文章 → 资源：`../assets/css/style.css?v=<指纹>`、`../assets/js/*.js?v=<指纹>`
   - 文章 → 音频：`../sources/0001.A_New_Hobby.wav`
   - 上一篇 / 下一篇：同目录文件名
+- **CSS / JS 的 URL 带内容指纹**：`?v=` + 文件 SHA-256 的前 8 位十六进制。GitHub Pages 对这些
+  文件回 `Cache-Control: max-age=600`，只改内容不改 URL 的话，手机上最长 10 分钟还拿旧文件
+  —— 表现就是「明明改了样式，手机上却没变」。内容一变 URL 就变，浏览器必然重新拉取。
+  指纹由 `build.asset_version()` 只按文件内容算出，因此构建仍字节级可复现。
 - `scripts/validate.py` 会断言生成结果中不存在 `href="/..."` / `src="/..."`。
 - 不依赖后端路由、服务器重写或动态 API，本地静态服务器与 GitHub Pages 行为一致。
 
@@ -597,7 +601,7 @@ DailyLingo 构建完成
 
 ```text
 $ python scripts/validate.py
-结果：PASS 309 / FAIL 0 / WARN 0
+结果：PASS 310 / FAIL 0 / WARN 0
 ```
 
 覆盖：文章数据；编号唯一性与升序；Chapter 区间边界与「只输出有真实文章的 Chapter」；
@@ -612,12 +616,12 @@ $ python scripts/validate.py
 
 ```text
 $ pytest -q
-108 passed in 2.93s
+109 passed in 2.31s
 ```
 
 | 文件 | 用例数 | 覆盖内容 |
 |---|---|---|
-| `tests/test_build.py` | 104 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`，含被转义的 `1\.` 写法，题干与答案都测）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**播放器与正文之间有分隔线**、**无 ±5 秒按钮且恰好三档倍速**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、GitHub Pages 子路径、构建可重复 |
+| `tests/test_build.py` | 105 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`，含被转义的 `1\.` 写法，题干与答案都测）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**播放器与正文之间有分隔线**、**无 ±5 秒按钮且恰好三档倍速**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、**CSS/JS 的 URL 带内容指纹（`?v=` + 8 位十六进制）**、GitHub Pages 子路径、构建可重复 |
 | `tests/test_frontend.py` | 4 | 在 Node 中真实执行 `assets/js/main.js`：单选正确 / 错误 / 空选、大小写不敏感、首尾空格、尾部标点、多个可接受答案、空白输入不判正确；并与 `build.normalize_answer` 做逐样本一致性比对 |
 
 测试全部使用临时目录，不会污染或覆盖真实的 `content/` 与 `sources/`。
@@ -626,10 +630,10 @@ $ pytest -q
 
 ```text
 $ python -m http.server 8123
-200 2275   text/html              <- /
-200 9617   text/html              <- /src/0001.A_New_Hobby.html
+200 2297   text/html              <- /
+200 9650   text/html              <- /src/0001.A_New_Hobby.html
 200 …                               <- /src/0002 … 0008（每篇文章一个页面）
-200 16857  text/css               <- /assets/css/style.css
+200 17162  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
 200 9610   application/javascript <- /assets/js/audio-player.js
 200 919    image/svg+xml          <- /assets/images/favicon.svg
@@ -689,6 +693,13 @@ WAV 响应支持 HTTP Range 请求（`206 Partial Content`，已实测），因�
   音频与相邻文章的 `## Continues` 交叉引用同步更新。
 - **改正文后音频过期**：`0005` 的 WAV 生成于正文修改之前，录音与文字已不一致。
   同步脚本只在文件**缺失**时补齐，不检测内容过期，必须显式重新生成。现已写入文档。
+- **已经 push 的样式修复，手机上看不到**：移动端 Continue 卡片被撑到 200 px 的问题修好并
+  部署后，手机仍旧是那个高度。查下来线上样式其实是**对的** —— GitHub Pages 给 CSS 回
+  `Cache-Control: max-age=600`，而手机在部署前几分钟已经拉过上一版，于是继续用缓存那份。
+  由此做了两件事：① CSS / JS 的 URL 挂内容指纹 `?v=<哈希>`（见《GitHub Pages 子路径兼容》）；
+  ② 把布局修法从媒体查询里挪出来 —— 共享规则上的 `flex: 1 1 200px` 一旦容器翻成
+  `flex-direction: column`，200px 就变成**高度**；现在改成 `flex: 1 1 0` + `min-width: 200px`，
+  横向排逐像素不变、纵向排天然安全。
 
 ---
 

@@ -834,7 +834,11 @@ summary:focus-visible,
 
 .nav-link,
 .nav-disabled {
-  flex: 1 1 200px;
+  /* 基准写 `0` + `min-width`，不要写成 `1 1 200px`：竖排容器里 flex-basis 会落到
+     「高度」上，200px 会把每个标签撑成 200px 高（移动端踩过这个坑）。
+     横向排时两者等价：都以 200px 为下限，再由 flex-grow 均分整行。 */
+  flex: 1 1 0;
+  min-width: 200px;
   padding: 13px 16px;
   font-size: 14.5px;
   background: var(--surface);
@@ -926,14 +930,6 @@ summary:focus-visible,
 
   .continue-nav {
     flex-direction: column;
-  }
-
-  /* 竖排后 flex-basis 作用在「高度」上：共享规则里的 `1 1 200px` 会把每个标签撑成
-     200px 高（桌面端是横向排，200px 落在宽度上所以正常）。移动端只留自然高度。 */
-  .continue-nav .nav-link,
-  .continue-nav .nav-disabled,
-  .continue-nav .nav-home {
-    flex: 0 0 auto;
   }
 }
 
