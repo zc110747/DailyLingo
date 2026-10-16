@@ -1,0 +1,8 @@
+# DailyLingo Python 依赖
+#
+# 构建脚本 scripts/build.py 与验证脚本 scripts/validate.py 只使用 Python 标准库，
+# 因此运行时无需任何第三方依赖；这里仅为自动化测试安装 pytest。
+#
+#   python -m pip install -r requirements.txt
+
+pytest>=7.4
