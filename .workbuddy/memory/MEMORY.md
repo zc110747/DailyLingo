@@ -161,12 +161,18 @@ md 必须是 UTF-8。本仓现有 9 个 WAV 均为单声道 / 16 bit / 22 050 Hz
   ⚠️ 别用 `'data-action=' not in html` 判定「没有控件」——**题目区的 Check/Reset 也带
   `data-action`**，会误伤（这个坑当场踩过一次）。
   两棵树都实测过：删掉 `0009` 的 WAV 的临时副本 → PASS 345 / FAIL 0 / WARN 1（就是缺音频那条）。
-- ⚠️ **`core.autocrlf=true` 且仓库无 `.gitattributes`，会威胁「构建可复现」的断言**：
-  `git ls-files --eol` 显示 `assets/js/main.js` 是 `i/lf w/crlf`，而 `src/*.html` 此刻是 LF
-  （刚由脚本生成）。**全新 clone 后 `src/*.html` 会是 CRLF**，而 validate 第 6 项拿磁盘上的
-  `src/*.html` 与新构建的 LF 结果逐字节比对 ⇒ 会**假 FAIL**。
-  修法：仓内加 `.gitattributes` 写 `* -text`（或文本设 `eol=lf`），或让 validate 比对前统一换行。
-  **尚未处理，已告知用户**。
+- ✅ **`core.autocrlf=true` + 无 `.gitattributes` 的假 FAIL 已修（2026-10-17）**：仓内已加
+  `.gitattributes`（`* text=auto eol=lf`、`*.bat text eol=crlf`、`*.wav/*.png/*.ico binary`），
+  并把索引里仍是 CRLF 的 7 个 `content/*.md` renormalize 成 LF、把 26 个工作副本仍是 CRLF 的
+  文本文件重新签出为 LF。**现在 `git ls-files --eol` 只有 `watch.bat` 是 `w/crlf`（预期）。**
+  全新 clone 实测：`src/*.html`、`index.html`、`content/*.md`、`assets/js/*.js` 全部 **LF**；
+  `watch.bat` 仍 **CRLF**。复现方式：把 10 个生成页面改成 CRLF 后 `validate.py` 会报 10 个
+  FAIL（干净站点），validate 现已把「纯行尾差异」显式点出来。
+  ⚠️ **指纹口径**：`build.asset_version()` 算的是**磁盘字节**的哈希，所以工作副本行尾一变，
+  全站 `?v=` 都会跟着变（本次见证了 CRLF→LF 导致 9 个页面 + 首页的指纹回退到 LF 口径）。
+  ⚠️ 同时注意 README《本地静态服务器》清单里的字节数是 **LF 口径**（= Pages 实际下发），
+  不要拿 CRLF 工作副本的 `stat` 结果去填（我曾填错一次，18102/7530/9928/941 是 CRLF 尺寸，
+  正确值 17162/7291/9610/919）。
 - 顺带发现：`0006`/`0007` 的 HTML 曾是过期产物（`?v=` 指纹落后于当前 assets，上个 commit 改了
   CSS/JS 没重建那两页），2026-10-17 重建时对齐。**改 `assets/` 后务必重跑一次构建**。
 - **GitHub Pages 已实际发布并验证**：`https://zc110747.github.io/DailyLingo/` 首页与
