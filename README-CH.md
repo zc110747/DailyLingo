@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#快速开始)
 [![运行期依赖: 无](https://img.shields.io/badge/%E8%BF%90%E8%A1%8C%E6%9C%9F%E4%BE%9D%E8%B5%96-none-success.svg)](#快速开始)
-[![测试: 151 passed](https://img.shields.io/badge/tests-151%20passed-success.svg)](#验证结果)
+[![测试: 152 passed](https://img.shields.io/badge/tests-152%20passed-success.svg)](#验证结果)
 [![部署: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#部署到-github-pages)
 
 **线上站点：** <https://zc110747.github.io/DailyLingo/>
@@ -539,7 +539,7 @@ python scripts/watch.py --audio
 
 行为约定：
 
-- **全量重建**（10 篇，进程内约 0.12 s）：新增或删除一篇文章会改变相邻文章的上一篇 / 下一篇，
+- **全量重建**（12 篇，进程内约 0.14 s）：新增或删除一篇文章会改变相邻文章的上一篇 / 下一篇，
   只重写「变化的那一页」会留下不一致的假象。
 - Markdown 写坏时**只打印错误并继续监听**，不会退出；修好再保存即可重建成功。
 - 被删除文章遗留的 `src/*.html` 只提示、**不自动删除**（构建脚本同样不删文件）。
@@ -671,9 +671,9 @@ $ python scripts/build.py --verbose
   文章 0001  A New Hobby  |  3 词  3 题  |  音频 有
   …                                   # 每篇文章一行
 DailyLingo 构建完成
-  文章总数：10
+  文章总数：12
   Chapter 分组：1
-    Chapter 0001–0100（默认展开）：10 篇
+    Chapter 0001–0100（默认展开）：12 篇
   警告：0 条
 ```
 
@@ -683,7 +683,7 @@ DailyLingo 构建完成
 
 ```text
 $ python scripts/validate.py
-结果：PASS 402 / FAIL 0 / WARN 0
+结果：PASS 474 / FAIL 0 / WARN 0
 ```
 
 覆盖：文章数据；编号唯一性与升序；Chapter 区间边界与「只输出有真实文章的 Chapter」；
@@ -703,7 +703,7 @@ $ python scripts/validate.py
 
 ```text
 $ pytest -q
-151 passed in 7.51s
+152 passed in 7.49s
 ```
 
 | 文件 | 用例数 | 覆盖内容 |
@@ -711,7 +711,7 @@ $ pytest -q
 | `tests/test_build.py` | 105 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`，含被转义的 `1\.` 写法，题干与答案都测）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**播放器与正文之间有分隔线**、**无 ±5 秒按钮且恰好三档倍速**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、**CSS/JS 的 URL 带内容指纹（`?v=` + 8 位十六进制）**、GitHub Pages 子路径、构建可重复 |
 | `tests/test_frontend.py` | 4 | 在 Node 中真实执行 `assets/js/main.js`：单选正确 / 错误 / 空选、大小写不敏感、首尾空格、尾部标点、多个可接受答案、空白输入不判正确；并与 `build.normalize_answer` 做逐样本一致性比对 |
 | `tests/test_progress.py` | 29 | 学习进度的首页结构（每篇一个完成按钮且初始未完成、统计总数 / `aria-valuemax` / Chapter 汇总等于真实篇数、设置对话框与导出导入控件、空站点渲染 `0 / 0`）**外加在 Node 中真实执行的纯逻辑**：编号补零、文件校验（JSON 语法 / `schemaVersion` / 结构）、去重与非法条目计数、忽略不存在编号、合并取并集、统计不除零、按真实篇数判定 Chapter 完成、导出载荷结构与文件名、导出内容可被导入解析器读回 |
-| `tests/test_progress_dom.py` | 13 | 在 **jsdom** 中用真实 click 事件与真实 `localStorage` 驱动生成的首页：首次访问为空、勾选同步统计与存储、取消回退、Chapter 全完成才变绿、刷新恢复、损坏数据隔离、存储禁用降级、导入预览、合并、覆盖需二次确认、取消覆盖、非法 JSON / 不支持版本不改动进度、未知编号忽略并计数、导出载荷与对话框开关。未安装 jsdom 时自动跳过 |
+| `tests/test_progress_dom.py` | 14 | 在 **jsdom** 中用真实 click 事件与真实 `localStorage` 驱动生成的首页：首次访问为空、勾选同步统计与存储、取消回退、Chapter 全完成才变绿、刷新恢复、损坏数据隔离、存储禁用降级、导入预览、合并、覆盖需二次确认、取消覆盖、非法 JSON / 不支持版本不改动进度、未知编号忽略并计数、导出载荷与对话框开关。未安装 jsdom 时自动跳过 |
 
 测试全部使用临时目录，不会污染或覆盖真实的 `content/` 与 `sources/`。
 `test_progress_dom.py` 额外需要本机装有 `jsdom`；它只是开发期辅助工具（不是站点依赖），
@@ -721,9 +721,9 @@ $ pytest -q
 
 ```text
 $ python -m http.server 8123
-200 16077  text/html              <- /
+200 17883  text/html              <- /
 200 9916   text/html              <- /src/0001.A_New_Hobby.html
-200 …                               <- /src/0002 … 0010（每篇文章一个页面）
+200 …                               <- /src/0002 … 0012（每篇文章一个页面）
 200 25081  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
 200 9610   application/javascript <- /assets/js/audio-player.js
@@ -732,10 +732,10 @@ $ python -m http.server 8123
 200 942    image/png              <- /assets/images/favicon-32.png
 200 4682   image/png              <- /assets/images/favicon-180.png
 200 1641488 audio/wav             <- /sources/0001.A_New_Hobby.wav
-200 …                               <- /sources/0002 … 0010（每篇文章一个 WAV）
+200 …                               <- /sources/0002 … 0012（每篇文章一个 WAV）
 ```
 
-*（做了省略：全部 28 条路径——10 个文章页、10 个 WAV、首页与共享静态资源——都真实请求过且全部
+*（做了省略：全部 32 条路径——12 个文章页、12 个 WAV、首页与共享静态资源——都真实请求过且全部
 `200`；按文章逐条的那部分只留一个示例加 `…`，文章变多以后这份清单仍然可读。）*
 
 > **`python -m http.server` 不支持 `Range`。** 带 `Range: bytes=0-1023` 的请求仍返回 `200`

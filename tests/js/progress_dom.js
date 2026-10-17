@@ -97,6 +97,16 @@ async function pickFile(w, text, name) {
   /* 1. 第一次访问：全未完成，无存储 */
   {
     const w = await boot(null);
+    const items = w.document.querySelectorAll('.article-item');
+    out.meta = {
+      total: items.length,
+      chapterTotal: Number(
+        q(w, '[data-chapter-total]').getAttribute('data-chapter-total')
+      ),
+      ids: Array.prototype.map.call(items, function (el) {
+        return el.getAttribute('data-article-id');
+      }),
+    };
     out.fresh = {
       stats: stats(w),
       chapter: chapter(w),

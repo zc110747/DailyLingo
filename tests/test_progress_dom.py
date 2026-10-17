@@ -2,9 +2,11 @@
 """学习进度功能：真实 DOM 交互测试（jsdom，可选依赖）。
 
 ``tests/js/progress_dom.js`` 会在真实的 DOM 里执行 ``assets/js/progress.js``，
-用真实 click 事件走完 17 项需求里能自动化的部分：勾选 / 取消、Chapter 汇总、统计、
+用真实 click 事件走完需求里能自动化的部分：勾选 / 取消、Chapter 汇总、统计、
 刷新恢复、数据损坏、存储禁用、合并导入、覆盖导入（含二次确认）、非法文件、
 未知编号、导出载荷、对话框开关。
+
+文章数**从生成结果里读**（``meta.total``），不写死具体篇数 —— 新增文章不用改测试。
 
 jsdom **不是**站点依赖，也不是测试套件的硬依赖：本机没装时这组用例整体 skip，
 ``pytest -q`` 仍然全绿（其余用例覆盖结构生成与纯逻辑）。
@@ -35,6 +37,23 @@ pytestmark = [
 ]
 
 
+def expected_percent(done: int, total: int) -> str:
+    """与 progress.js 的 Math.round(done / total * 100) 对齐（JS 是四舍五入）。"""
+    if not total:
+        return "0%"
+    return f"{int(done / total * 100 + 0.5)}%"
+
+
+def expected_fill(done: int, total: int) -> str:
+    """进度条宽度按 (ratio * 100).toFixed(1) 写入，浏览器会去掉尾随的 ``.0``。"""
+    if not total:
+        return "0%"
+    value = f"{done / total * 100:.1f}"
+    if value.endswith(".0"):
+        value = value[:-2]
+    return value + "%"
+
+
 @pytest.fixture(scope="module")
 def observations(tmp_path_factory) -> dict:
     out = tmp_path_factory.mktemp("dom")
@@ -53,8 +72,14 @@ def observations(tmp_path_factory) -> dict:
     return json.loads(proc.stdout)
 
 
+@pytest.fixture(scope="module")
+def total(observations) -> int:
+    return observations["meta"]["total"]
+
+
 def test_dom_script_reports_all_scenarios(observations):
     expected = {
+        "meta",
         "fresh",
         "toggle_one",
         "toggle_off",
@@ -81,30 +106,39 @@ def test_dom_script_reports_all_scenarios(observations):
     assert expected <= set(observations)
 
 
+def test_meta_matches_generated_pages(observations, total, tmp_path):
+    """DOM 里的文章数 / Chapter 篇数 / ID 列表必须等于生成结果（测试不能与构建脱节）。"""
+    result = build.build_site(ROOT / "content", tmp_path, ROOT / "sources")
+    assert total == len(result.articles)
+    assert observations["meta"]["chapterTotal"] == len(result.chapters[0].articles)
+    assert observations["meta"]["ids"] == [a.number_text for a in result.articles]
+
+
 # 需求 1：第一次访问没有任何文章被标记
-def test_first_visit_is_empty(observations):
+def test_first_visit_is_empty(observations, total):
     fresh = observations["fresh"]
     assert fresh["stats"]["done"] == "0"
-    assert fresh["stats"]["total"] == "10"
+    assert fresh["stats"]["total"] == str(total)
     assert fresh["stats"]["percent"] == "0%"
     assert set(fresh["pressed"]) == {"false"}
-    assert fresh["chapter"]["count"] == "0/10"
+    assert len(fresh["pressed"]) == total
+    assert fresh["chapter"]["count"] == f"0/{total}"
     assert fresh["chapter"]["complete"] is False
     assert fresh["storage"] is None
     assert fresh["notice"] == ""
 
 
-# 需求 2/3：勾选立即更新统计，取消正确回退
-def test_toggle_updates_stats_and_storage(observations):
+# 需求 2/3：勾选立即更新统计与存储，取消正确回退
+def test_toggle_updates_stats_and_storage(observations, total):
     step = observations["toggle_one"]
     assert step["stats"] == {
         "done": "1",
-        "total": "10",
-        "percent": "10%",
-        "fill": "10%",
+        "total": str(total),
+        "percent": expected_percent(1, total),
+        "fill": expected_fill(1, total),
         "valuenow": "1",
     }
-    assert step["chapter"] == {"count": "1/10", "state": "未完成", "complete": False}
+    assert step["chapter"] == {"count": f"1/{total}", "state": "未完成", "complete": False}
     assert step["pressed0001"] == "true"
     assert "未完成" in step["label0001"]  # 标签切换成「取消」语义
     assert step["itemDone"] is True
@@ -117,39 +151,48 @@ def test_toggle_updates_stats_and_storage(observations):
 
     off = observations["toggle_off"]
     assert (off["stats"]["done"], off["stats"]["percent"]) == ("0", "0%")
-    assert off["chapter"]["count"] == "0/10"
+    assert off["chapter"]["count"] == f"0/{total}"
     assert off["pressed0001"] == "false"
     assert off["storage"]["completedArticles"] == []
 
 
 # 需求 4/5：Chapter 全完成才显示勾，取消任意一篇立即失效
-def test_chapter_auto_aggregates(observations):
+def test_chapter_auto_aggregates(observations, total):
     done = observations["all_done"]
-    assert (done["stats"]["done"], done["stats"]["percent"]) == ("10", "100%")
+    assert (done["stats"]["done"], done["stats"]["percent"]) == (str(total), "100%")
     assert done["stats"]["fill"] == "100%"
-    assert done["chapter"] == {"count": "10/10", "state": "已完成", "complete": True}
+    assert done["chapter"] == {
+        "count": f"{total}/{total}",
+        "state": "已完成",
+        "complete": True,
+    }
 
     after = observations["uncheck_one"]
-    assert after["stats"]["done"] == "9"
-    assert after["chapter"] == {"count": "9/10", "state": "未完成", "complete": False}
+    assert after["stats"]["done"] == str(total - 1)
+    assert after["stats"]["percent"] == expected_percent(total - 1, total)
+    assert after["chapter"] == {
+        "count": f"{total - 1}/{total}",
+        "state": "未完成",
+        "complete": False,
+    }
 
 
 # 需求 6/7：刷新、关闭浏览器后重开，状态仍在
-def test_state_survives_reload(observations):
+def test_state_survives_reload(observations, total):
     step = observations["reload"]
-    assert step["stats"]["done"] == "9"
-    assert step["stats"]["percent"] == "90%"
-    assert step["chapter"]["count"] == "9/10"
+    assert step["stats"]["done"] == str(total - 1)
+    assert step["stats"]["percent"] == expected_percent(total - 1, total)
+    assert step["chapter"]["count"] == f"{total - 1}/{total}"
     assert step["pressed0003"] == "false"
 
 
 # 需求 9：数据损坏要提示 + 安全恢复
-def test_corrupt_storage_is_quarantined(observations):
+def test_corrupt_storage_is_quarantined(observations, total):
     step = observations["corrupt"]
     assert "损坏" in step["notice"]
     assert step["backup"] == "{oops"  # 原始数据留存
     assert step["stats"]["done"] == "0"
-    assert step["stats"]["total"] == "10"  # 页面统计仍可用
+    assert step["stats"]["total"] == str(total)  # 页面统计仍可用
     assert step["rewritten"] == {"schemaVersion": 1, "completedArticles": [], "updatedAt": ""}
 
 
@@ -231,7 +274,6 @@ def test_export_produces_importable_json(observations):
     assert payload["completedArticles"] == ["0001", "0002"]
     assert set(payload) == {"schemaVersion", "completedArticles", "updatedAt", "exportedAt"}
     assert "导出" in step["message"]
-    # 导出内容必须能被同一套解析器读回
     assert payload["exportedAt"] and payload["updatedAt"]
 
 
