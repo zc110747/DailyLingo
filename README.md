@@ -278,7 +278,7 @@ Notes:
 - Section names are case-insensitive, and both `# Article` and `## Article` levels are accepted.
   A `## Q1` inside `## Questions` is **not** treated as a new section.
 - `## Words` table headers are matched by alias, and both 3-column and 5-column layouts work:
-  `Word/单词`, `Pronunciation/音标`, `词性/pos`, `中文释义/meaning`, `例句/example`.
+  `Word/单词`, `Pronunciation/IPA/音标/发音`, `词性/pos`, `中文释义/meaning/释义`, `例句/example`.
   `**bold**` inside a cell is stripped.
 - `## Answers` accepts four notations (freely mixable):
   1. **Compact key string** — assigned in question order: `BAC`, `ACBBA`, `CABABB`;
@@ -429,7 +429,7 @@ Audio is produced by an external tool — the build script **never** synthesises
 transcodes. This project uses **EnglishAudio** (Piper + ONNX, fully offline: no network access and
 no text ever leaves the machine). It can live in either place:
 
-- `D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd` — the source
+- `E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd` — the source
   repository, maintained separately;
 - `<this repo>/tools\eaudio.cmd` — optional: copy the whole package in. `tools/` is `.gitignore`d
   because the package is ~100 MB (including a 63 MB voice model), so it is not stored twice.
@@ -444,12 +444,12 @@ rebuilds the pages and prints a notice:
 
 ```bat
 :: Single file: reads the ## Article section -> writes a same-named WAV
-"D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
+"E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
   "content\0006.A_Visit_to_the_Library.md" --dist="sources"
 
 :: Batch: convert every .md under content/
 for %f in (content\*.md) do ^
-  "D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd" "%f" --dist="sources"
+  "E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd" "%f" --dist="sources"
 
 :: Or let the watcher fill in missing WAVs and rebuild for you
 python scripts/watch.py --audio
@@ -488,7 +488,7 @@ removed.
 
 Behaviour:
 
-- **Full rebuild** (eight articles in under 0.2 s): adding or removing an article changes the
+- **Full rebuild** (nine articles, ~0.13 s in process): adding or removing an article changes the
   previous/next links of its neighbours, so rewriting only the changed page would leave the site
   subtly inconsistent.
 - A malformed Markdown file **prints an error and keeps watching** — fix it and save again.
@@ -567,7 +567,7 @@ Adjust the branch or folder if this repository is configured differently.
    [Generating Audio with EnglishAudio](#generating-audio-with-englishaudio)):
 
    ```bat
-   "D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
+   "E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
      "content\0009.My_Weekend.md" --dist="sources"
    ```
 
@@ -629,9 +629,9 @@ $ python scripts/build.py --verbose
   文章 0001  A New Hobby  |  3 词  3 题  |  音频 有
   …                                   # one such line per article
 DailyLingo 构建完成
-  文章总数：8
+  文章总数：9
   Chapter 分组：1
-    Chapter 0001–0100（默认展开）：8 篇
+    Chapter 0001–0100（默认展开）：9 篇
   警告：0 条
 ```
 
@@ -642,7 +642,7 @@ every title under its Chapter. The CLI output is currently in Chinese; the forma
 
 ```text
 $ python scripts/validate.py
-结果：PASS 310 / FAIL 0 / WARN 0
+结果：PASS 345 / FAIL 0 / WARN 0
 ```
 
 Covers: article data; number uniqueness and ascending order; Chapter range boundaries and the
@@ -650,7 +650,9 @@ Covers: article data; number uniqueness and ascending order; Chapter range bound
 (including negative checks for summaries / difficulty / audio status); the first Chapter being
 expanded; the order of the five sections; **the player sitting inside `Article`, under the heading
 and above the first paragraph**; **a divider between the player and the body text**; **the player
-controls being volume plus exactly three speed buttons (`0.75x` / `1x` / `1.25x`, no ±5 s)**;
+controls being volume plus exactly three speed buttons (`0.75x` / `1x` / `1.25x`, no ±5 s)** on pages
+whose WAV exists — a page whose audio has not been generated yet must instead emit no player
+controls at all (only the `player-unavailable` note);
 **the icon files existing, being valid PNG/SVG, and being declared
 on every page with the right relative prefix**; browser title and heading consistency; word-table
 row counts; question counts; the grading key matching the Answers section; Answers being collapsed
@@ -675,20 +677,20 @@ Every test uses temporary directories and never touches the real `content/` or `
 
 ```text
 $ python -m http.server 8123
-200 2297   text/html              <- /
-200 9650   text/html              <- /src/0001.A_New_Hobby.html
-200 …                               <- /src/0002 … 0008  (one page per article)
-200 17162  text/css               <- /assets/css/style.css
-200 7291   application/javascript <- /assets/js/main.js
-200 9610   application/javascript <- /assets/js/audio-player.js
-200 919    image/svg+xml          <- /assets/images/favicon.svg
+200 2413   text/html              <- /
+200 9916   text/html              <- /src/0001.A_New_Hobby.html
+200 …                               <- /src/0002 … 0009  (one page per article)
+200 18102  text/css               <- /assets/css/style.css
+200 7530   application/javascript <- /assets/js/main.js
+200 9928   application/javascript <- /assets/js/audio-player.js
+200 941    image/svg+xml          <- /assets/images/favicon.svg
 200 942    image/png              <- /assets/images/favicon-32.png
 200 4682   image/png              <- /assets/images/favicon-180.png
 200 1641488 audio/wav             <- /sources/0001.A_New_Hobby.wav
-200 …                               <- /sources/0002 … 0008  (one WAV per article)
+200 …                               <- /sources/0002 … 0009  (one WAV per article)
 ```
 
-*(Abridged: all 23 paths — 8 article pages, 8 WAVs, the homepage and the shared assets — were
+*(Abridged: all 25 paths — 9 article pages, 9 WAVs, the homepage and the shared assets — were
 requested and answered `200`; the per-article rows are collapsed to one example plus `…` so this
 listing stays readable as the collection grows.)*
 
@@ -754,6 +756,17 @@ live site.
   **height** of 200 px the moment a container switches to `flex-direction: column`; the rule is now
   `flex: 1 1 0` + `min-width: 200px`, which is pixel-identical in the row layout and safe in the
   column layout.
+- **A validator false positive on pages without a WAV.** `validate.py` asserted "volume plus three
+  speed buttons" on *every* page, but a page whose audio has not been generated yet renders only the
+  `player-unavailable` hint and no controls at all, so `rates=[]` and the run reported a `FAIL`
+  (surfaced by adding `0009` before generating its WAV). The check is now branched: with a player it
+  asserts the three speeds and the absence of ±5 s buttons, without one it asserts that no player
+  controls were emitted.
+- **A stale local path to the audio tool.** `watch.py`'s fallback pointed at
+  `D:\user_project\…\009.ai_voice\publisher\eaudio.cmd`, which no longer exists — the EnglishAudio
+  source repo now lives under `E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\`. The
+  candidate list and both READMEs were updated, and `resolve_audio_tool()` was checked to actually
+  return a readable path (`--audio` therefore works again).
 
 ---
 

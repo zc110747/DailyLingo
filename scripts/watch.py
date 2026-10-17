@@ -15,7 +15,7 @@ r"""DailyLingo 增量同步：content/ 或 sources/ 一变，站点 HTML 立刻�
 
 EnglishAudio（本地离线 TTS）查找顺序：
     --audio-tool 参数 > 环境变量 DAILYLINGO_AUDIO_TOOL > <仓库>/tools/eaudio.cmd
-    > D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd
+    > E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd
     都找不到时只重建网页并给出提示，不会中断监听。
 
 行为约定：
@@ -46,7 +46,7 @@ ROOT = Path(__file__).resolve().parent.parent
 AUDIO_TOOL_ENV = "DAILYLINGO_AUDIO_TOOL"
 AUDIO_TOOL_CANDIDATES = (
     ROOT / "tools" / "eaudio.cmd",
-    Path(r"D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"),
+    Path(r"E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"),
 )
 
 

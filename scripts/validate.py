@@ -234,14 +234,24 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
         )
 
         # 播放器控件：±5s 已移除，倍速只保留 0.75x / 1x / 1.25x
-        rates = re.findall(r'data-rate="([0-9.]+)"', html)
-        report.check(
-            f"{article.html_name} 播放器控件为音量 + 三档倍速（无 ±5s）",
-            rates == ["0.75", "1", "1.25"]
-            and 'data-action="back"' not in html
-            and 'data-action="forward"' not in html,
-            f"rates={rates}",
-        )
+        # 缺音频时页面只渲染 player-unavailable 提示、不渲染播放器控件，故分支断言
+        if 'data-player' in html:
+            rates = re.findall(r'data-rate="([0-9.]+)"', html)
+            report.check(
+                f"{article.html_name} 播放器控件为音量 + 三档倍速（无 ±5s）",
+                rates == ["0.75", "1", "1.25"]
+                and 'data-action="back"' not in html
+                and 'data-action="forward"' not in html,
+                f"rates={rates}",
+            )
+        else:
+            # 用播放器专属标记判断：题目区的 Check / Reset 也带 data-action，不能拿它当依据
+            report.check(
+                f"{article.html_name} 缺音频时不渲染播放器控件",
+                "player-rates" not in html
+                and "player-track" not in html
+                and "player-toggle" not in html,
+            )
 
         # 音频
         audio_file = sources_dir / article.audio_name

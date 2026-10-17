@@ -267,7 +267,7 @@ BAC
 - 章节名大小写不敏感，`# Article` 与 `## Article` 两种层级都接受；
   `## Questions` 内部的 `## Q1` **不会**被当成新章节。
 - `## Words` 表头列名按别名识别，3 列和 5 列都支持：
-  `Word/单词`、`Pronunciation/音标`、`词性/pos`、`中文释义/meaning`、`例句/example`。
+  `Word/单词`、`Pronunciation/IPA/音标/发音`、`词性/pos`、`中文释义/meaning/释义`、`例句/example`。
   单元格里的 `**粗体**` 会被剥离。
 - `## Answers` 支持四种写法（可混用）：
   1. **紧凑字母串** —— 按题目顺序逐题赋值：`BAC`、`ACBBA`、`CABABB`；
@@ -404,7 +404,7 @@ end   = start + 99
 音频由外部工具生成 —— 构建脚本**不做** TTS、**不做**转码。本项目使用
 **EnglishAudio**（Piper + ONNX，完全离线：不联网、不上传文本）。它可存在于两处：
 
-- `D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd` —— 源仓库，已单独维护；
+- `E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd` —— 源仓库，已单独维护；
 - `<本仓库>/tools\eaudio.cmd` —— 可选：把整包复制进来即可。`tools/` 已被 `.gitignore` 忽略，
   因为整包约 100 MB（含 63 MB 语音模型），不再在仓库里存第二份。
 
@@ -417,12 +417,12 @@ end   = start + 99
 
 ```bat
 :: 单篇：读取 ## Article 章节 -> 生成同名 WAV
-"D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
+"E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
   "content\0006.A_Visit_to_the_Library.md" --dist="sources"
 
 :: 批量：把 content/ 下所有 md 一次转完
 for %f in (content\*.md) do ^
-  "D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd" "%f" --dist="sources"
+  "E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd" "%f" --dist="sources"
 
 :: 也可以交给同步脚本：自动补齐缺失 WAV 并重建网页
 python scripts/watch.py --audio
@@ -457,7 +457,7 @@ python scripts/watch.py --audio
 
 行为约定：
 
-- **全量重建**（8 篇 < 0.2 s）：新增或删除一篇文章会改变相邻文章的上一篇 / 下一篇，
+- **全量重建**（9 篇，进程内约 0.13 s）：新增或删除一篇文章会改变相邻文章的上一篇 / 下一篇，
   只重写「变化的那一页」会留下不一致的假象。
 - Markdown 写坏时**只打印错误并继续监听**，不会退出；修好再保存即可重建成功。
 - 被删除文章遗留的 `src/*.html` 只提示、**不自动删除**（构建脚本同样不删文件）。
@@ -531,7 +531,7 @@ python -m http.server 8000
    [用 EnglishAudio 生成音频](#用-englishaudio-生成音频)）：
 
    ```bat
-   "D:\user_project\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
+   "E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
      "content\0009.My_Weekend.md" --dist="sources"
    ```
 
@@ -589,9 +589,9 @@ $ python scripts/build.py --verbose
   文章 0001  A New Hobby  |  3 词  3 题  |  音频 有
   …                                   # 每篇文章一行
 DailyLingo 构建完成
-  文章总数：8
+  文章总数：9
   Chapter 分组：1
-    Chapter 0001–0100（默认展开）：8 篇
+    Chapter 0001–0100（默认展开）：9 篇
   警告：0 条
 ```
 
@@ -601,13 +601,14 @@ DailyLingo 构建完成
 
 ```text
 $ python scripts/validate.py
-结果：PASS 310 / FAIL 0 / WARN 0
+结果：PASS 345 / FAIL 0 / WARN 0
 ```
 
 覆盖：文章数据；编号唯一性与升序；Chapter 区间边界与「只输出有真实文章的 Chapter」；
 首页只含品牌名与折叠目录（并做摘要 / 难度 / 音频状态的**反向**检查）；第一个 Chapter 默认展开；
 五个区域顺序；**播放器位于 `Article` 区内、标题之下、第一段正文之上**；**播放器与正文之间有分隔线**；
-**播放器控件为音量 + 恰好三档倍速（`0.75x` / `1x` / `1.25x`，无 ±5 秒）**；
+**播放器控件为音量 + 恰好三档倍速（`0.75x` / `1x` / `1.25x`，无 ±5 秒）**（仅对**已有 WAV** 的页面
+断言 —— 尚未生成音频的页面反过来必须**不输出任何播放器控件**，只留 `player-unavailable` 提示）；
 **图标文件存在、PNG/SVG 有效、每个页面都以正确相对前缀声明**；浏览器标签与主标题一致性；
 单词表行数；题目数量；判分数据与 Answers 同源；Answers 默认折叠；上一篇 / 下一篇链接与标题；
 首末篇边界；无绝对根路径；静态资源存在性；重复构建字节级一致。
@@ -630,20 +631,20 @@ $ pytest -q
 
 ```text
 $ python -m http.server 8123
-200 2297   text/html              <- /
-200 9650   text/html              <- /src/0001.A_New_Hobby.html
-200 …                               <- /src/0002 … 0008（每篇文章一个页面）
-200 17162  text/css               <- /assets/css/style.css
-200 7291   application/javascript <- /assets/js/main.js
-200 9610   application/javascript <- /assets/js/audio-player.js
-200 919    image/svg+xml          <- /assets/images/favicon.svg
+200 2413   text/html              <- /
+200 9916   text/html              <- /src/0001.A_New_Hobby.html
+200 …                               <- /src/0002 … 0009（每篇文章一个页面）
+200 18102  text/css               <- /assets/css/style.css
+200 7530   application/javascript <- /assets/js/main.js
+200 9928   application/javascript <- /assets/js/audio-player.js
+200 941    image/svg+xml          <- /assets/images/favicon.svg
 200 942    image/png              <- /assets/images/favicon-32.png
 200 4682   image/png              <- /assets/images/favicon-180.png
 200 1641488 audio/wav             <- /sources/0001.A_New_Hobby.wav
-200 …                               <- /sources/0002 … 0008（每篇文章一个 WAV）
+200 …                               <- /sources/0002 … 0009（每篇文章一个 WAV）
 ```
 
-*（做了省略：全部 23 条路径——8 个文章页、8 个 WAV、首页与共享静态资源——都真实请求过且全部
+*（做了省略：全部 25 条路径——9 个文章页、9 个 WAV、首页与共享静态资源——都真实请求过且全部
 `200`；按文章逐条的那部分只留一个示例加 `…`，文章变多以后这份清单仍然可读。）*
 
 > **`python -m http.server` 不支持 `Range`。** 带 `Range: bytes=0-1023` 的请求仍返回 `200`
@@ -700,6 +701,14 @@ WAV 响应支持 HTTP Range 请求（`206 Partial Content`，已实测），因�
   ② 把布局修法从媒体查询里挪出来 —— 共享规则上的 `flex: 1 1 200px` 一旦容器翻成
   `flex-direction: column`，200px 就变成**高度**；现在改成 `flex: 1 1 0` + `min-width: 200px`，
   横向排逐像素不变、纵向排天然安全。
+- **验证脚本在「无音频页」上误报失败**：`validate.py` 对**每个**页面都断言「音量 + 三档倍速」，
+  但尚未生成音频的页面只渲染 `player-unavailable` 提示、根本不输出控件，于是 `rates=[]` 被判
+  `FAIL`（新增 `0009` 后、生音频之前暴露出来）。现在按分支断言：有播放器就查三档倍速且无 ±5 s
+  按钮，没有播放器就查页面里不出现任何播放器控件。
+- **音频工具的本地路径已失效**：`watch.py` 的兜底路径指向
+  `D:\user_project\…\009.ai_voice\publisher\eaudio.cmd`，该目录已不存在 —— EnglishAudio 源仓库
+  现在位于 `E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\`。候选路径与两份 README 已
+  同步更新，并实测 `resolve_audio_tool()` 能返回可读路径（`--audio` 恢复正常）。
 
 ---
 
