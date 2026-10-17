@@ -151,7 +151,8 @@ DailyLingo/
 > 问题：`scripts/build.py` 永远写 LF，所以在 `core.autocrlf=true` 的机器上，全新 clone 会把
 > **CRLF** 的 `src/*.html` 交给 `validate.py`，其字节级重建比对就会无端报 `FAIL` —— 这个假失败
 > 已实际复现并加了防护。配置正确时 `git ls-files --eol src/0001.A_New_Hobby.html index.html`
-> 应显示 `i/lf w/lf`。
+> 应显示 `i/lf w/lf`；《本地静态服务器》一节里的字节数都是 **LF 计数**，与 GitHub Pages 实际
+> 下发的字节一致。
 
 > `tools/`（EnglishAudio 的 ~100 MB 打包产物）**不在仓库内**：体积大且已在其它仓库维护，
 > 这里只按需调用。`.gitignore` 已忽略该目录，放进去也不会污染 `git status`。
@@ -642,10 +643,10 @@ $ python -m http.server 8123
 200 2413   text/html              <- /
 200 9916   text/html              <- /src/0001.A_New_Hobby.html
 200 …                               <- /src/0002 … 0009（每篇文章一个页面）
-200 18102  text/css               <- /assets/css/style.css
-200 7530   application/javascript <- /assets/js/main.js
-200 9928   application/javascript <- /assets/js/audio-player.js
-200 941    image/svg+xml          <- /assets/images/favicon.svg
+200 17162  text/css               <- /assets/css/style.css
+200 7291   application/javascript <- /assets/js/main.js
+200 9610   application/javascript <- /assets/js/audio-player.js
+200 919    image/svg+xml          <- /assets/images/favicon.svg
 200 942    image/png              <- /assets/images/favicon-32.png
 200 4682   image/png              <- /assets/images/favicon-180.png
 200 1641488 audio/wav             <- /sources/0001.A_New_Hobby.wav

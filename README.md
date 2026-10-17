@@ -158,7 +158,8 @@ DailyLingo/
 > machine with `core.autocrlf=true` a fresh clone would hand a **CRLF** `src/*.html` to
 > `validate.py`, whose byte-level rebuild comparison would then fail (`FAIL`) for no real reason —
 > that exact false alarm was reproduced and is now guarded against. When the setup is right,
-> `git ls-files --eol src/0001.A_New_Hobby.html index.html` reports `i/lf w/lf`.
+> `git ls-files --eol src/0001.A_New_Hobby.html index.html` reports `i/lf w/lf`, and the byte counts
+> quoted under *Local static server* are LF counts — the same bytes GitHub Pages serves.
 
 > `tools/` (the ~100 MB packaged EnglishAudio TTS build) is **not** in this repository: it is large
 > and already maintained elsewhere, so it is only invoked on demand. `.gitignore` already ignores
@@ -689,10 +690,10 @@ $ python -m http.server 8123
 200 2413   text/html              <- /
 200 9916   text/html              <- /src/0001.A_New_Hobby.html
 200 …                               <- /src/0002 … 0009  (one page per article)
-200 18102  text/css               <- /assets/css/style.css
-200 7530   application/javascript <- /assets/js/main.js
-200 9928   application/javascript <- /assets/js/audio-player.js
-200 941    image/svg+xml          <- /assets/images/favicon.svg
+200 17162  text/css               <- /assets/css/style.css
+200 7291   application/javascript <- /assets/js/main.js
+200 9610   application/javascript <- /assets/js/audio-player.js
+200 919    image/svg+xml          <- /assets/images/favicon.svg
 200 942    image/png              <- /assets/images/favicon-32.png
 200 4682   image/png              <- /assets/images/favicon-180.png
 200 1641488 audio/wav             <- /sources/0001.A_New_Hobby.wav
