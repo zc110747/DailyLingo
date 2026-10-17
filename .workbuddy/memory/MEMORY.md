@@ -152,10 +152,33 @@ md 必须是 UTF-8。本仓现有 10 个 WAV 均为单声道 / 16 bit / 22 050 H
 > 0001–0005 已由用户手工把单词表表头改成 `Word | IPA | Meaning`、题干改成 `Question N：…`、
 > Answers 改成**编号答案列表** `1\. **B. … ** 解释文字`（三种写法解析器都支持，只是写法统一了）。
 
+## 首页学习进度（2026-10-17 新增，纯前端）
+- 结构由 `build.render_index()` 生成：左上角 `.site-tools`（齿轮 → `<dialog id="settings-dialog">`）、
+  `.progress-card`（`data-progress-done/total/percent/fill/bar`，SSR 兜底 0/总数/0%）、
+  每篇 `li.article-item[data-article-id="NNNN"]` + `button.article-toggle
+  [data-action="toggle-complete"][aria-pressed][aria-label]`、Chapter summary 内
+  `[data-chapter-status][data-chapter-total]` + `[data-chapter-count]` + `[data-chapter-state]`。
+- **两个图标（空心圆 / 绿勾）同时在 DOM 里**，靠 CSS `[aria-pressed="true"] > .toggle-icon-*` 与
+  `.chapter-status.is-complete` 切显隐；JS 只改属性，不重建节点。
+- `assets/js/progress.js` 契约：键 `dailylingo_learning_progress_v1`、`schemaVersion: 1`、
+  ID 为**四位补零字符串**（`article.number_text`，永不把标题当身份）、`updatedAt` ISO。
+  损坏数据先备份到 `…__corrupt` 再重置+提示；存储不可用则内存态继续可用。
+  导出 `dailylingo-progress-YYYYMMDD.json` 只含 4 个键（schemaVersion / completedArticles /
+  updatedAt / exportedAt）；导入先预览再合并（并集）或覆盖（**二次确认**）。
+  纯逻辑挂 `globalThis.DailyLingoProgress`，`typeof document === "undefined"` 早退。
+- ⚠️ **jsdom 测真 DOM 必须 `runScripts: "outside-only"`**：不加时 `window.eval` 静默不执行
+  （表现为 `exports present: false`，什么都不报）；且构造后 `readyState` 是 `loading`，
+  **要等 `load` 再点**（脚本按 defer 在 DOMContentLoaded 前跑）。
+  jsdom 装在 `~/.workbuddy/binaries/node/workspace/node_modules`，**不是站点/测试硬依赖**，
+  `tests/conftest.py::find_jsdom()` 找不到就整组 skip。
+- ⚠️ **本沙箱起不了 Chromium**（`msedge --version` 无输出、`--dump-dom` 空、exit 0 假成功），
+  所以**像素级布局没有截图证据**，只有 jsdom 行为证据。改这块 CSS 后要人工在浏览器看一眼。
+
 ## 已验证 / 待验证
-- 已验证（2026-10-17，10 篇）：`python scripts/build.py`（10 篇 / 1 个 Chapter / 0 警告）、
-  `python scripts/validate.py`（PASS 380 / FAIL 0 / WARN 0）、`pytest -q`（109 passed）、
-  本地 `http.server` 27 条路径全 200（10 HTML + 10 WAV + 首页 + CSS/JS + 3 图标，22.2 MiB）、
+- 已验证（2026-10-17，10 篇 + 学习进度）：`python scripts/build.py`（10 篇 / 1 个 Chapter / 0 警告）、
+  `python scripts/validate.py`（PASS 402 / FAIL 0 / WARN 0）、`pytest -q`（151 passed：
+  test_build 105 / test_frontend 4 / test_progress 29 / test_progress_dom 13）、
+  本地 `http.server` 28 条路径全 200（10 HTML + 10 WAV + 首页 + CSS/JS（含 progress.js）+ 3 图标，22.2 MiB）、
   进程内全量重建 10 篇约 0.12 s（5 次中位数 124 ms；首次偶发 34 ms 是缓存抖动，别采信单次）；
   `watch.py` 实测 touch 后 1 s 内重建（23 ms）。
 - ⚠️ **`validate.py` 的「三档倍速」断言必须分支**（2026-10-17 修）：没生成 WAV 的页面只渲染
