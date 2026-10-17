@@ -129,11 +129,13 @@ WAV 由 **EnglishAudio**（Piper + ONNX，离线）生成：
 `watch.py --audio` 的定位顺序：`--audio-tool` > `DAILYLINGO_AUDIO_TOOL` >
 `<仓库>/tools/eaudio.cmd` > 上面那个 publisher 路径；都找不到只提示不中断。
 只朗读 `## Article` 章节，输出与 md 同名的 WAV，正文含非英文会被拒绝（退出码 4），
-md 必须是 UTF-8。本仓现有 9 个 WAV 均为单声道 / 16 bit / 22 050 Hz。
+md 必须是 UTF-8。本仓现有 10 个 WAV 均为单声道 / 16 bit / 22 050 Hz。
+> **弯引号不拦**：`0010` 正文含 `“ ”`（U+201C/U+201D）照样合成成功（exit 0）——"含非英文就拒绝"
+> 指的是中文字符等，排版标点没问题。**不用为此删引号**。
 直接跑 `EnglishAudio.exe <md> --dist=sources`（`MSYS_NO_PATHCONV=1`，从仓库根执行）比走
 `.cmd` 包装更省事：stdout 能正常看到它自己的 banner（含字数 / 时长 / 字节数 / RTF）。
 
-## 文章清单（9 篇，全部在 Chapter 0001–0100）
+## 文章清单（10 篇，全部在 Chapter 0001–0100）
 | 编号 | 文件 | 标题 |
 |---|---|---|
 | 0001 | `0001.A_New_Hobby.md` | A New Hobby |
@@ -145,14 +147,16 @@ md 必须是 UTF-8。本仓现有 9 个 WAV 均为单声道 / 16 bit / 22 050 Hz
 | 0007 | `0007.A_Day_at_the_Market.md` | A Day at the Market |
 | 0008 | `0008.The_Blue_Planet.md` | The Blue Planet |
 | 0009 | `0009.A_Little_Coffee_Shop.md` | A Little Coffee Shop |
+| 0010 | `0010.The_Lost_Puppy.md` | The Lost Puppy |
 
 > 0001–0005 已由用户手工把单词表表头改成 `Word | IPA | Meaning`、题干改成 `Question N：…`、
 > Answers 改成**编号答案列表** `1\. **B. … ** 解释文字`（三种写法解析器都支持，只是写法统一了）。
 
 ## 已验证 / 待验证
-- 已验证（2026-10-17，9 篇）：`python scripts/build.py`（9 篇 / 1 个 Chapter / 0 警告）、
-  `python scripts/validate.py`（PASS 345 / FAIL 0 / WARN 0）、`pytest -q`（109 passed）、
-  本地 `http.server` 25 条路径全 200（9 HTML + 9 WAV + 首页 + CSS/JS + 3 图标，19.9 MiB）、
+- 已验证（2026-10-17，10 篇）：`python scripts/build.py`（10 篇 / 1 个 Chapter / 0 警告）、
+  `python scripts/validate.py`（PASS 380 / FAIL 0 / WARN 0）、`pytest -q`（109 passed）、
+  本地 `http.server` 27 条路径全 200（10 HTML + 10 WAV + 首页 + CSS/JS + 3 图标，22.2 MiB）、
+  进程内全量重建 10 篇约 0.12 s（5 次中位数 124 ms；首次偶发 34 ms 是缓存抖动，别采信单次）；
   `watch.py` 实测 touch 后 1 s 内重建（23 ms）。
 - ⚠️ **`validate.py` 的「三档倍速」断言必须分支**（2026-10-17 修）：没生成 WAV 的页面只渲染
   `player-unavailable`、不输出任何控件，无条件断言会得到 `rates=[]` 假 FAIL。
