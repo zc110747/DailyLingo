@@ -873,6 +873,414 @@ summary:focus-visible,
   font-weight: 600;
 }
 
+/* ------------------------------------------------- 学习进度 / 设置入口 */
+
+/* 只给屏幕阅读器的文字（图标按钮的可读名称等） */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 导入预览 / 覆盖确认 / 提示条都靠 hidden 属性开关，必须压得住后面的 display 规则 */
+[hidden] {
+  display: none !important;
+}
+
+.site-header {
+  position: relative;
+}
+
+/* 左上角设置入口 */
+.site-tools {
+  position: absolute;
+  top: 8px;
+  left: 0;
+}
+
+.settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background-color 0.12s ease;
+}
+
+.settings-btn:hover,
+.settings-btn[aria-expanded="true"] {
+  color: var(--accent-strong);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.settings-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+/* 首页统计：一行标题 + 一行细进度条，不抢首屏 */
+.progress-card {
+  margin: 0 0 14px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.progress-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--text-muted);
+}
+
+.progress-numbers {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-numbers strong {
+  font-size: 15.5px;
+  color: var(--text);
+}
+
+.progress-track {
+  position: relative;
+  height: 6px;
+  overflow: hidden;
+  background: var(--surface-alt);
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.progress-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--ok);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+.progress-notice {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.progress-notice.is-ok {
+  color: var(--ok);
+}
+
+.progress-notice.is-err {
+  color: var(--err);
+}
+
+.progress-notice.is-hint {
+  color: var(--text-faint);
+}
+
+/* 文章行：链接占满、完成图标固定在最右，标题对齐不受影响 */
+.article-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 12px;
+}
+
+.article-item .article-link {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.article-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--text-faint); /* 未完成：低干扰灰 */
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color 0.12s ease, background-color 0.12s ease;
+}
+
+.article-toggle:hover {
+  color: var(--text-muted);
+  background: var(--surface-alt);
+}
+
+.article-toggle[aria-pressed="true"] {
+  color: var(--ok); /* 已完成：绿 */
+}
+
+.article-toggle[aria-pressed="true"]:hover {
+  background: var(--ok-soft);
+}
+
+.toggle-icon {
+  display: block;
+  width: 21px;
+  height: 21px;
+}
+
+/* 两个图标同时存在，纯靠状态属性切换显隐（JS 不碰图标节点） */
+.toggle-icon-done {
+  display: none;
+}
+
+[aria-pressed="true"] > .toggle-icon-todo {
+  display: none;
+}
+
+[aria-pressed="true"] > .toggle-icon-done {
+  display: block;
+}
+
+.article-item.is-done .article-link {
+  color: var(--text-muted);
+}
+
+/* Chapter 汇总状态：推到 summary 最右 */
+.chapter-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.chapter-mark {
+  display: inline-flex;
+}
+
+.chapter-mark .toggle-icon {
+  width: 19px;
+  height: 19px;
+}
+
+.chapter-status.is-complete {
+  color: var(--ok);
+}
+
+.chapter-status.is-complete .toggle-icon-todo {
+  display: none;
+}
+
+.chapter-status.is-complete .toggle-icon-done {
+  display: block;
+}
+
+/* 设置对话框 */
+.settings-dialog {
+  width: min(560px, calc(100vw - 24px));
+  max-height: min(86vh, 720px);
+  padding: 0;
+  overflow: auto;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 48px rgba(32, 44, 56, 0.22);
+}
+
+.settings-dialog::backdrop {
+  background: rgba(24, 32, 40, 0.42);
+}
+
+/* 不支持 showModal() 的老浏览器：靠 open 属性 + 固定定位兜底 */
+.settings-dialog.is-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  margin: auto;
+}
+
+.settings-panel {
+  padding: 18px 20px 20px;
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.settings-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.settings-close:hover {
+  color: var(--text);
+  background: var(--surface-alt);
+}
+
+.close-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+.settings-section {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.settings-subtitle {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.settings-desc {
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.settings-message {
+  min-height: 1.2em;
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.settings-message.is-ok {
+  color: var(--ok);
+}
+
+.settings-message.is-err {
+  color: var(--err);
+}
+
+.settings-message.is-hint {
+  color: var(--text-faint);
+}
+
+.import-preview,
+.import-confirm {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.import-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 0 0 10px;
+}
+
+.import-stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--surface-alt);
+  border-radius: var(--radius-sm);
+}
+
+.import-stat dt {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.import-stat dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.import-modes {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.import-modes legend {
+  padding: 0 4px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.import-mode {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.import-mode input {
+  margin-top: 4px;
+}
+
 /* -------------------------------------------------------------- 移动端 */
 
 @media (max-width: 640px) {
@@ -882,7 +1290,22 @@ summary:focus-visible,
   }
 
   .site-header {
-    padding: 36px 0 20px;
+    /* 留出左上角设置按钮的高度，避免按钮压到品牌行 */
+    padding: 46px 0 20px;
+  }
+
+  .site-tools {
+    top: 6px;
+  }
+
+  .settings-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .settings-icon {
+    width: 18px;
+    height: 18px;
   }
 
   .brand {
@@ -930,6 +1353,38 @@ summary:focus-visible,
 
   .continue-nav {
     flex-direction: column;
+  }
+
+  .progress-card {
+    padding: 10px 12px;
+    margin-bottom: 12px;
+  }
+
+  .progress-head {
+    flex-wrap: wrap;
+    gap: 2px 10px;
+  }
+
+  .article-item {
+    padding-right: 8px;
+  }
+
+  .article-toggle {
+    width: 34px;
+    height: 34px;
+  }
+
+  .settings-dialog {
+    width: calc(100vw - 20px);
+    max-height: 88vh;
+  }
+
+  .settings-panel {
+    padding: 14px 14px 16px;
+  }
+
+  .import-stats {
+    grid-template-columns: 1fr;
   }
 }
 

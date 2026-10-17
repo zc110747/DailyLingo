@@ -68,6 +68,7 @@ THEME_COLOR = "#3166a4"  # 与图标底色中值一致
 STYLE_CSS = "assets/css/style.css"
 MAIN_JS = "assets/js/main.js"
 PLAYER_JS = "assets/js/audio-player.js"
+PROGRESS_JS = "assets/js/progress.js"  # 仅首页引用：学习进度的本地存储 / 导入导出
 
 
 def asset_version(rel: str) -> str:
@@ -758,13 +759,51 @@ def _render_icons(prefix: str) -> str:
     )
 
 
+# 完成状态图标对：未完成 = 灰色空心圆，完成 = 绿色勾。两个 SVG 始终都在 DOM 里，
+# 由 CSS 按 `[aria-pressed]` 切换显隐 —— JS 只改状态属性，不重建节点，也不碰图标。
+_TOGGLE_ICONS = (
+    '<svg class="toggle-icon toggle-icon-todo" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+    '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>'
+    "</svg>"
+    '<svg class="toggle-icon toggle-icon-done" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+    '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>'
+    '<path d="M7.6 12.4l3.1 3.1 5.9-6.4" fill="none" stroke="currentColor" stroke-width="2.2" '
+    'stroke-linecap="round" stroke-linejoin="round"/>'
+    "</svg>"
+)
+
+# 设置入口（首页左上角）
+_SETTINGS_ICON = (
+    '<svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+    '<circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/>'
+    '<path d="M12 3.4v2.4M12 18.2v2.4M3.4 12h2.4M18.2 12h2.4'
+    'M6.1 6.1l1.7 1.7M16.2 16.2l1.7 1.7M17.9 6.1l-1.7 1.7M7.8 16.2l-1.7 1.7" '
+    'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+    "</svg>"
+)
+
+_CLOSE_ICON = (
+    '<svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+    '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round"/>'
+    "</svg>"
+)
+
+
 def render_index(chapters: Sequence[Chapter]) -> str:
+    total = sum(len(chapter.articles) for chapter in chapters)
     parts: list[str] = []
     for i, chapter in enumerate(chapters):
         opened = " open" if i == 0 else ""
+        chapter_total = len(chapter.articles)
         items = "\n".join(
-            f'          <li><a class="article-link" href="src/{esc(a.html_name)}">'
-            f"{esc(a.display_title)}</a></li>"
+            f'          <li class="article-item" data-article-id="{a.number_text}">\n'
+            f'            <a class="article-link" href="src/{esc(a.html_name)}">'
+            f"{esc(a.display_title)}</a>\n"
+            f'            <button class="article-toggle" type="button" data-action="toggle-complete"'
+            f' data-article-id="{a.number_text}" aria-pressed="false"'
+            f' aria-label="标记「{esc(a.display_title)}」为已完成">{_TOGGLE_ICONS}</button>\n'
+            f"          </li>"
             for a in chapter.articles
         )
         parts.append(
@@ -772,6 +811,12 @@ def render_index(chapters: Sequence[Chapter]) -> str:
             f'        <summary class="chapter-summary">\n'
             f'          <span class="chapter-arrow" aria-hidden="true"></span>\n'
             f'          <span class="chapter-label">{esc(chapter.label)}</span>\n'
+            f'          <span class="chapter-status" data-chapter-status'
+            f' data-chapter-total="{chapter_total}">\n'
+            f'            <span class="chapter-count" data-chapter-count>0/{chapter_total}</span>\n'
+            f'            <span class="chapter-mark" aria-hidden="true">{_TOGGLE_ICONS}</span>\n'
+            f'            <span class="visually-hidden" data-chapter-state>未完成</span>\n'
+            f"          </span>\n"
             f"        </summary>\n"
             f'        <ul class="article-list">\n{items}\n        </ul>\n'
             f"      </details>"
@@ -790,16 +835,79 @@ def render_index(chapters: Sequence[Chapter]) -> str:
 <body class="page page-index">
   <main class="container">
     <header class="site-header">
+      <div class="site-tools">
+        <button class="settings-btn" type="button" data-action="open-settings"
+                aria-haspopup="dialog" aria-controls="settings-dialog" aria-expanded="false"
+                aria-label="设置：导入或导出学习进度">{_SETTINGS_ICON}</button>
+      </div>
       <h1 class="brand">
         <img class="brand-icon" src="assets/images/favicon.svg" alt="" width="32" height="32" aria-hidden="true">
         <span class="brand-text">{esc(BRAND)}</span>
       </h1>
     </header>
+    <section class="progress-card" aria-labelledby="progress-title">
+      <div class="progress-head">
+        <h2 class="progress-title" id="progress-title">学习进度</h2>
+        <p class="progress-numbers" aria-live="polite"><strong data-progress-done>0</strong> / <span data-progress-total>{total}</span> 篇 · <span data-progress-percent>0%</span></p>
+      </div>
+      <div class="progress-track" role="progressbar" data-progress-bar
+           aria-labelledby="progress-title" aria-valuemin="0" aria-valuemax="{total}"
+           aria-valuenow="0" aria-valuetext="共 {total} 篇，已完成 0 篇">
+        <span class="progress-fill" data-progress-fill></span>
+      </div>
+      <p class="progress-notice" data-progress-notice role="status" hidden></p>
+    </section>
     <nav class="catalogue" aria-label="文章目录">
 {chapters_html}
     </nav>
   </main>
+  <dialog class="settings-dialog" id="settings-dialog" aria-labelledby="settings-title">
+    <div class="settings-panel">
+      <header class="settings-head">
+        <h2 class="settings-title" id="settings-title">设置</h2>
+        <button class="settings-close" type="button" data-action="close-settings" aria-label="关闭设置">{_CLOSE_ICON}</button>
+      </header>
+      <section class="settings-section" aria-labelledby="settings-progress-title">
+        <h3 class="settings-subtitle" id="settings-progress-title">学习进度</h3>
+        <p class="settings-desc">进度只保存在当前浏览器（localStorage），不上传、不跨设备同步。换设备或换浏览器时，用下面的导出 / 导入手动迁移。</p>
+        <div class="settings-actions">
+          <button class="btn" type="button" data-action="export-progress">导出学习进度</button>
+          <button class="btn" type="button" data-action="pick-import">导入学习进度</button>
+          <input class="visually-hidden" type="file" accept="application/json,.json" data-import-input tabindex="-1">
+        </div>
+        <p class="settings-message" data-settings-message role="status"></p>
+      </section>
+      <section class="import-preview" data-import-preview aria-labelledby="import-title" hidden>
+        <h3 class="settings-subtitle" id="import-title">导入预览</h3>
+        <dl class="import-stats">
+          <div class="import-stat"><dt>文件中的有效记录</dt><dd data-import-file-count>0</dd></div>
+          <div class="import-stat"><dt>当前已完成</dt><dd data-import-current-count>0</dd></div>
+          <div class="import-stat"><dt>合并导入后</dt><dd data-import-merged-count>0</dd></div>
+          <div class="import-stat"><dt>覆盖导入后</dt><dd data-import-overwrite-count>0</dd></div>
+        </dl>
+        <p class="settings-message" data-import-message role="status"></p>
+        <fieldset class="import-modes">
+          <legend>导入方式</legend>
+          <label class="import-mode"><input type="radio" name="import-mode" value="merge" checked> 合并：保留现有记录，取两者并集</label>
+          <label class="import-mode"><input type="radio" name="import-mode" value="overwrite"> 覆盖：以文件为准，替换现有记录</label>
+        </fieldset>
+        <div class="settings-actions">
+          <button class="btn btn-primary" type="button" data-action="apply-import">应用导入</button>
+          <button class="btn btn-ghost" type="button" data-action="cancel-import">取消</button>
+        </div>
+      </section>
+      <section class="import-confirm" data-import-confirm aria-labelledby="import-confirm-title" hidden>
+        <h3 class="settings-subtitle" id="import-confirm-title">确认覆盖</h3>
+        <p class="settings-desc">覆盖会取消当前已完成、但文件中未标记为完成的文章。此操作不可撤销，确定继续？</p>
+        <div class="settings-actions">
+          <button class="btn btn-primary" type="button" data-action="confirm-overwrite">确认覆盖</button>
+          <button class="btn btn-ghost" type="button" data-action="cancel-overwrite">返回</button>
+        </div>
+      </section>
+    </div>
+  </dialog>
   <script src="{asset_url(MAIN_JS)}" defer></script>
+  <script src="{asset_url(PROGRESS_JS)}" defer></script>
 </body>
 </html>
 """

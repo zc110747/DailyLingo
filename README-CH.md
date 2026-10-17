@@ -3,7 +3,7 @@
 **[English](README.md) | [简体中文](README-CH.md)**
 
 每日英语学习网站：分级短文阅读 + 真实 WAV 朗读 + 重点单词表 + 阅读理解即时判分，
-文章导航全自动生成。
+文章导航全自动生成，学习进度只存在你自己的浏览器里。
 
 纯静态站点 —— **无登录、无数据库、无后端、无远程 API**，构建产物原样提交，
 直接由 GitHub Pages 提供服务。
@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#快速开始)
 [![运行期依赖: 无](https://img.shields.io/badge/%E8%BF%90%E8%A1%8C%E6%9C%9F%E4%BE%9D%E8%B5%96-none-success.svg)](#快速开始)
-[![测试: 109 passed](https://img.shields.io/badge/tests-109%20passed-success.svg)](#验证结果)
+[![测试: 151 passed](https://img.shields.io/badge/tests-151%20passed-success.svg)](#验证结果)
 [![部署: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#部署到-github-pages)
 
 **线上站点：** <https://zc110747.github.io/DailyLingo/>
@@ -38,6 +38,7 @@
 - [文章编号与命名](#文章编号与命名)
 - [Markdown 文章格式](#markdown-文章格式)
 - [首页 Chapter 目录](#首页-chapter-目录)
+- [学习进度](#学习进度)
 - [文章详情页区域](#文章详情页区域)
 - [音频播放器](#音频播放器)
 - [用 EnglishAudio 生成音频](#用-englishaudio-生成音频)
@@ -54,8 +55,11 @@
 
 ## 功能特性
 
-- **Chapter 折叠目录** —— 首页**只显示** `DailyLingo` 品牌名和按固定 100 号区间分组的
-  `<details>` 文章目录。没有摘要、难度、音频状态、文章数量统计。
+- **Chapter 折叠目录** —— 首页显示 `DailyLingo` 品牌名、一张紧凑的学习进度卡，以及按固定
+  100 号区间分组的 `<details>` 文章目录。没有摘要、没有难度、没有音频状态。
+- **学习进度只存在你自己的浏览器里** —— 每篇一个完成开关、Chapter 全部学完才变绿的汇总、
+  实时更新的 `已完成 / 总数 · 百分比` 进度条，以及藏在左上角设置里的 JSON 导出 / 导入
+  （合并或覆盖）。无账号、无后端、不上传任何数据 —— 详见[学习进度](#学习进度)。
 - **每篇文章五个固定区域** —— `Article` / `Words` / `Questions` / `Answers` / `Continue`，
   顺序恒定，所有文章共用同一套模板、样式与脚本。
 - **真实音频，不是模拟** —— HTML5 Audio 播放器直连真实 WAV。播放暂停、已播时间、总时长、
@@ -126,6 +130,7 @@ DailyLingo/
 │   ├── css/style.css           # 全站统一样式（桌面 + 移动）
 │   ├── js/audio-player.js      # 音频播放器
 │   ├── js/main.js              # 题目判分 / 页面交互
+│   ├── js/progress.js          # 学习进度：localStorage + JSON 导出 / 导入（仅首页）
 │   └── images/                 # 站点图标（原样提交，非构建产物）
 │       ├── favicon.svg         # 设计源文件：打开的书 + 声波
 │       ├── favicon-32.png      # 不支持 SVG 图标时的光栅回退
@@ -137,7 +142,10 @@ DailyLingo/
 ├── tests/
 │   ├── conftest.py
 │   ├── test_build.py           # 解析 / 分组 / 标题 / 导航 / 判分 / 路径
-│   └── test_frontend.py        # 在 Node 中真实执行判分逻辑
+│   ├── test_frontend.py        # 在 Node 中真实执行判分逻辑
+│   ├── test_progress.py        # 进度结构 + 纯逻辑（在 Node 中执行）
+│   ├── test_progress_dom.py    # 用 jsdom 驱动进度交互（可选）
+│   └── js/progress_dom.js      # 上一个测试用到的 jsdom 驱动脚本
 ├── watch.bat                   # Windows 双击即开始监听
 ├── requirements.txt
 ├── .gitignore
@@ -364,6 +372,72 @@ end   = start + 99
 - 收起 / 展开状态由箭头方向体现（`▸` / `▾`）。
 
 ---
+
+## 学习进度
+
+首页会记录每篇文章是否学完。所有数据都只存在浏览器里 —— 没有账号、没有后端、没有同步服务，
+文章页本身没有被改动。
+
+### 每篇标记与 Chapter 汇总
+
+- 目录每一行在标题**右侧**有一个圆形开关：未完成是灰色空心圆，完成是绿色勾。标题链接行为不变；
+  开关是独立的 `<button>`，带 `aria-pressed`、随状态变化的 `aria-label`，点击区 36 px
+  （手机上 34 px）。
+- 点开关既不跳转文章，也不展开 / 折叠 Chapter：处理函数里 `preventDefault()` +
+  `stopPropagation()`，而且按钮本来就在 `<summary>` 之外。
+- Chapter 标题右侧有自己的汇总：`已完成/总篇数` 加同一对图标，只有**该 Chapter 里实际存在的
+  每一篇**都完成后才变绿。分母取自生成时的标记（`data-chapter-total`），**不假定 100 篇**；
+  状态每次渲染都实时算，不存在「Chapter 完成标记」这种会发霉的字段。
+- 新增文章自动以未完成状态出现，不需要任何配置：存储里只有「已完成编号的集合」，不是每篇一条记录。
+
+### 首页统计
+
+目录上方一张紧凑的卡片显示 `已完成 / 总数 · 百分比` 和一条 6 px 进度条
+（`role="progressbar"`，`aria-valuenow` / `aria-valuetext` 同步，数字变化会被读屏温和播报）。
+只统计真实文章 —— Chapter 标题、导航链接、品牌名都不算。文章数为 0 时显示 `0 / 0` 与 `0%`，
+不会除零。数字是从目录同一份 DOM 算出来的，所以新增文章只要重新构建就自动计入总数，
+已有记录不受影响。
+
+### 设置对话框（左上角）
+
+首页标题区左上角有一个齿轮按钮，打开原生模态 `<dialog>`（`showModal()`；`Esc`、点遮罩、
+点关闭按钮都能关）。导出 / 导入就藏在里面，不占阅读视线。
+
+- **导出**通过 `Blob` + `<a download>` 下载 `dailylingo-progress-YYYYMMDD.json`，内容只有
+  结构版本号、已完成编号和时间戳 —— 不含正文、不含音频、不含任何个人信息。
+- **导入**先读你选的文件、校验，然后给出**预览**再动手：文件里有效编号多少条、你当前多少条、
+  两种模式各自的结果是什么。
+- **合并**（默认）取并集，不会取消你已有的记录。**覆盖**以文件为准替换，**可能取消**记录，
+  所以必须再确认一次才执行。
+- JSON 非法、`schemaVersion` 不支持、结构不对、或者文件里的编号在本项目一个都不存在 —— 这些
+  情况下现有进度一律不动，并给出明确提示。
+- 编号是四位补零的字符串（`"0001"`）。不存在的编号会被忽略**并报数量**，格式非法的条目被跳过
+  并计数，重复编号自动去重。
+
+### 存储结构
+
+`localStorage["dailylingo_learning_progress_v1"]`：
+
+```json
+{
+  "schemaVersion": 1,
+  "completedArticles": ["0001", "0002", "0003"],
+  "updatedAt": "2026-10-16T08:00:00.000Z"
+}
+```
+
+- 用文章**编号**做身份，绝不用标题 —— 改标题不影响记录，改编号就不再对应。
+- 保留前导零；超过四位的编号保留完整数字。
+- 本地数据损坏时，原始内容先复制到 `dailylingo_learning_progress_v1__corrupt`，再重置为空白，
+  并在页面上提示 —— 坏数据不会把首页带崩。
+- 本地存储不可用（隐私模式 / 被禁用 / 配额满）时页面会明确提示，当前会话仍可正常勾选，
+  只是刷新后会丢。
+
+### 浏览器范围与迁移
+
+`localStorage` 属于**某一个浏览器配置文件里的某一个来源**。两个浏览器、两部手机、Android
+WebView、台式机加笔记本之间都不会同步，也不会上传到任何地方。JSON 导出 / 导入是唯一的迁移
+途径。重新部署网站**不会**重置你浏览器里已有的记录 —— 浏览器是按来源存，不是按版本存。
 
 ## 文章详情页区域
 
@@ -609,43 +683,51 @@ DailyLingo 构建完成
 
 ```text
 $ python scripts/validate.py
-结果：PASS 380 / FAIL 0 / WARN 0
+结果：PASS 402 / FAIL 0 / WARN 0
 ```
 
 覆盖：文章数据；编号唯一性与升序；Chapter 区间边界与「只输出有真实文章的 Chapter」；
-首页只含品牌名与折叠目录（并做摘要 / 难度 / 音频状态的**反向**检查）；第一个 Chapter 默认展开；
+首页含品牌名、进度卡与折叠目录（并做摘要 / 难度 / 音频状态的**反向**检查）；第一个 Chapter 默认展开；
 五个区域顺序；**播放器位于 `Article` 区内、标题之下、第一段正文之上**；**播放器与正文之间有分隔线**；
 **播放器控件为音量 + 恰好三档倍速（`0.75x` / `1x` / `1.25x`，无 ±5 秒）**（仅对**已有 WAV** 的页面
 断言 —— 尚未生成音频的页面反过来必须**不输出任何播放器控件**，只留 `player-unavailable` 提示）；
 **图标文件存在、PNG/SVG 有效、每个页面都以正确相对前缀声明**；浏览器标签与主标题一致性；
 单词表行数；题目数量；判分数据与 Answers 同源；Answers 默认折叠；上一篇 / 下一篇链接与标题；
 首末篇边界；无绝对根路径；静态资源存在性；重复构建字节级一致（若差异**纯粹来自行尾**，会直接
-点明是行尾问题，而不是报一个语焉不详的字节不一致）。
+点明是行尾问题，而不是报一个语焉不详的字节不一致）；**进度卡、每篇恰好一个完成按钮
+（全部初始未完成）、统计总数与进度条上限等于真实文章数、各 Chapter 汇总篇数等于该章真实
+篇数、设置对话框及其导出 / 导入控件、以及 `progress.js` 带存储键与 schema 版本且不含任何
+网络请求**。
 
 ### 自动化测试
 
 ```text
 $ pytest -q
-109 passed in 2.31s
+151 passed in 7.51s
 ```
 
 | 文件 | 用例数 | 覆盖内容 |
 |---|---|---|
 | `tests/test_build.py` | 105 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`，含被转义的 `1\.` 写法，题干与答案都测）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**播放器与正文之间有分隔线**、**无 ±5 秒按钮且恰好三档倍速**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、**CSS/JS 的 URL 带内容指纹（`?v=` + 8 位十六进制）**、GitHub Pages 子路径、构建可重复 |
 | `tests/test_frontend.py` | 4 | 在 Node 中真实执行 `assets/js/main.js`：单选正确 / 错误 / 空选、大小写不敏感、首尾空格、尾部标点、多个可接受答案、空白输入不判正确；并与 `build.normalize_answer` 做逐样本一致性比对 |
+| `tests/test_progress.py` | 29 | 学习进度的首页结构（每篇一个完成按钮且初始未完成、统计总数 / `aria-valuemax` / Chapter 汇总等于真实篇数、设置对话框与导出导入控件、空站点渲染 `0 / 0`）**外加在 Node 中真实执行的纯逻辑**：编号补零、文件校验（JSON 语法 / `schemaVersion` / 结构）、去重与非法条目计数、忽略不存在编号、合并取并集、统计不除零、按真实篇数判定 Chapter 完成、导出载荷结构与文件名、导出内容可被导入解析器读回 |
+| `tests/test_progress_dom.py` | 13 | 在 **jsdom** 中用真实 click 事件与真实 `localStorage` 驱动生成的首页：首次访问为空、勾选同步统计与存储、取消回退、Chapter 全完成才变绿、刷新恢复、损坏数据隔离、存储禁用降级、导入预览、合并、覆盖需二次确认、取消覆盖、非法 JSON / 不支持版本不改动进度、未知编号忽略并计数、导出载荷与对话框开关。未安装 jsdom 时自动跳过 |
 
 测试全部使用临时目录，不会污染或覆盖真实的 `content/` 与 `sources/`。
+`test_progress_dom.py` 额外需要本机装有 `jsdom`；它只是开发期辅助工具（不是站点依赖），
+找不到时整个文件自动 skip。
 
 ### 本地静态服务器
 
 ```text
 $ python -m http.server 8123
-200 2517   text/html              <- /
+200 16077  text/html              <- /
 200 9916   text/html              <- /src/0001.A_New_Hobby.html
 200 …                               <- /src/0002 … 0010（每篇文章一个页面）
-200 17162  text/css               <- /assets/css/style.css
+200 25081  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
 200 9610   application/javascript <- /assets/js/audio-player.js
+200 26252  application/javascript <- /assets/js/progress.js
 200 919    image/svg+xml          <- /assets/images/favicon.svg
 200 942    image/png              <- /assets/images/favicon-32.png
 200 4682   image/png              <- /assets/images/favicon-180.png
@@ -653,7 +735,7 @@ $ python -m http.server 8123
 200 …                               <- /sources/0002 … 0010（每篇文章一个 WAV）
 ```
 
-*（做了省略：全部 27 条路径——10 个文章页、10 个 WAV、首页与共享静态资源——都真实请求过且全部
+*（做了省略：全部 28 条路径——10 个文章页、10 个 WAV、首页与共享静态资源——都真实请求过且全部
 `200`；按文章逐条的那部分只留一个示例加 `…`，文章变多以后这份清单仍然可读。）*
 
 > **`python -m http.server` 不支持 `Range`。** 带 `Range: bytes=0-1023` 的请求仍返回 `200`
@@ -735,7 +817,8 @@ WAV 响应支持 HTTP Range 请求（`206 Partial Content`，已实测），因�
    因此「点击 Chapter 展开收起、拖动进度条跳转、切换倍速、输入答案点检查答案」这些交互
    没有跑过自动化用例。已做的是：判分规则在 Node 中逐条真实执行（见上文），
    生成 HTML 的结构与语义（`<details>` / `<summary>` / `role="slider"` / `aria-live` /
-   `aria-controls`）由 `validate.py` 静态断言。请按[本地预览](#本地预览)在浏览器里手工过一遍。
+   `aria-controls`）由 `validate.py` 静态断言。请按[本地预览](#本地预览)在浏览器里手工过一遍。（后来加的学习进度交互已由 jsdom 真实驱动，
+   见第 7 条。）
 2. **实际听感未验证**：WAV 参数已用 Python `wave` 模块读出核对，
    但「播放是否真的出声」需要有声卡的浏览器会话，未由本工具执行。
 3. **移动端真机布局未验证**：响应式断点（640 px）已实现，未在真机或设备模拟器中逐档核对。
@@ -749,6 +832,10 @@ WAV 响应支持 HTTP Range 请求（`206 Partial Content`，已实测），因�
    每个页面的声明）并已按渲染结果目视检查过，但 16 px 标签栏里的实际观感、以及手机上滚动时
    播放器的吸顶表现，需要真实浏览器会话。若不需要吸顶效果，删掉 `assets/css/style.css` 中的
    `.section-article .player` 规则即可。
+7. **学习进度界面只在 DOM 层面验证过，没有在真实浏览器里看过像素**：行为有真覆盖 ——
+   `tests/test_progress_dom.py` 用真实 click 事件和真实 `localStorage` 驱动生成的首页；
+   但本环境无法启动浏览器，所以齿轮位置、6 px 进度条、两种图标状态、以及 390 px 宽下的
+   对话框，仍值得按[本地预览](#本地预览)亲手看一眼。
 
 ---
 

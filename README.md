@@ -3,7 +3,8 @@
 **[English](README.md) | [简体中文](README-CH.md)**
 
 A daily English-learning site: short graded readings with real WAV narration, a key-word table,
-reading-comprehension practice with instant grading, and fully automatic article navigation.
+reading-comprehension practice with instant grading, fully automatic article navigation, and a
+local per-browser learning-progress tracker.
 
 Pure static site — **no login, no database, no backend, no remote API**. The build output is
 committed as-is and served straight from GitHub Pages.
@@ -11,7 +12,7 @@ committed as-is and served straight from GitHub Pages.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#quick-start)
 [![Runtime dependencies: none](https://img.shields.io/badge/runtime%20dependencies-none-success.svg)](#quick-start)
-[![Tests: 109 passed](https://img.shields.io/badge/tests-109%20passed-success.svg)](#verification-results)
+[![Tests: 151 passed](https://img.shields.io/badge/tests-151%20passed-success.svg)](#verification-results)
 [![Deploy: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#deployment-to-github-pages)
 
 **Live site:** <https://zc110747.github.io/DailyLingo/>
@@ -38,6 +39,7 @@ committed as-is and served straight from GitHub Pages.
 - [Article Numbering and Naming](#article-numbering-and-naming)
 - [Markdown Article Format](#markdown-article-format)
 - [Homepage Chapter Directory](#homepage-chapter-directory)
+- [Learning Progress](#learning-progress)
 - [Article Page Sections](#article-page-sections)
 - [Audio Player](#audio-player)
 - [Generating Audio with EnglishAudio](#generating-audio-with-englishaudio)
@@ -54,9 +56,14 @@ committed as-is and served straight from GitHub Pages.
 
 ## Features
 
-- **Collapsible Chapter directory** — the homepage shows *only* the `DailyLingo` brand and a
-  `<details>` tree of articles grouped into fixed 100-number Chapters. No summaries, no difficulty
-  labels, no audio status, no counters.
+- **Collapsible Chapter directory** — the homepage shows the `DailyLingo` brand, a compact
+  progress card and a `<details>` tree of articles grouped into fixed 100-number Chapters. No
+  summaries, no difficulty labels, no audio status.
+- **Learning progress, stored in your own browser** — a per-article completed toggle, a Chapter
+  roll-up that turns green only when every article in that Chapter is done, a live
+  `completed / total · percent` bar, and JSON export/import (merge or overwrite) behind a
+  settings dialog in the top-left corner. No account, no backend, nothing uploaded — see
+  [Learning Progress](#learning-progress).
 - **Five fixed sections per article** — `Article` / `Words` / `Questions` / `Answers` / `Continue`,
   always in that order, sharing one template, one stylesheet and one script.
 - **Real audio, not a mock** — an HTML5 Audio player wired to the actual WAV file. Play/pause,
@@ -132,6 +139,7 @@ DailyLingo/
 │   ├── css/style.css           # Site-wide styles (desktop + mobile)
 │   ├── js/audio-player.js      # Audio player
 │   ├── js/main.js              # Question grading / page interactions
+│   ├── js/progress.js          # Learning progress: localStorage + JSON export/import (homepage)
 │   └── images/                 # Site icon (committed as-is, not generated)
 │       ├── favicon.svg         # Source design: open book + sound bars
 │       ├── favicon-32.png      # Raster fallback for browsers without SVG icons
@@ -143,7 +151,10 @@ DailyLingo/
 ├── tests/
 │   ├── conftest.py
 │   ├── test_build.py           # Parsing / grouping / titles / navigation / grading / paths
-│   └── test_frontend.py        # Grading logic executed for real in Node
+│   ├── test_frontend.py        # Grading logic executed for real in Node
+│   ├── test_progress.py        # Progress markup + pure logic (executed in Node)
+│   ├── test_progress_dom.py    # Progress interactions driven in jsdom (optional)
+│   └── js/progress_dom.js      # The jsdom driver used by the test above
 ├── watch.bat                   # Double-click to start watching on Windows
 ├── requirements.txt
 ├── .gitignore
@@ -384,6 +395,80 @@ never leak into the template and can be unit-tested directly.
 - State is conveyed by the arrow direction (`▸` / `▾`).
 
 ---
+
+## Learning Progress
+
+The homepage tracks which articles you have finished. Everything lives in the browser — no account,
+no backend, no sync service — and the article pages themselves are untouched.
+
+### Per-article marks and Chapter roll-up
+
+- Every row in the directory has a round toggle to the **right** of the title: an outlined grey
+  circle when unmarked, a green check when done. The title link keeps working as before; the toggle
+  is a separate `<button>` carrying `aria-pressed`, a state-dependent `aria-label` and a 36 px hit
+  area (34 px on mobile).
+- Clicking a toggle never navigates and never collapses or expands the Chapter: the handler calls
+  `preventDefault()` + `stopPropagation()`, and the button lives outside `<summary>` anyway.
+- The Chapter header carries its own roll-up — `done/total` plus the same icon pair — that turns
+  green only when **every article that actually exists in that Chapter** is done. The denominator
+  comes from the generated markup (`data-chapter-total`), never from an assumed 100. The state is
+  derived on every render, so there is no separate "chapter completed" flag that can drift.
+- A new article joins the list unchecked with nothing to configure: storage holds only the set of
+  completed IDs, not one record per article.
+
+### Homepage statistics
+
+A compact card above the directory shows `completed / total · percent` and a 6 px bar
+(`role="progressbar"`, with `aria-valuenow` / `aria-valuetext` kept in sync and the numbers
+announced politely). Only real articles are counted — Chapter labels, navigation links and the
+brand are not. With zero articles the page shows `0 / 0` and `0%` rather than dividing by zero.
+Because the numbers are computed from the same DOM the directory renders, adding an article and
+rebuilding is all it takes for it to join the total; existing marks are unaffected.
+
+### Settings dialog (top-left)
+
+A gear button in the top-left corner of the homepage header opens a modal `<dialog>`
+(`showModal()`; `Esc`, a backdrop click and the close button all dismiss it). Export/import live
+there, deliberately out of the reading path.
+
+- **Export** downloads `dailylingo-progress-YYYYMMDD.json` through a `Blob` + `<a download>`: the
+  schema version, the completed IDs and timestamps — no article text, no audio, nothing personal.
+- **Import** reads the file you pick, validates it, and then shows a **preview** before touching
+  anything: the valid IDs in the file, how many you have now, and the result each mode would give.
+- **Merge** (the default) takes the union, so nothing you already marked is cleared. **Overwrite**
+  replaces the set with the file's, which *can* clear marks, so it demands a second, explicit
+  confirmation.
+- Invalid JSON, an unsupported `schemaVersion`, a malformed structure, or an ID list that matches
+  nothing in this project all leave the stored progress untouched, with a message saying so.
+- IDs are zero-padded strings (`"0001"`). Unknown IDs are ignored **and counted**, malformed
+  entries are skipped and counted, and duplicates collapse.
+
+### Storage format
+
+`localStorage["dailylingo_learning_progress_v1"]`:
+
+```json
+{
+  "schemaVersion": 1,
+  "completedArticles": ["0001", "0002", "0003"],
+  "updatedAt": "2026-10-16T08:00:00.000Z"
+}
+```
+
+- The article **number** is the identity, never the title — renaming an article keeps its mark,
+  changing its number does not.
+- Leading zeros are preserved; numbers beyond four digits keep every digit.
+- A corrupt value is copied to `dailylingo_learning_progress_v1__corrupt` and then reset, with a
+  visible notice, so a broken record can never take the homepage down.
+- If storage is unavailable (private mode, disabled, quota exhausted) the page says so and keeps
+  working for the current session — the marks simply do not survive a reload.
+
+### Browser scope and migration
+
+`localStorage` belongs to **one origin in one browser profile**. Two browsers, two phones, an
+Android WebView, a desktop and a laptop do not share marks, and nothing is uploaded anywhere. JSON
+export/import is the only migration path. Redeploying the site cannot reset marks that are already
+in your browser, because the browser scopes them to the origin, not to a deployment.
 
 ## Article Page Sections
 
@@ -651,12 +736,12 @@ every title under its Chapter. The CLI output is currently in Chinese; the forma
 
 ```text
 $ python scripts/validate.py
-结果：PASS 380 / FAIL 0 / WARN 0
+结果：PASS 402 / FAIL 0 / WARN 0
 ```
 
 Covers: article data; number uniqueness and ascending order; Chapter range boundaries and the
-"only non-empty Chapters" rule; the homepage containing nothing but the brand and the directory
-(including negative checks for summaries / difficulty / audio status); the first Chapter being
+"only non-empty Chapters" rule; the homepage containing the brand, the progress card and the directory (still with negative
+checks for summaries / difficulty / audio status); the first Chapter being
 expanded; the order of the five sections; **the player sitting inside `Article`, under the heading
 and above the first paragraph**; **a divider between the player and the body text**; **the player
 controls being volume plus exactly three speed buttons (`0.75x` / `1x` / `1.25x`, no ±5 s)** on pages
@@ -667,32 +752,41 @@ on every page with the right relative prefix**; browser title and heading consis
 row counts; question counts; the grading key matching the Answers section; Answers being collapsed
 by default; previous/next links and titles; first/last article boundaries; absence of
 root-absolute paths; existence of static assets; byte-identical rebuilds (a mismatch caused purely
-by line endings is called out as such, instead of being reported as an unexplained byte difference).
+by line endings is called out as such, instead of being reported as an unexplained byte difference);
+**the progress card, one toggle per real article (all initially unchecked), a stats total and
+`aria-valuemax` equal to the real article count, Chapter roll-up totals equal to each Chapter's
+real count, the settings dialog with its export/import controls, and `progress.js` carrying the
+storage key plus the schema version while making no network calls**.
 
 ### Automated tests
 
 ```text
 $ pytest -q
-109 passed in 2.31s
+151 passed in 7.51s
 ```
 
 | File | Cases | Coverage |
 |---|---|---|
 | `tests/test_build.py` | 105 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`, both the plain and the escaped `1\.` spelling, for stems and answers alike), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, **the player rendered above the body text (with and without a WAV)**, **a divider between the player and the body text**, **no ±5 s buttons and exactly three speed buttons**, **icon declarations carrying the correct relative prefix, home page icon next to the brand, icon assets valid PNG/SVG with the expected dimensions**, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, **CSS/JS URLs carrying a content fingerprint (`?v=` + 8 hex digits)**, GitHub Pages subpath, reproducible builds |
 | `tests/test_frontend.py` | 4 | Executes `assets/js/main.js` for real in Node: correct / incorrect / empty single-choice selections, case insensitivity, leading and trailing whitespace, trailing punctuation, multiple acceptable answers, blank input never correct; plus a sample-by-sample consistency check against `build.normalize_answer` |
+| `tests/test_progress.py` | 29 | Homepage structure for the progress feature (one toggle per real article, all starting unchecked, stats total / `aria-valuemax` / Chapter totals matching reality, settings dialog and its export-import controls, empty site rendering `0 / 0`) **plus the pure logic executed in Node**: zero-padded IDs, payload validation (JSON syntax / `schemaVersion` / structure), dedupe and invalid-entry counting, ignoring unknown IDs, merge union, statistics without dividing by zero, Chapter completion on the real count, export payload shape, filename and import round-trip |
+| `tests/test_progress_dom.py` | 13 | Drives the generated homepage in **jsdom** with real click events and a real `localStorage`: first visit empty, toggle updates stats / storage / Chapter, unchecking reverts, Chapter turns green only when complete, reload restores, corrupt data quarantined, storage-disabled degradation, import preview, merge, overwrite behind a second confirmation, cancelling overwrite, invalid JSON / unsupported version leaving progress intact, unknown IDs ignored and counted, export payload and dialog open/close. Skipped automatically when jsdom is not installed |
 
 Every test uses temporary directories and never touches the real `content/` or `sources/`.
+`test_progress_dom.py` additionally needs `jsdom` on this machine; it is a development-only
+helper (not a site dependency) and the whole file is skipped when it is missing.
 
 ### Local static server
 
 ```text
 $ python -m http.server 8123
-200 2517   text/html              <- /
+200 16077  text/html              <- /
 200 9916   text/html              <- /src/0001.A_New_Hobby.html
 200 …                               <- /src/0002 … 0010  (one page per article)
-200 17162  text/css               <- /assets/css/style.css
+200 25081  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
 200 9610   application/javascript <- /assets/js/audio-player.js
+200 26252  application/javascript <- /assets/js/progress.js
 200 919    image/svg+xml          <- /assets/images/favicon.svg
 200 942    image/png              <- /assets/images/favicon-32.png
 200 4682   image/png              <- /assets/images/favicon-180.png
@@ -700,7 +794,7 @@ $ python -m http.server 8123
 200 …                               <- /sources/0002 … 0010  (one WAV per article)
 ```
 
-*(Abridged: all 27 paths — 10 article pages, 10 WAVs, the homepage and the shared assets — were
+*(Abridged: all 28 paths — 10 article pages, 10 WAVs, the homepage and the shared assets — were
 requested and answered `200`; the per-article rows are collapsed to one example plus `…` so this
 listing stays readable as the collection grows.)*
 
@@ -799,7 +893,8 @@ on this machine, so no "verified" claim is made for them:
    the grading rules are executed for real in Node (see above), and the structure and semantics of
    the generated HTML (`<details>` / `<summary>` / `role="slider"` / `aria-live` / `aria-controls`)
    are statically asserted by `validate.py`. Please walk through [Local Preview](#local-preview) by
-   hand in a browser.
+   hand in a browser. (The learning-progress interactions added later *are* driven for real in
+   jsdom — see item 7.)
 2. **Actual sound output not verified.** WAV parameters were read back and checked with Python's
    `wave` module, but "does it really play through a speaker" needs a browser session with an audio
    device, which this tool did not have.
@@ -817,6 +912,11 @@ on this machine, so no "verified" claim is made for them:
    reviewed as a rendered image, but how the favicon looks in a real tab bar at 16 px, and how the
    sticky player behaves while scrolling on a phone, need a browser session. If the sticky
    behaviour is unwanted, delete the `.section-article .player` rule in `assets/css/style.css`.
+7. **The learning-progress UI is verified in a DOM, not in a browser.** Its behaviour has real
+   coverage — `tests/test_progress_dom.py` drives the generated homepage in jsdom with real click
+   events and a real `localStorage` — but pixels are not verified: this environment cannot launch
+   a browser, so the gear position, the 6 px bar, the two icon states and the dialog at 390 px
+   still deserve a quick look through [Local Preview](#local-preview).
 
 ---
 

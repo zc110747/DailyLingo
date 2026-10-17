@@ -163,6 +163,62 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
             f">{build.esc(article.display_title)}</a>" in index_html,
         )
     report.check("首页无绝对根路径", not ABS_PATH_RE.search(index_html))
+
+    # 学习进度：左上角设置入口 + 统计 + 每篇完成按钮 + Chapter 汇总
+    report.check(
+        "首页有左上角设置入口（含 ARIA 关联）",
+        'data-action="open-settings"' in index_html
+        and 'aria-haspopup="dialog"' in index_html
+        and 'aria-controls="settings-dialog"' in index_html,
+    )
+    report.check(
+        "首页有设置对话框与导出 / 导入入口",
+        '<dialog class="settings-dialog" id="settings-dialog"' in index_html
+        and 'data-action="export-progress"' in index_html
+        and 'data-action="pick-import"' in index_html
+        and "data-import-input" in index_html,
+    )
+    report.check(
+        "首页统计总数等于实际文章数",
+        f"data-progress-total>{len(articles)}<" in index_html,
+        f"articles={len(articles)}",
+    )
+    report.check(
+        "进度条 aria-valuemax 等于文章总数",
+        f'aria-valuemax="{len(articles)}"' in index_html,
+    )
+    report.check(
+        "首页引用 progress.js 且带内容指纹",
+        f'src="{build.asset_url(build.PROGRESS_JS)}"' in index_html,
+    )
+    toggles = index_html.count('data-action="toggle-complete"')
+    report.check(
+        "每篇文章恰有一个完成切换按钮",
+        toggles == len(articles),
+        f"toggles={toggles} articles={len(articles)}",
+    )
+    report.check(
+        "完成按钮初始状态全部为未完成",
+        index_html.count('aria-pressed="false"') == len(articles),
+        f'aria-pressed="false" -> {index_html.count(chr(97) + "ria-pressed=\"false\"")}',
+    )
+    for article in articles:
+        report.check(
+            f"完成按钮的编号与文章一致（{article.number_text}）",
+            f'data-action="toggle-complete" data-article-id="{article.number_text}"' in index_html,
+        )
+    report.check(
+        "每个 Chapter 都有汇总状态",
+        index_html.count("data-chapter-status") == len(chapters),
+        f'{index_html.count("data-chapter-status")} != {len(chapters)}',
+    )
+    generated_totals = sorted(int(m) for m in re.findall(r'data-chapter-total="(\d+)"', index_html))
+    expected_totals = sorted(len(c.articles) for c in chapters)
+    report.check(
+        "Chapter 汇总篇数等于各章实际文章数",
+        generated_totals == expected_totals,
+        f"{generated_totals} != {expected_totals}",
+    )
     report.check(
         "首页 CSS/JS 带内容指纹",
         f'href="{build.asset_url(build.STYLE_CSS)}"' in index_html
@@ -332,6 +388,7 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
         "assets/css/style.css",
         "assets/js/main.js",
         "assets/js/audio-player.js",
+        build.PROGRESS_JS,
         build.FAVICON_SVG,
         build.FAVICON_PNG32,
         build.FAVICON_PNG180,
@@ -347,6 +404,16 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
     report.check(
         f"{build.FAVICON_SVG} 是有效 SVG",
         svg_icon.is_file() and b"<svg" in svg_icon.read_bytes()[:400],
+    )
+    progress_js = out_dir / build.PROGRESS_JS
+    progress_src = progress_js.read_text(encoding="utf-8") if progress_js.is_file() else ""
+    report.check(
+        f"{build.PROGRESS_JS} 声明存储键与 schema 版本",
+        "dailylingo_learning_progress_v1" in progress_src and "SCHEMA_VERSION = 1" in progress_src,
+    )
+    report.check(
+        f"{build.PROGRESS_JS} 只操作相对资源、不发网络请求",
+        "fetch(" not in progress_src and "XMLHttpRequest" not in progress_src,
     )
 
     print("== 6. 构建可重复性 ==")
