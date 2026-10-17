@@ -359,7 +359,12 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
             b_bytes = (tmp_out / rel).read_bytes()
             if a_bytes != b_bytes:
                 identical = False
-                report.check(f"重复构建 {rel} 字节一致", False)
+                # 最常见的假失败：工作副本被签出成 CRLF，而构建始终写 LF
+                # （core.autocrlf=true 且仓库缺 .gitattributes 时全新 clone 就会这样）
+                hint = ""
+                if a_bytes.replace(b"\r\n", b"\n") == b_bytes.replace(b"\r\n", b"\n"):
+                    hint = "（仅行尾差异：磁盘上是 CRLF —— 检查 .gitattributes 与 core.autocrlf）"
+                report.check(f"重复构建 {rel} 字节一致{hint}", False)
         report.check("重复构建结果稳定（字节级一致）", identical)
 
     return report.summary()

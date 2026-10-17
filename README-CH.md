@@ -141,10 +141,17 @@ DailyLingo/
 ├── watch.bat                   # Windows 双击即开始监听
 ├── requirements.txt
 ├── .gitignore
+├── .gitattributes              # 仓库内 LF、*.bat 为 CRLF（见下方说明）
 ├── LICENSE
 ├── README.md                   # 英文文档（默认）
 └── README-CH.md                # 本文件（简体中文）
 ```
+
+> **行尾约定。** 仓库内一律存 LF，`*.bat` 签出为 CRLF（cmd.exe 只对 CRLF 可靠）。这不只是整洁
+> 问题：`scripts/build.py` 永远写 LF，所以在 `core.autocrlf=true` 的机器上，全新 clone 会把
+> **CRLF** 的 `src/*.html` 交给 `validate.py`，其字节级重建比对就会无端报 `FAIL` —— 这个假失败
+> 已实际复现并加了防护。配置正确时 `git ls-files --eol src/0001.A_New_Hobby.html index.html`
+> 应显示 `i/lf w/lf`。
 
 > `tools/`（EnglishAudio 的 ~100 MB 打包产物）**不在仓库内**：体积大且已在其它仓库维护，
 > 这里只按需调用。`.gitignore` 已忽略该目录，放进去也不会污染 `git status`。
@@ -611,7 +618,8 @@ $ python scripts/validate.py
 断言 —— 尚未生成音频的页面反过来必须**不输出任何播放器控件**，只留 `player-unavailable` 提示）；
 **图标文件存在、PNG/SVG 有效、每个页面都以正确相对前缀声明**；浏览器标签与主标题一致性；
 单词表行数；题目数量；判分数据与 Answers 同源；Answers 默认折叠；上一篇 / 下一篇链接与标题；
-首末篇边界；无绝对根路径；静态资源存在性；重复构建字节级一致。
+首末篇边界；无绝对根路径；静态资源存在性；重复构建字节级一致（若差异**纯粹来自行尾**，会直接
+点明是行尾问题，而不是报一个语焉不详的字节不一致）。
 
 ### 自动化测试
 
@@ -709,6 +717,12 @@ WAV 响应支持 HTTP Range 请求（`206 Partial Content`，已实测），因�
   `D:\user_project\…\009.ai_voice\publisher\eaudio.cmd`，该目录已不存在 —— EnglishAudio 源仓库
   现在位于 `E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\`。候选路径与两份 README 已
   同步更新，并实测 `resolve_audio_tool()` 能返回可读路径（`--audio` 恢复正常）。
+- **冲着「构建字节级可复现」来的行尾陷阱**：本机开着 `core.autocrlf=true` 而仓库没有
+  `.gitattributes`，全新 clone 会把 `src/*.html` 签出成 **CRLF**，而 `build.py` 永远写 LF。
+  在临时目录里把那 10 个生成页面改成 CRLF 复现：`validate.py` 对一个完全正常的站点报了 10 个
+  `FAIL`。已通过提交 `.gitattributes`（`* text=auto eol=lf`、`*.bat text eol=crlf`、二进制资产
+  标 `binary`）修复，并把索引里仍是 CRLF 的 7 个 `content/*.md` renormalize 成 LF；同时让
+  `validate.py` 把「只有行尾不同」的情况**显式点出来**，而不是闷着报字节不一致。
 
 ---
 

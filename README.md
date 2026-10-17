@@ -147,10 +147,18 @@ DailyLingo/
 ├── watch.bat                   # Double-click to start watching on Windows
 ├── requirements.txt
 ├── .gitignore
+├── .gitattributes              # LF in the repo, CRLF for *.bat (see the note below)
 ├── LICENSE
 ├── README.md                   # This file (English, default)
 └── README-CH.md                # 简体中文文档
 ```
+
+> **Line endings.** The repository stores LF, and `*.bat` is checked out as CRLF (cmd.exe is only
+> reliable with CRLF). This is more than tidiness: `scripts/build.py` always writes LF, so on a
+> machine with `core.autocrlf=true` a fresh clone would hand a **CRLF** `src/*.html` to
+> `validate.py`, whose byte-level rebuild comparison would then fail (`FAIL`) for no real reason —
+> that exact false alarm was reproduced and is now guarded against. When the setup is right,
+> `git ls-files --eol src/0001.A_New_Hobby.html index.html` reports `i/lf w/lf`.
 
 > `tools/` (the ~100 MB packaged EnglishAudio TTS build) is **not** in this repository: it is large
 > and already maintained elsewhere, so it is only invoked on demand. `.gitignore` already ignores
@@ -657,7 +665,8 @@ controls at all (only the `player-unavailable` note);
 on every page with the right relative prefix**; browser title and heading consistency; word-table
 row counts; question counts; the grading key matching the Answers section; Answers being collapsed
 by default; previous/next links and titles; first/last article boundaries; absence of
-root-absolute paths; existence of static assets; byte-identical rebuilds.
+root-absolute paths; existence of static assets; byte-identical rebuilds (a mismatch caused purely
+by line endings is called out as such, instead of being reported as an unexplained byte difference).
 
 ### Automated tests
 
@@ -767,6 +776,14 @@ live site.
   source repo now lives under `E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\`. The
   candidate list and both READMEs were updated, and `resolve_audio_tool()` was checked to actually
   return a readable path (`--audio` therefore works again).
+- **A line-ending trap aimed at the "byte-identical rebuild" guarantee.** `core.autocrlf=true` was
+  set on the development machine and the repository had no `.gitattributes`, so a fresh clone would
+  check `src/*.html` out as **CRLF** while `build.py` always writes LF. Reproduced by converting the
+  ten generated pages in a scratch tree to CRLF: `validate.py` reported ten `FAIL`s on a site that
+  was in fact perfectly fine. Fixed by committing `.gitattributes` (`* text=auto eol=lf`,
+  `*.bat text eol=crlf`, binary assets marked `binary`) and renormalising the seven `content/*.md`
+  files whose copies in the index still held CRLF; `validate.py` now also names a CRLF-only
+  mismatch explicitly instead of silently reporting a byte difference.
 
 ---
 

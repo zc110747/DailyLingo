@@ -1,0 +1,16 @@
+# Line endings — see README.md "Repository layout".
+#
+# This machine has core.autocrlf=true. Without this file, a fresh clone checks text files out as
+# CRLF, while scripts/build.py always writes LF — so validate.py's "byte-identical rebuild" check
+# would compare CRLF (working copy) against LF (fresh build) and fail spuriously.
+#
+# Rule: everything is LF inside the repository *and* on disk; Windows batch files are the one
+# exception, because cmd.exe is only reliable with CRLF.
+* text=auto eol=lf
+
+*.bat text eol=crlf
+
+# Binary assets: never convert.
+*.wav binary
+*.png binary
+*.ico binary
