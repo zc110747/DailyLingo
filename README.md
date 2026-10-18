@@ -582,7 +582,7 @@ removed.
 
 Behaviour:
 
-- **Full rebuild** (twelve articles, ~0.14 s in process): adding or removing an article changes the
+- **Full rebuild** (sixteen articles, ~0.20 s in process): adding or removing an article changes the
   previous/next links of its neighbours, so rewriting only the changed page would leave the site
   subtly inconsistent.
 - A malformed Markdown file **prints an error and keeps watching** — fix it and save again.
@@ -723,9 +723,9 @@ $ python scripts/build.py --verbose
   文章 0001  A New Hobby  |  3 词  3 题  |  音频 有
   …                                   # one such line per article
 DailyLingo 构建完成
-  文章总数：12
+  文章总数：16
   Chapter 分组：1
-    Chapter 0001–0100（默认展开）：12 篇
+    Chapter 0001–0100（默认展开）：16 篇
   警告：0 条
 ```
 
@@ -736,7 +736,7 @@ every title under its Chapter. The CLI output is currently in Chinese; the forma
 
 ```text
 $ python scripts/validate.py
-结果：PASS 474 / FAIL 0 / WARN 0
+结果：PASS 618 / FAIL 0 / WARN 0
 ```
 
 Covers: article data; number uniqueness and ascending order; Chapter range boundaries and the
@@ -762,7 +762,7 @@ storage key plus the schema version while making no network calls**.
 
 ```text
 $ pytest -q
-152 passed in 7.49s
+152 passed in 7.84s
 ```
 
 | File | Cases | Coverage |
@@ -780,9 +780,9 @@ helper (not a site dependency) and the whole file is skipped when it is missing.
 
 ```text
 $ python -m http.server 8123
-200 17883  text/html              <- /
+200 21522  text/html              <- /
 200 9916   text/html              <- /src/0001.A_New_Hobby.html
-200 …                               <- /src/0002 … 0012  (one page per article)
+200 …                               <- /src/0002 … 0016  (one page per article)
 200 25081  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
 200 9610   application/javascript <- /assets/js/audio-player.js
@@ -791,10 +791,10 @@ $ python -m http.server 8123
 200 942    image/png              <- /assets/images/favicon-32.png
 200 4682   image/png              <- /assets/images/favicon-180.png
 200 1641488 audio/wav             <- /sources/0001.A_New_Hobby.wav
-200 …                               <- /sources/0002 … 0012  (one WAV per article)
+200 …                               <- /sources/0002 … 0016  (one WAV per article)
 ```
 
-*(Abridged: all 32 paths — 12 article pages, 12 WAVs, the homepage and the shared assets — were
+*(Abridged: all 40 paths — 16 article pages, 16 WAVs, the homepage and the shared assets — were
 requested and answered `200`; the per-article rows are collapsed to one example plus `…` so this
 listing stays readable as the collection grows.)*
 

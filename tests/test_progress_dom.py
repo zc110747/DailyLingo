@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -44,14 +46,18 @@ def expected_percent(done: int, total: int) -> str:
     return f"{int(done / total * 100 + 0.5)}%"
 
 
-def expected_fill(done: int, total: int) -> str:
-    """进度条宽度按 (ratio * 100).toFixed(1) 写入，浏览器会去掉尾随的 ``.0``。"""
+def assert_fill(actual: str, done: int, total: int) -> None:
+    """进度条宽度是 ratio*100 的 1 位小数渲染。
+
+    JS 用 ``toFixed(1)``，Python 的 ``:.1f`` 在 6.25 这种半数上取值不同（6.3 vs 6.2），
+    所以按容差比对，而不是逐字比较（否则文章数一变就假红）。
+    """
     if not total:
-        return "0%"
-    value = f"{done / total * 100:.1f}"
-    if value.endswith(".0"):
-        value = value[:-2]
-    return value + "%"
+        assert actual == "0%"
+        return
+    assert actual.endswith("%"), actual
+    value = float(actual[:-1])
+    assert abs(value - done * 100 / total) <= 0.06, f"{actual} vs {done}/{total}"
 
 
 @pytest.fixture(scope="module")
@@ -131,13 +137,10 @@ def test_first_visit_is_empty(observations, total):
 # 需求 2/3：勾选立即更新统计与存储，取消正确回退
 def test_toggle_updates_stats_and_storage(observations, total):
     step = observations["toggle_one"]
-    assert step["stats"] == {
-        "done": "1",
-        "total": str(total),
-        "percent": expected_percent(1, total),
-        "fill": expected_fill(1, total),
-        "valuenow": "1",
-    }
+    stats = step["stats"]
+    assert (stats["done"], stats["total"], stats["valuenow"]) == ("1", str(total), "1")
+    assert stats["percent"] == expected_percent(1, total)
+    assert_fill(stats["fill"], 1, total)
     assert step["chapter"] == {"count": f"1/{total}", "state": "未完成", "complete": False}
     assert step["pressed0001"] == "true"
     assert "未完成" in step["label0001"]  # 标签切换成「取消」语义
@@ -267,7 +270,9 @@ def test_unknown_ids_are_ignored(observations):
 # 导出：文件名、JSON 结构、只含有效编号
 def test_export_produces_importable_json(observations):
     step = observations["export"]
-    assert step["downloaded"]["download"] == "dailylingo-progress-20261017.json"
+    name = step["downloaded"]["download"]
+    assert re.fullmatch(r"dailylingo-progress-\d{8}\.json", name), name
+    datetime.strptime(name[len("dailylingo-progress-") : -len(".json")], "%Y%m%d")
     assert step["downloaded"]["href"] == "blob:test"
     payload = step["payload"]
     assert payload["schemaVersion"] == 1

@@ -156,7 +156,8 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
 
     # 首页链接
     for article in articles:
-        link = f'href="src/{article.html_name}"'
+        # 构建对属性值做了 HTML 转义，断言也必须用转义后的形式
+        link = f'href="src/{build.esc(article.html_name)}"'
         report.check(f"首页链接指向 {article.html_name}", link in index_html)
         report.check(
             f"首页标题格式为「编号. 原始标题」（{article.display_title}）",
@@ -314,7 +315,7 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
         if audio_file.is_file():
             report.check(
                 f"{article.html_name} 关联音频路径 {article.audio_name}",
-                f'data-src="../sources/{article.audio_name}"' in html,
+                f'data-src="../sources/{build.esc(article.audio_name)}"' in html,
             )
         else:
             report.warn(f"{article.html_name} 缺少音频 sources/{article.audio_name}（页面其余部分正常）")
@@ -364,8 +365,8 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
         )
 
         # 导航
-        prev_link = f'href="{article.prev.html_name}"' if article.prev else None
-        next_link = f'href="{article.next.html_name}"' if article.next else None
+        prev_link = f'href="{build.esc(article.prev.html_name)}"' if article.prev else None
+        next_link = f'href="{build.esc(article.next.html_name)}"' if article.next else None
         if prev_link:
             report.check(f"{article.html_name} 上一篇链接正确", prev_link in html)
             report.check(
