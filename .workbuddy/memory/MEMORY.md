@@ -42,37 +42,42 @@
 1. 编号是永久 ID：四位补零，超过四位不截断；文件名 = `NNNN.Title_With_Underscores.md`，
    **文件名里不要有空格**（否则 `sources/` 音频名、页面链接、`href` 三处对不上）；
    编号、文件名、front matter `id` 三者必须一致，否则构建报错。
-2. 显示标题统一由 `build.display_title()` 生成：`NNNN. 原始标题`；浏览器标签加 `| DailyLingo`。
+2. **文件名只用 ASCII，不要含撇号 / 引号 / 空格等标点**：文件名同时是 URL 片段与音频文件名，
+   U+2019 这类弯引号会多出 percent-encoding、git 引号、HTML 属性转义（`esc()` 把 `'` 变
+   `&#x27;`）三层麻烦。先例：`0006.A_Visit_to_the Library.md` → 下划线；
+   `0016.Grandma’s_Secret_Recipe.md` → `0016.Grandmas_Secret_Recipe.md`（H1 保留排版撇号）。
+   改名后记得：改相邻文章 `## Continue` 交叉引用 → 删旧 WAV → 用新名字重新生成 → **删旧 HTML**。
+3. 显示标题统一由 `build.display_title()` 生成：`NNNN. 原始标题`；浏览器标签加 `| DailyLingo`。
    首页 / 文章页 / 标签 / 上下篇导航共用同一函数。
-3. Chapter 固定 100 号一段：`start = ((n-1)//100)*100 + 1`；**只输出含真实文章的 Chapter**，
+4. Chapter 固定 100 号一段：`start = ((n-1)//100)*100 + 1`；**只输出含真实文章的 Chapter**，
    第一组默认展开（`<details open>`），其余折叠。
-4. 文章页固定五个区域，顺序不可变：Article / Words / Questions / Answers / Continue。
+5. 文章页固定五个区域，顺序不可变：Article / Words / Questions / Answers / Continue。
    Answers 用 `<details>` 默认折叠；判分答案内嵌在 `#quiz-data`，与 Answers 同源。
-5. 全站相对路径，**禁止 `href="/…"` / `src="/…"`**；`validate.py` 会失败。
-6. 构建脚本不生成音频、不调 TTS、不转码；单篇缺 WAV 只警告，其他页面照常构建。
-7. 构建必须可复现：输入不变时输出字节级一致（validate.py 会重构建到临时目录逐字节比对）。
-8. `src/` 中已删除文章的历史 HTML **不会自动清理**（不删文件原则），需人工删；
+6. 全站相对路径，**禁止 `href="/…"` / `src="/…"`**；`validate.py` 会失败。
+7. 构建脚本不生成音频、不调 TTS、不转码；单篇缺 WAV 只警告，其他页面照常构建。
+8. 构建必须可复现：输入不变时输出字节级一致（validate.py 会重构建到临时目录逐字节比对）。
+9. `src/` 中已删除文章的历史 HTML **不会自动清理**（不删文件原则），需人工删；
    `watch.py` 只提示遗留页面，同样不删。
-9. **改 md 后不必手动敲构建**：`python scripts/watch.py`（或双击 `watch.bat`）会在 1 s 内
+10. **改 md 后不必手动敲构建**：`python scripts/watch.py`（或双击 `watch.bat`）会在 1 s 内
    全量重建。全量而非单页增量 —— 新增/删除文章会改动相邻文章的上下篇导航。
    md 写坏时只报错并继续监听；`--audio` 会顺带补齐缺失 WAV。
-10. **改了 `## Article` 正文就必须重新生成同名 WAV**（`sources/` 里那份会过期）；
+11. **改了 `## Article` 正文就必须重新生成同名 WAV**（`sources/` 里那份会过期）；
     `watch.py --audio` 只在**缺文件**时补，不检测内容过期，需人工重跑 EnglishAudio。
-11. **改名/删除文章要手删旧产物**：`sources/<旧名>.wav` 与 `src/<旧名>.html`。
+12. **改名/删除文章要手删旧产物**：`sources/<旧名>.wav` 与 `src/<旧名>.html`。
    构建脚本与 `watch.py` 都遵守「不删文件」，只会提示。
    改名的配套动作：`git mv content/...` → 改 H1 → 改相邻文章 `## Continues` 里的交叉引用
    → 重新生成 WAV → 删旧产物 → 重新构建。编号**永不**随标题变化。
-12. 文章页 Article 区内顺序为 **`<h2>Article</h2>` → 播放器 → `<hr class="player-divider">` → 正文段落**
+13. 文章页 Article 区内顺序为 **`<h2>Article</h2>` → 播放器 → `<hr class="player-divider">` → 正文段落**
     （诉求：先点开播放再读文字；分隔线由用户要求，上下各有 16 / 20 px 间距）。
     播放器另加 `.section-article .player { position: sticky; top: 8px }` 在阅读长文时吸顶，
     不想要吸顶删掉这条规则即可。`validate.py` 会断言顺序（有 / 无 WAV 两种情形都测）。
-13. 站点图标是**静态资产、随仓库提交**（不是构建产物，删不掉也不用生成）：
+14. 站点图标是**静态资产、随仓库提交**（不是构建产物，删不掉也不用生成）：
     `assets/images/favicon.svg`（设计源，打开的书 + 声波）、`favicon-32.png`、`favicon-180.png`；
     由 `build._render_icons(prefix)` 在每页 head 声明三条 link + `<meta name="theme-color">`
     （首页前缀 `""`、文章页 `"../"`），`build.THEME_COLOR = "#3166a4"`；首页品牌名左侧另有
     `class="brand-icon"`。**PNG 的光栅化脚本是一次性的，已删除**——要改图标需重写一个
     （纯标准库手写 PNG 编码 + 超采样即可，几何与 SVG 保持一致）。
-14. 播放器是「紧凑款」且**控件刻意做减法**（都是用户明确要求，别自行加回）：
+15. 播放器是「紧凑款」且**控件刻意做减法**（都是用户明确要求，别自行加回）：
     - 尺寸：卡片高实测 136 → 85.7 px（padding `12px 14px`，留白是用户后来的要求）；
       进度条视觉高 **5 px**，靠 `.player-track::before`（18 px 高、`top:50%` + `margin-top:-9px`）
       把可点区域撑到 **±9 px**（实测 ±7 px 有效、±11 px 无效）。伪元素不是独立事件目标，
@@ -81,7 +86,7 @@
       跳转只靠点击 / 拖动进度条与键盘方向键（`←`/`→`）。
     - **倍速只有 0.75x / 1x / 1.25x** 三档（`RATES` 数组与页面按钮同步），1x 默认激活。
     - 控件行布局：`<label 音量>` 在前、`.player-rates` 在后靠 `margin-left: auto` 右对齐。
-15. **`flex-basis` 不要写长度值（px）：容器一翻成竖排，它就变成「高度」。**
+16. **`flex-basis` 不要写长度值（px）：容器一翻成竖排，它就变成「高度」。**
     `.nav-link/.nav-disabled` 原本是 `flex: 1 1 200px`，移动端 `.continue-nav` 翻成
     `flex-direction: column` 后每个标签被撑到 200px 高（实测 366×200）。
     **2026-10-16 已把共享规则直接改成 `flex: 1 1 0; min-width: 200px`**，媒体查询里那条
@@ -89,7 +94,7 @@
     竖排时靠 flex item 默认的 `min-height: auto` 回到内容高 **52.6px**。
     百分比（`1 1 60%`）与 `auto` 不踩这个坑；`.fill-input`（`1 1 220px`）的父 `.fill-row`
     是 row + wrap 且移动端不翻转，所以没问题。
-16. **CSS / JS 的 URL 必须带内容指纹 `?v=<sha256 前 8 位>`**（`build.asset_version()` /
+17. **CSS / JS 的 URL 必须带内容指纹 `?v=<sha256 前 8 位>`**（`build.asset_version()` /
     `build.asset_url()` 生成，只按文件内容算 ⇒ 构建仍字节级可复现）。
     GitHub Pages 给这两个文件回 `Cache-Control: max-age=600`：只改内容不改 URL，手机端最长
     10 分钟还拿旧文件 —— 已把「已修好并部署」误判成「修复没生效」一次。HTML 自身也有
@@ -129,13 +134,13 @@ WAV 由 **EnglishAudio**（Piper + ONNX，离线）生成：
 `watch.py --audio` 的定位顺序：`--audio-tool` > `DAILYLINGO_AUDIO_TOOL` >
 `<仓库>/tools/eaudio.cmd` > 上面那个 publisher 路径；都找不到只提示不中断。
 只朗读 `## Article` 章节，输出与 md 同名的 WAV，正文含非英文会被拒绝（退出码 4），
-md 必须是 UTF-8。本仓现有 12 个 WAV 均为单声道 / 16 bit / 22 050 Hz。
+md 必须是 UTF-8。本仓现有 16 个 WAV 均为单声道 / 16 bit / 22 050 Hz。
 > **弯引号不拦**：`0010` 正文含 `“ ”`（U+201C/U+201D）照样合成成功（exit 0）——"含非英文就拒绝"
 > 指的是中文字符等，排版标点没问题。**不用为此删引号**。
 直接跑 `EnglishAudio.exe <md> --dist=sources`（`MSYS_NO_PATHCONV=1`，从仓库根执行）比走
 `.cmd` 包装更省事：stdout 能正常看到它自己的 banner（含字数 / 时长 / 字节数 / RTF）。
 
-## 文章清单（12 篇，全部在 Chapter 0001–0100）
+## 文章清单（16 篇，全部在 Chapter 0001–0100）
 | 编号 | 文件 | 标题 |
 |---|---|---|
 | 0001 | `0001.A_New_Hobby.md` | A New Hobby |
@@ -150,6 +155,10 @@ md 必须是 UTF-8。本仓现有 12 个 WAV 均为单声道 / 16 bit / 22 050 H
 | 0010 | `0010.The_Lost_Puppy.md` | The Lost Puppy |
 | 0011 | `0011.The_School_Art_Show.md` | The School Art Show |
 | 0012 | `0012.A_Message_from_the_Moon.md` | A Message from the Moon |
+| 0013 | `0013.The_Little_Musician.md` | The Little Musician |
+| 0014 | `0014.A_Strange_Fish_in_the_Sea.md` | A Strange Fish in the Sea |
+| 0015 | `0015.The_Weekend_Football_Game.md` | The Weekend Football Game |
+| 0016 | `0016.Grandmas_Secret_Recipe.md` | Grandma’s Secret Recipe（文件名去撇号，见下） |
 
 > 0001–0005 已由用户手工把单词表表头改成 `Word | IPA | Meaning`、题干改成 `Question N：…`、
 > Answers 改成**编号答案列表** `1\. **B. … ** 解释文字`（三种写法解析器都支持，只是写法统一了）。
@@ -177,11 +186,11 @@ md 必须是 UTF-8。本仓现有 12 个 WAV 均为单声道 / 16 bit / 22 050 H
   所以**像素级布局没有截图证据**，只有 jsdom 行为证据。改这块 CSS 后要人工在浏览器看一眼。
 
 ## 已验证 / 待验证
-- 已验证（2026-10-17，12 篇 + 学习进度）：`python scripts/build.py`（12 篇 / 1 个 Chapter / 0 警告）、
-  `python scripts/validate.py`（PASS 474 / FAIL 0 / WARN 0）、`pytest -q`（152 passed：
+- 已验证（2026-10-18，16 篇 + 学习进度）：`python scripts/build.py`（16 篇 / 1 个 Chapter / 0 警告）、
+  `python scripts/validate.py`（PASS 618 / FAIL 0 / WARN 0）、`pytest -q`（152 passed：
   test_build 105 / test_frontend 4 / test_progress 29 / test_progress_dom 14）、
-  本地 `http.server` 32 条路径全 200（12 HTML + 12 WAV + 首页 + CSS/JS（含 progress.js）+ 3 图标，26.5 MiB）、
-  进程内全量重建 12 篇约 0.14 s（5 次中位数 139 ms；单次 28 ms 是缓存抖动，别采信单次）；
+  本地 `http.server` 40 条路径全 200（16 HTML + 16 WAV + 首页 + CSS/JS（含 progress.js）+ 3 图标，35.6 MiB）、
+  进程内全量重建 16 篇约 0.20 s（5 次中位数 200 ms；单次 32 ms 是缓存抖动，别采信单次）；
   `watch.py` 实测 touch 后 1 s 内重建（23 ms）。
 - ⚠️ **`validate.py` 的「三档倍速」断言必须分支**（2026-10-17 修）：没生成 WAV 的页面只渲染
   `player-unavailable`、不输出任何控件，无条件断言会得到 `rates=[]` 假 FAIL。
