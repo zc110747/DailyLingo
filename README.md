@@ -523,27 +523,28 @@ Audio is produced by an external tool — the build script **never** synthesises
 transcodes. This project uses **EnglishAudio** (Piper + ONNX, fully offline: no network access and
 no text ever leaves the machine). It can live in either place:
 
-- `E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd` — the source
-  repository, maintained separately;
-- `<this repo>/tools\eaudio.cmd` — optional: copy the whole package in. `tools/` is `.gitignore`d
-  because the package is ~100 MB (including a 63 MB voice model), so it is not stored twice.
+- **On the system `PATH`** — EnglishAudio is installed machine-wide, so `EnglishAudio.exe` and
+  `eaudio.cmd` are callable by name. **No absolute path is recorded anywhere in this repository**:
+  different machines keep the tool in different places, and a hard-coded path breaks on the next
+  machine;
+- `<this repo>/tools\eaudio.cmd` — optional fallback: copy the whole package in. `tools/` is
+  `.gitignore`d because the package is ~100 MB (including a 63 MB voice model).
 
 `scripts/watch.py --audio` locates it in the following order, and if nothing is found it simply
 rebuilds the pages and prints a notice:
 
 ```text
 --audio-tool <path>  >  env var DAILYLINGO_AUDIO_TOOL  >  <repo>/tools/eaudio.cmd
-                     >  009.ai_voice\publisher\eaudio.cmd
+                     >  PATH: eaudio.cmd / EnglishAudio.exe / EnglishAudio
+                     >  <repo>/tools/eaudio.cmd
 ```
 
 ```bat
 :: Single file: reads the ## Article section -> writes a same-named WAV
-"E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
-  "content\0006.A_Visit_to_the_Library.md" --dist="sources"
+EnglishAudio.exe "content\0006.A_Visit_to_the_Library.md" --dist="sources"
 
 :: Batch: convert every .md under content/
-for %f in (content\*.md) do ^
-  "E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd" "%f" --dist="sources"
+for %f in (content\*.md) do EnglishAudio.exe "%f" --dist="sources"
 
 :: Or let the watcher fill in missing WAVs and rebuild for you
 python scripts/watch.py --audio
@@ -582,7 +583,7 @@ removed.
 
 Behaviour:
 
-- **Full rebuild** (sixteen articles, ~0.20 s in process): adding or removing an article changes the
+- **Full rebuild** (twenty articles, ~0.20 s in process): adding or removing an article changes the
   previous/next links of its neighbours, so rewriting only the changed page would leave the site
   subtly inconsistent.
 - A malformed Markdown file **prints an error and keeps watching** — fix it and save again.
@@ -652,7 +653,7 @@ Adjust the branch or folder if this repository is configured differently.
 1. Create a Markdown file in `content/` using an **unused number**:
 
    ```text
-   content/0009.My_Weekend.md
+   content/0021.My_Weekend.md
    ```
 
 2. Write the raw title and body: `# My Weekend`, then `## Article`.
@@ -661,8 +662,7 @@ Adjust the branch or folder if this repository is configured differently.
    [Generating Audio with EnglishAudio](#generating-audio-with-englishaudio)):
 
    ```bat
-   "E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
-     "content\0009.My_Weekend.md" --dist="sources"
+   EnglishAudio.exe "content\0021.My_Weekend.md" --dist="sources"
    ```
 
 5. Rebuild and self-check — or, better, leave `python scripts/watch.py --audio` running, in which
@@ -723,9 +723,9 @@ $ python scripts/build.py --verbose
   文章 0001  A New Hobby  |  3 词  3 题  |  音频 有
   …                                   # one such line per article
 DailyLingo 构建完成
-  文章总数：16
+  文章总数：20
   Chapter 分组：1
-    Chapter 0001–0100（默认展开）：16 篇
+    Chapter 0001–0100（默认展开）：20 篇
   警告：0 条
 ```
 
@@ -736,7 +736,7 @@ every title under its Chapter. The CLI output is currently in Chinese; the forma
 
 ```text
 $ python scripts/validate.py
-结果：PASS 618 / FAIL 0 / WARN 0
+结果：PASS 762 / FAIL 0 / WARN 0
 ```
 
 Covers: article data; number uniqueness and ascending order; Chapter range boundaries and the
@@ -780,9 +780,9 @@ helper (not a site dependency) and the whole file is skipped when it is missing.
 
 ```text
 $ python -m http.server 8123
-200 21522  text/html              <- /
+200 25185  text/html              <- /
 200 9916   text/html              <- /src/0001.A_New_Hobby.html
-200 …                               <- /src/0002 … 0016  (one page per article)
+200 …                               <- /src/0002 … 0020  (one page per article)
 200 25081  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
 200 9610   application/javascript <- /assets/js/audio-player.js
@@ -791,10 +791,10 @@ $ python -m http.server 8123
 200 942    image/png              <- /assets/images/favicon-32.png
 200 4682   image/png              <- /assets/images/favicon-180.png
 200 1641488 audio/wav             <- /sources/0001.A_New_Hobby.wav
-200 …                               <- /sources/0002 … 0016  (one WAV per article)
+200 …                               <- /sources/0002 … 0020  (one WAV per article)
 ```
 
-*(Abridged: all 40 paths — 16 article pages, 16 WAVs, the homepage and the shared assets — were
+*(Abridged: all 48 paths — 20 article pages, 20 WAVs, the homepage and the shared assets — were
 requested and answered `200`; the per-article rows are collapsed to one example plus `…` so this
 listing stays readable as the collection grows.)*
 
@@ -866,11 +866,13 @@ live site.
   (surfaced by adding `0009` before generating its WAV). The check is now branched: with a player it
   asserts the three speeds and the absence of ±5 s buttons, without one it asserts that no player
   controls were emitted.
-- **A stale local path to the audio tool.** `watch.py`'s fallback pointed at
-  `D:\user_project\…\009.ai_voice\publisher\eaudio.cmd`, which no longer exists — the EnglishAudio
-  source repo now lives under `E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\`. The
-  candidate list and both READMEs were updated, and `resolve_audio_tool()` was checked to actually
-  return a readable path (`--audio` therefore works again).
+- **A hard-coded path to the audio tool.** `watch.py`'s fallback carried an absolute path to
+  EnglishAudio, which stops resolving as soon as the tool is reinstalled or the project is opened on
+  another machine — that is exactly what happened (the path broke twice as the source repo moved).
+  Because the tool is installed on the system `PATH`, `resolve_audio_tool()` now looks it up by name
+  (`eaudio.cmd` / `EnglishAudio.exe` / `EnglishAudio`) and **no absolute path is recorded anywhere in
+  the repository**. Verified: it resolves on this machine and `watch.py --once` rebuilds all 20
+  articles in 118 ms.
 - **A line-ending trap aimed at the "byte-identical rebuild" guarantee.** `core.autocrlf=true` was
   set on the development machine and the repository had no `.gitattributes`, so a fresh clone would
   check `src/*.html` out as **CRLF** while `build.py` always writes LF. Reproduced by converting the

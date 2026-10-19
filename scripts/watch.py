@@ -14,9 +14,10 @@ r"""DailyLingo 增量同步：content/ 或 sources/ 一变，站点 HTML 立刻�
     python scripts/watch.py --interval 0.5  轮询间隔（秒，默认 1.0）
 
 EnglishAudio（本地离线 TTS）查找顺序：
-    --audio-tool 参数 > 环境变量 DAILYLINGO_AUDIO_TOOL > <仓库>/tools/eaudio.cmd
-    > E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd
+    --audio-tool 参数 > 环境变量 DAILYLINGO_AUDIO_TOOL > 系统 PATH 里的
+    eaudio.cmd / EnglishAudio.exe / EnglishAudio > <仓库>/tools/eaudio.cmd
     都找不到时只重建网页并给出提示，不会中断监听。
+    **刻意不写任何绝对路径**：工具已加入系统环境，各台电脑安装位置不同，写死会在换机后失效。
 
 行为约定：
     * 重建是**全量**的（5 篇文章 < 0.2 秒）。原因：新增/删除一篇文章会改变相邻文章的
@@ -29,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -40,24 +42,29 @@ import build  # noqa: E402  （同目录，复用唯一的构建逻辑）
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# EnglishAudio（本地离线 TTS）的查找顺序：--audio-tool > 环境变量 > 仓库内 tools/ > 本机默认位置。
-# 它约 100 MB 且已在其它仓库维护，因此本仓库不存一份；仓库内仍认 tools/eaudio.cmd，
-# 但默认不进 Git（见 .gitignore），你把它放进来也能直接用。
+# EnglishAudio（本地离线 TTS）的查找顺序：--audio-tool > 环境变量 > 系统 PATH > 仓库内 tools/。
+# 工具已加入系统环境（PATH），因此**不写任何绝对路径** —— 各台电脑安装位置不同，
+# 写死一条只会在换机后失效。仓库内仍认 tools/eaudio.cmd 作为兜底（可选，默认不进 Git）。
 AUDIO_TOOL_ENV = "DAILYLINGO_AUDIO_TOOL"
-AUDIO_TOOL_CANDIDATES = (
-    ROOT / "tools" / "eaudio.cmd",
-    Path(r"E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"),
-)
+AUDIO_TOOL_NAMES = ("eaudio.cmd", "EnglishAudio.exe", "EnglishAudio")
+AUDIO_TOOL_CANDIDATES = (ROOT / "tools" / "eaudio.cmd",)
 
 
 def resolve_audio_tool(explicit: str | None) -> Path | None:
-    """返回可直接调用的 eaudio.cmd 路径；找不到返回 None。"""
+    """返回可直接调用的音频工具路径；找不到返回 None。
+
+    顺序：``--audio-tool`` > 环境变量 > 系统 PATH（按名称查找）> ``<仓库>/tools/eaudio.cmd``。
+    """
     candidates: list[Path] = []
     if explicit:
         candidates.append(Path(explicit))
     from_env = os.environ.get(AUDIO_TOOL_ENV)
     if from_env:
         candidates.append(Path(from_env))
+    for name in AUDIO_TOOL_NAMES:
+        found = shutil.which(name)
+        if found:
+            candidates.append(Path(found))
     candidates.extend(AUDIO_TOOL_CANDIDATES)
 
     for candidate in candidates:
@@ -204,10 +211,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.audio:
         audio_tool = resolve_audio_tool(args.audio_tool)
         if audio_tool is None:
-            print("[WARN] 未找到 EnglishAudio 的 eaudio.cmd，本次不生成音频，只重建网页。")
-            print(f"       可用 --audio-tool <路径> 或环境变量 {AUDIO_TOOL_ENV} 指定，例如：")
+            print("[WARN] 未找到 EnglishAudio（PATH 里既没有 eaudio.cmd 也没有 EnglishAudio.exe），"
+                  "本次不生成音频，只重建网页。")
+            print(f"       把工具加入系统 PATH，或用 --audio-tool <路径> / 环境变量 {AUDIO_TOOL_ENV} 指定，例如：")
             print("         python scripts/watch.py --audio --audio-tool "
-                  r'"D:\path\to\eaudio.cmd"')
+                  r'"<安装目录>\eaudio.cmd"')
             print()
 
     print(f"DailyLingo 同步监听")

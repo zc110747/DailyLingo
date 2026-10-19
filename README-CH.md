@@ -486,25 +486,25 @@ WebView、台式机加笔记本之间都不会同步，也不会上传到任何�
 音频由外部工具生成 —— 构建脚本**不做** TTS、**不做**转码。本项目使用
 **EnglishAudio**（Piper + ONNX，完全离线：不联网、不上传文本）。它可存在于两处：
 
-- `E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd` —— 源仓库，已单独维护；
-- `<本仓库>/tools\eaudio.cmd` —— 可选：把整包复制进来即可。`tools/` 已被 `.gitignore` 忽略，
-  因为整包约 100 MB（含 63 MB 语音模型），不再在仓库里存第二份。
+- **系统 `PATH` 里** —— EnglishAudio 已加入系统环境，`EnglishAudio.exe` / `eaudio.cmd` 都能按名字
+  直接调用。**本仓库不记录任何绝对路径**：各台电脑安装位置不同，写死一条只会在换机后失效；
+- `<本仓库>/tools\eaudio.cmd` —— 可选兜底：把整包复制进来即可。`tools/` 已被 `.gitignore`
+  忽略，因为整包约 100 MB（含 63 MB 语音模型）。
 
 `scripts/watch.py --audio` 按下面的顺序定位它；都找不到时只重建网页并给出提示：
 
 ```text
 --audio-tool <路径>  >  环境变量 DAILYLINGO_AUDIO_TOOL  >  <仓库>/tools/eaudio.cmd
-                     >  009.ai_voice\publisher\eaudio.cmd
+                     >  PATH 里的 eaudio.cmd / EnglishAudio.exe / EnglishAudio
+                     >  <仓库>/tools/eaudio.cmd
 ```
 
 ```bat
 :: 单篇：读取 ## Article 章节 -> 生成同名 WAV
-"E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
-  "content\0006.A_Visit_to_the_Library.md" --dist="sources"
+EnglishAudio.exe "content\0006.A_Visit_to_the_Library.md" --dist="sources"
 
 :: 批量：把 content/ 下所有 md 一次转完
-for %f in (content\*.md) do ^
-  "E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd" "%f" --dist="sources"
+for %f in (content\*.md) do EnglishAudio.exe "%f" --dist="sources"
 
 :: 也可以交给同步脚本：自动补齐缺失 WAV 并重建网页
 python scripts/watch.py --audio
@@ -539,7 +539,7 @@ python scripts/watch.py --audio
 
 行为约定：
 
-- **全量重建**（16 篇，进程内约 0.20 s）：新增或删除一篇文章会改变相邻文章的上一篇 / 下一篇，
+- **全量重建**（20 篇，进程内约 0.12 s）：新增或删除一篇文章会改变相邻文章的上一篇 / 下一篇，
   只重写「变化的那一页」会留下不一致的假象。
 - Markdown 写坏时**只打印错误并继续监听**，不会退出；修好再保存即可重建成功。
 - 被删除文章遗留的 `src/*.html` 只提示、**不自动删除**（构建脚本同样不删文件）。
@@ -604,7 +604,7 @@ python -m http.server 8000
 1. 在 `content/` 新建 Markdown，文件名用**未占用的编号**：
 
    ```text
-   content/0009.My_Weekend.md
+   content/0021.My_Weekend.md
    ```
 
 2. 写原始标题与正文：`# My Weekend`，然后 `## Article`。
@@ -613,8 +613,7 @@ python -m http.server 8000
    [用 EnglishAudio 生成音频](#用-englishaudio-生成音频)）：
 
    ```bat
-   "E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\eaudio.cmd"^
-     "content\0009.My_Weekend.md" --dist="sources"
+   EnglishAudio.exe "content\0021.My_Weekend.md" --dist="sources"
    ```
 
 5. 重建与自检 —— 或者更省事：先开着 `python scripts/watch.py --audio`，
@@ -671,9 +670,9 @@ $ python scripts/build.py --verbose
   文章 0001  A New Hobby  |  3 词  3 题  |  音频 有
   …                                   # 每篇文章一行
 DailyLingo 构建完成
-  文章总数：16
+  文章总数：20
   Chapter 分组：1
-    Chapter 0001–0100（默认展开）：16 篇
+    Chapter 0001–0100（默认展开）：20 篇
   警告：0 条
 ```
 
@@ -683,7 +682,7 @@ DailyLingo 构建完成
 
 ```text
 $ python scripts/validate.py
-结果：PASS 618 / FAIL 0 / WARN 0
+结果：PASS 762 / FAIL 0 / WARN 0
 ```
 
 覆盖：文章数据；编号唯一性与升序；Chapter 区间边界与「只输出有真实文章的 Chapter」；
@@ -721,9 +720,9 @@ $ pytest -q
 
 ```text
 $ python -m http.server 8123
-200 21522  text/html              <- /
+200 25185  text/html              <- /
 200 9916   text/html              <- /src/0001.A_New_Hobby.html
-200 …                               <- /src/0002 … 0016（每篇文章一个页面）
+200 …                               <- /src/0002 … 0020（每篇文章一个页面）
 200 25081  text/css               <- /assets/css/style.css
 200 7291   application/javascript <- /assets/js/main.js
 200 9610   application/javascript <- /assets/js/audio-player.js
@@ -732,10 +731,10 @@ $ python -m http.server 8123
 200 942    image/png              <- /assets/images/favicon-32.png
 200 4682   image/png              <- /assets/images/favicon-180.png
 200 1641488 audio/wav             <- /sources/0001.A_New_Hobby.wav
-200 …                               <- /sources/0002 … 0016（每篇文章一个 WAV）
+200 …                               <- /sources/0002 … 0020（每篇文章一个 WAV）
 ```
 
-*（做了省略：全部 40 条路径——16 个文章页、16 个 WAV、首页与共享静态资源——都真实请求过且全部
+*（做了省略：全部 48 条路径——20 个文章页、20 个 WAV、首页与共享静态资源——都真实请求过且全部
 `200`；按文章逐条的那部分只留一个示例加 `…`，文章变多以后这份清单仍然可读。）*
 
 > **`python -m http.server` 不支持 `Range`。** 带 `Range: bytes=0-1023` 的请求仍返回 `200`
@@ -796,10 +795,10 @@ WAV 响应支持 HTTP Range 请求（`206 Partial Content`，已实测），因�
   但尚未生成音频的页面只渲染 `player-unavailable` 提示、根本不输出控件，于是 `rates=[]` 被判
   `FAIL`（新增 `0009` 后、生音频之前暴露出来）。现在按分支断言：有播放器就查三档倍速且无 ±5 s
   按钮，没有播放器就查页面里不出现任何播放器控件。
-- **音频工具的本地路径已失效**：`watch.py` 的兜底路径指向
-  `D:\user_project\…\009.ai_voice\publisher\eaudio.cmd`，该目录已不存在 —— EnglishAudio 源仓库
-  现在位于 `E:\cnb\git\Desktop_Vibe_Coding\009.ai_voice\publisher\`。候选路径与两份 README 已
-  同步更新，并实测 `resolve_audio_tool()` 能返回可读路径（`--audio` 恢复正常）。
+- **音频工具被写成了绝对路径**：`watch.py` 的兜底路径写死了 EnglishAudio 在某块盘上的位置，
+  工具一挪或换台电脑就失效 —— 实际已经因此坏过两次。现在工具本身已加入系统 `PATH`，
+  `resolve_audio_tool()` 改为**按名字查找**（`eaudio.cmd` / `EnglishAudio.exe` / `EnglishAudio`），
+  **仓库里不再记录任何绝对路径**。实测：本机能解析到，`watch.py --once` 重建 20 篇耗时 118 ms。
 - **冲着「构建字节级可复现」来的行尾陷阱**：本机开着 `core.autocrlf=true` 而仓库没有
   `.gitattributes`，全新 clone 会把 `src/*.html` 签出成 **CRLF**，而 `build.py` 永远写 LF。
   在临时目录里把那 10 个生成页面改成 CRLF 复现：`validate.py` 对一个完全正常的站点报了 10 个
