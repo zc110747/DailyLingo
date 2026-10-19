@@ -14,7 +14,7 @@
 可手改；`tools/`（EnglishAudio 整包 ~100 MB）已 gitignore、不进仓库。
 
 ## 文档约定
-`README.md` 英文（默认）+ `README-CH.md` 中文，**两份同步、结构对齐**（各 23 个 H2），顶/底互链；
+`README.md` 英文（默认）+ `README-CH.md` 中文，**两份同步、结构对齐**（各 24 个 H2），顶/底互链；
 改章节标题顺带看 `.gitignore` 与 `tests/` 里指向 README 的注释。
 **凡随文章数线性增长的列举一律省略**（目录树、首页示例、WAV 表、`--verbose`、`http.server` 清单）：
 只留第一条 + `…` 并注明 abridged。判据就是「会不会随篇数变长」。
@@ -59,8 +59,7 @@
 - 扩展：front matter（`id`/`title`/`audio`）+ `## Q1` + `题型：单选|填空` + `答案：` / `可接受答案：` / `解释：`。
 - **答案四种写法可混用**：① 紧凑串 `BAC`；② `Question5: …`；③ 分块；④ 编号列表 `1. **B. …** 解释`。
   ④ 的序号点常被转义成 `1\.`（CommonMark 里等价），正则写 `\\?`，**别全局删反斜杠**；题干同理。
-- `build.extract_choice_key()` 判据严格：`cook` / `bamboo` 不会被读成 `C` / `B`。
-- 题干里的 `______` 是内容，`strip_markdown` **不得**处理下划线强调。
+- `extract_choice_key()` 判据严格（`cook` 不会读成 `C`）；题干 `______` 是内容，不得当强调处理。
 
 ## 音频链路
 WAV 由 **EnglishAudio**（Piper + ONNX，离线）生成。**工具已在系统 PATH，仓库与记忆都不记绝对路径**
@@ -69,17 +68,16 @@ WAV 由 **EnglishAudio**（Piper + ONNX，离线）生成。**工具已在系统
 `<仓库>/tools/eaudio.cmd`。排查「找不到」先 `command -v`，**别改路径**。只读 `## Article`；输出同名
 WAV；正文含非英文被拒（退出码 4）；md 必须 UTF-8。现有 20 个 WAV 全为单声道 / 16 bit / 22 050 Hz，
 单篇 5–7 s。弯引号 `“ ”` 不拦（`0010` 实测 exit 0）。直接 `EnglishAudio.exe <md> --dist=sources`
-（`MSYS_NO_PATHCONV=1`，仓库根）比走 `.cmd` 省事：stdout 有字数 / 时长 / 字节数 / RTF；`--help` 可验 PATH。
+（`MSYS_NO_PATHCONV=1`，仓库根）比走 `.cmd` 省事：stdout 有字数 / 时长 / 字节数。
 
 ## 文章清单
 **0001–0020 共 20 篇**，全在 Chapter 0001–0100，不逐篇罗列（以 `content/` 为准，标题看 H1）。
-改名史：`0005` 撞名 → *A Day on the Farm*；`0016` 去撇号；`0018` 笔误 `fro` → `from`。
-0001–0005 已被用户统一成 `Word | IPA | Meaning` + `Question N：…` + `1\. **B. …**`。
+改名史：`0005` 撞名、`0016` 去撇号、`0018` 笔误 `fro`→`from`。
 
 ## 首页学习进度（纯前端）
-- `build.render_index()` 输出 `.site-tools`（齿轮 → `<dialog id="settings-dialog">`）、`.progress-card`
-  （`data-progress-*`）、`li.article-item[data-article-id]` + 勾选按钮 `[aria-pressed]`、Chapter summary
-  内 `[data-chapter-*]`；空心圆 / 绿勾**同时在 DOM 里**，靠属性切显隐，JS 只改属性不重建节点。
+- `build.render_index()` 输出 `.site-tools`（齿轮 → `#settings-dialog`）、`.progress-card`（`data-progress-*`）、
+  `li.article-item[data-article-id]` + `[aria-pressed]`、Chapter summary 内 `[data-chapter-*]`；空心圆 /
+  绿勾**同时在 DOM 里**，靠属性切显隐，JS 只改属性不重建节点。
 - `progress.js`：键 `dailylingo_learning_progress_v1`、`schemaVersion: 1`、ID 用**四位补零字符串**
   （永不拿标题当身份）；坏数据备份 `…__corrupt` 后重置；存储不可用走内存态；导出 / 导入 JSON（4 键，
   导入先预览再并集或覆盖，**覆盖二次确认**）；纯逻辑挂 `globalThis.DailyLingoProgress`，无 document 早退。
@@ -87,25 +85,29 @@ WAV；正文含非英文被拒（退出码 4）；md 必须 UTF-8。现有 20 �
   `load` 再点（脚本 defer 在 DOMContentLoaded 前跑）。⚠️ **jsdom 会被环境清掉**：曾让 14 条 DOM
   用例整组 skip（仍"全绿"，极易漏看）；恢复 `cd ~/.workbuddy/binaries/node/workspace && npm install
   jsdom`，跑完必须 `152 passed`。
-- ✅ **headless Chromium 可用**：playwright + 本机 chromium，`file://` 直开生成页可量尺寸 / 截图 /
-  发 pointer 事件（`NODE_PATH=~/.workbuddy/binaries/node/workspace/node_modules`）。⚠️ 别用
-  `msedge --dump-dom` 判断浏览器可用（假成功：空输出 + exit 0）。
+- ✅ **headless Chromium 可用**：playwright + 本机 chromium，`file://` 直开可量尺寸 / 截图 / 发 pointer
+  事件（`NODE_PATH=~/.workbuddy/binaries/node/workspace/node_modules`）。⚠️ 别用 `msedge --dump-dom`
+  判浏览器可用（假成功：空输出 + exit 0）。
 
-## 桌面端（apps/windows）
-WinForms + WebView2 外壳（启动页 → 探网络 → **导航成功才**显示网页；离线/超时进错误菜单），进度镜像
-exe 同目录 `dailylingo-progress.json`（与网页导出同构）。`publisher/` 已提交（框架依赖，需 .NET 8 桌面
-运行时）；发布命令、注入脚本、调试开关见 `apps/windows/README.md`。
+## 桌面端 / Android 端（apps/）
+两端都加载线上站点：启动页 → 探网 → **导航成功才**显示网页，离线/超时进错误菜单；进度镜像成
+`dailylingo-progress.json`（与网页导出同构；**Android 写 LF，Windows 因 .NET 9 默认写 CRLF**）。
+`windows/` = WinForms + WebView2；`android/` = 系统 WebView，**无 Gradle / AndroidX / Material**，
+构建 `python tools/build_apk.py`（aapt2 + javac + d8 + zipalign + apksigner，只用标准库，
+SDK 读 `ANDROID_SDK_ROOT`、JDK 读 `JAVA_HOME` 或 Studio 的 `jbr`）。细节见各自 README。
+⚠️ Android 三个坑：`WindowInsetsController` 必须在 `setContentView` **之后**取（否则 NPE）；
+隐藏 WebView 用 **GONE**（`INVISIBLE` 仍参与合成，会盖住启动页 → 启动一片空白）；图标用 favicon
+整图，别拆 adaptive icon 也别垫白底（桌面上会是一圈白边）。`adb install` 报
+`User rejected permissions` 先看手机是否息屏（弹窗无法确认会被自动拒绝）。
 
 ## 已验证 / 踩坑
-- 2026-10-19：build 20 篇 / 0 警告；validate PASS 762；pytest 152 passed；48 条路径全 200。
-- **validate 的「三档倍速」断言必须分支**：无 WAV 的页只渲染 `player-unavailable`，无条件断言会得
-  `rates=[]` 假 FAIL —— 有 `data-player` 才查 `0.75/1/1.25` 且无 `back/forward`，否则查播放器专属类名
-  （`player-rates` / `player-track` / `player-toggle`）不出现。⚠️ 别用 `'data-action=' not in html`
-  判断「无控件」：题目区 Check/Reset 也带它。
+- 2026-10-19：build 20 篇 / 0 警告；validate 762；pytest 152；Android 真机三态全通过。
+- **validate 的三档倍速断言必须分支**：无 WAV 的页只有 `player-unavailable`，无条件查会得 `rates=[]`
+  假 FAIL。有 `data-player` 才查 `0.75/1/1.25` 且无 `back/forward`，否则只断言播放器专属类名不出现。
+  ⚠️ 别用 `'data-action=' not in html` 判「无控件」——题目区 Check/Reset 也带它。
 - **行尾**：`.gitattributes` 已设 `* text=auto eol=lf` / `*.bat eol=crlf` / 二进制 `binary`，
-  `git ls-files --eol` 只应剩 `watch.bat` 是 CRLF。⚠️ `asset_version()` 算**磁盘字节**，行尾一变全站
-  `?v=` 全变（README 字节数是 **LF 口径**）。⚠️ **绝不 `git checkout -- content/`**（回滚整个目录）；
-  要回滚就逐个 `git add` → `rm` → `git checkout --`。
-- **本地 `http.server` 不支持 Range**（带 `Range` 仍 200 整份）；线上 Pages 是 **206**，拖动跳转只能对
-  线上验证。改 `assets/` 后**务必重跑构建**（否则 `?v=` 落后于实际 assets）；一次性脚本放
-  `.workbuddy/tmp/`（gitignore，跑完即删）。待人工验证：真机出声、真实手机上的视觉与触感。
+  `git ls-files --eol` 只应剩 `watch.bat` 是 CRLF。⚠️ `asset_version()` 算磁盘字节，行尾一变全站
+  `?v=` 全变。⚠️ **绝不 `git checkout -- content/`**（回滚整目录）；回滚要逐个 `git add` → `rm` → checkout。
+- **本地 `http.server` 不支持 Range**（带 `Range` 仍 200）；线上 Pages 是 **206**，拖动跳转只能对线上验证。
+  改 `assets/` 后**必须重跑构建**（否则 `?v=` 落后）；一次性脚本放 `.workbuddy/tmp/`（gitignore）。
+  待人工验证：真机出声、真实手机上的视觉与触感。
