@@ -147,6 +147,8 @@ DailyLingo/
 │   ├── test_progress_dom.py    # 用 jsdom 驱动进度交互（可选）
 │   └── js/progress_dom.js      # 上一个测试用到的 jsdom 驱动脚本
 ├── watch.bat                   # Windows 双击即开始监听
+├── apps/
+│   └── windows/                # 桌面端（WinForms + WebView2）+ publisher/ 发布产物
 ├── requirements.txt
 ├── .gitignore
 ├── .gitattributes              # 仓库内 LF、*.bat 为 CRLF（见下方说明）
@@ -580,6 +582,25 @@ python -m http.server 8000
 > `python -m http.server` **不支持** HTTP Range 请求（线上 GitHub Pages 支持）。
 > 浏览器会把整个 WAV 下载完再播放，因此本地预览时拖动跳转的体验与线上略有差异，
 > 功能本身不受影响。
+
+---
+
+## 桌面端（Windows）
+
+`apps/windows/` 是一个 WinForms 外壳：嵌 WebView2 直接打开线上站点，不复制任何内容。
+启动先显示 `Lingo` 启动页，联网成功才切到主页；断网或连接超时则显示「请连接网络，当前无资源」。
+学习进度会镜像到程序同目录的 `dailylingo-progress.json`，**格式与网页端导出完全一致**，
+两边可以互相导入。
+
+```bash
+# 直接运行（需 .NET 8 桌面运行时 + WebView2 运行时）
+apps\windows\publisher\DailyLingo.Desktop.exe
+
+# 重新发布
+cd apps/windows && dotnet publish -c Release -r win-x64 --self-contained false -o publisher
+```
+
+启动流程、进度同步机制、调试开关与已知边界见 [`apps/windows/README.md`](apps/windows/README.md)。
 
 ---
 

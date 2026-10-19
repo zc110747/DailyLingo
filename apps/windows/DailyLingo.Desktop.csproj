@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <!-- WebView2 的 targets 无条件引用它的 WPF 程序集，纯 WinForms 工程会因此报
+         MSB3277（WindowsBase 4.0 vs 5.0 版本冲突）。打开 UseWPF 让桌面框架统一解析，
+         WPF 本身属于共享运行时，不会给发布目录增加文件。 -->
+    <UseWPF>true</UseWPF>
+
+    <AssemblyName>DailyLingo.Desktop</AssemblyName>
+    <RootNamespace>DailyLingo.Desktop</RootNamespace>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <Product>DailyLingo</Product>
+    <AssemblyTitle>DailyLingo 桌面版</AssemblyTitle>
+    <Description>加载 zc110747.github.io/DailyLingo 的 Windows 桌面外壳，学习进度本机留档。</Description>
+    <Company>DailyLingo</Company>
+    <Copyright>DailyLingo</Copyright>
+
+    <!-- 发布产物里不需要本地化资源目录，只保留英文，避免 publisher/ 下多出十几个语言文件夹。 -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- 发布目录要进仓库，不生成 pdb，免得提交一堆调试符号。 -->
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <!-- 也不要把依赖包里的 .xml 文档 / .pdb 复制出来（WebView2 那三个 xml 就有 800 KB）。 -->
+    <AllowedReferenceRelatedFileExtensions>none</AllowedReferenceRelatedFileExtensions>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
+  </ItemGroup>
+
+</Project>

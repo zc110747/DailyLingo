@@ -14,7 +14,7 @@
 可手改；`tools/`（EnglishAudio 整包 ~100 MB）已 gitignore、不进仓库。
 
 ## 文档约定
-`README.md` 英文（默认）+ `README-CH.md` 中文，**两份同步、结构对齐**（各 22 个 H2），顶/底互链；
+`README.md` 英文（默认）+ `README-CH.md` 中文，**两份同步、结构对齐**（各 23 个 H2），顶/底互链；
 改章节标题顺带看 `.gitignore` 与 `tests/` 里指向 README 的注释。
 **凡随文章数线性增长的列举一律省略**（目录树、首页示例、WAV 表、`--verbose`、`http.server` 清单）：
 只留第一条 + `…` 并注明 abridged。判据就是「会不会随篇数变长」。
@@ -53,9 +53,6 @@
     HTML 自身也有 10 分钟缓存，属 Pages 固有行为。断言用 `build.asset_url()`，别写死路径；
     诊断 `curl -D -` 看 `Last-Modified` 与字节数。
 
-## 本机预览
-IDE 预览以**文件所在目录**为站点根 ⇒ `src/` 下页面丢样式；带样式的看 `.workbuddy/preview/`（gitignore）。
-
 ## Markdown 格式（两种可混用）
 - 既有：`# 标题` + `## Article` / `## Words`（3 或 5 列，表头按别名识别）/ `## Questions`
   （`**题干**` 或 `Question N：题干` + `A. …`）/ `## Answers` / `## Continue(s)`（忽略）。
@@ -81,9 +78,8 @@ WAV；正文含非英文被拒（退出码 4）；md 必须 UTF-8。现有 20 �
 
 ## 首页学习进度（纯前端）
 - `build.render_index()` 输出 `.site-tools`（齿轮 → `<dialog id="settings-dialog">`）、`.progress-card`
-  （`data-progress-*`，SSR 兜底 0 / 总数 / 0%）、`li.article-item[data-article-id]` + 勾选按钮
-  `[aria-pressed]`、Chapter summary 内 `[data-chapter-*]`；空心圆 / 绿勾**同时在 DOM 里**，靠
-  `[aria-pressed="true"]` / `.is-complete` 切显隐，JS 只改属性不重建节点。
+  （`data-progress-*`）、`li.article-item[data-article-id]` + 勾选按钮 `[aria-pressed]`、Chapter summary
+  内 `[data-chapter-*]`；空心圆 / 绿勾**同时在 DOM 里**，靠属性切显隐，JS 只改属性不重建节点。
 - `progress.js`：键 `dailylingo_learning_progress_v1`、`schemaVersion: 1`、ID 用**四位补零字符串**
   （永不拿标题当身份）；坏数据备份 `…__corrupt` 后重置；存储不可用走内存态；导出 / 导入 JSON（4 键，
   导入先预览再并集或覆盖，**覆盖二次确认**）；纯逻辑挂 `globalThis.DailyLingoProgress`，无 document 早退。
@@ -95,9 +91,13 @@ WAV；正文含非英文被拒（退出码 4）；md 必须 UTF-8。现有 20 �
   发 pointer 事件（`NODE_PATH=~/.workbuddy/binaries/node/workspace/node_modules`）。⚠️ 别用
   `msedge --dump-dom` 判断浏览器可用（假成功：空输出 + exit 0）。
 
+## 桌面端（apps/windows）
+WinForms + WebView2 外壳（启动页 → 探网络 → **导航成功才**显示网页；离线/超时进错误菜单），进度镜像
+exe 同目录 `dailylingo-progress.json`（与网页导出同构）。`publisher/` 已提交（框架依赖，需 .NET 8 桌面
+运行时）；发布命令、注入脚本、调试开关见 `apps/windows/README.md`。
+
 ## 已验证 / 踩坑
-- 2026-10-19：build 20 篇 / **0 警告**；validate **PASS 762 / FAIL 0 / WARN 0**；pytest **152 passed
-  0 skipped**；本地 48 条路径全 200；`watch.py --once` 重建 118 ms。
+- 2026-10-19：build 20 篇 / 0 警告；validate PASS 762；pytest 152 passed；48 条路径全 200。
 - **validate 的「三档倍速」断言必须分支**：无 WAV 的页只渲染 `player-unavailable`，无条件断言会得
   `rates=[]` 假 FAIL —— 有 `data-player` 才查 `0.75/1/1.25` 且无 `back/forward`，否则查播放器专属类名
   （`player-rates` / `player-track` / `player-toggle`）不出现。⚠️ 别用 `'data-action=' not in html`

@@ -36,3 +36,11 @@ desktop.ini
 # DAILYLINGO_AUDIO_TOOL 指定，或把整包放进 tools/ 作为兜底。
 # 详见 README-CH.md「用 EnglishAudio 生成音频」/ README.md "Generating Audio with EnglishAudio"。
 tools/
+
+# ---- Windows 桌面端 ----
+# 发布产物（apps/windows/publisher/）要提交：双击就能运行，不要求装 SDK 或自己编译。
+# 只忽略构建中间目录与运行期生成的用户数据。
+apps/windows/bin/
+apps/windows/obj/
+apps/windows/publisher/dailylingo-progress.json
+apps/windows/publisher/dailylingo-progress.corrupt-*.json

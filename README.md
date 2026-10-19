@@ -156,6 +156,8 @@ DailyLingo/
 │   ├── test_progress_dom.py    # Progress interactions driven in jsdom (optional)
 │   └── js/progress_dom.js      # The jsdom driver used by the test above
 ├── watch.bat                   # Double-click to start watching on Windows
+├── apps/
+│   └── windows/                # Desktop app (WinForms + WebView2) + publisher/ output
 ├── requirements.txt
 ├── .gitignore
 ├── .gitattributes              # LF in the repo, CRLF for *.bat (see the note below)
@@ -629,6 +631,27 @@ Then open:
 > `python -m http.server` does **not** support HTTP Range requests (the deployed GitHub Pages does).
 > The browser therefore downloads the whole WAV before playing, so scrubbing feels slightly
 > different locally. Functionality itself is unaffected.
+
+---
+
+## Windows Desktop App
+
+`apps/windows/` is a WinForms shell that hosts WebView2 and opens the live site directly — nothing
+is copied. It starts on a `Lingo` splash screen and only switches to the site once the navigation
+succeeds; with no network (or on timeout) it shows "请连接网络，当前无资源" instead. Learning
+progress is mirrored to `dailylingo-progress.json` next to the executable, **in exactly the same
+format as the web export**, so either side can import the other's file.
+
+```bash
+# Run it as-is (needs the .NET 8 Desktop Runtime and the WebView2 Runtime)
+apps\windows\publisher\DailyLingo.Desktop.exe
+
+# Re-publish
+cd apps/windows && dotnet publish -c Release -r win-x64 --self-contained false -o publisher
+```
+
+Startup flow, progress syncing, debug switches and known limits are documented in
+[`apps/windows/README.md`](apps/windows/README.md).
 
 ---
 
