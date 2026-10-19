@@ -65,8 +65,9 @@ WAV 由 **EnglishAudio**（Piper + ONNX，离线）生成。**工具在 PATH，�
 WAV；正文含非英文被拒（退出码 4）；md 必须 UTF-8。WAV 均单声道 / 16 bit / 22 050 Hz。
 
 ## 文章清单
-**0001–0020 共 20 篇**，全在 Chapter 0001–0100，不逐篇罗列。
-改名史：`0005` 撞名、`0016` 去撇号、`0018` 笔误 `fro`→`from`。
+**0001–0022 共 22 篇**，全在 Chapter 0001–0100，不逐篇罗列。
+改名史：`0005` 撞名、`0016` 去撇号、`0018` 笔误 `fro`→`from`、`0021` 去弯撇号（`Bee’s`→`Bees`，
+H1 保留弯引号）。
 
 ## 首页学习进度（纯前端）
 - `build.render_index()` 输出 `.site-tools`（齿轮 → `#settings-dialog`）、`.progress-card`（`data-progress-*`）、
@@ -105,7 +106,7 @@ DailyLingo.apk?v=<sha8>` + `download`；**APK 缺失整块省略**。
 播放前不高亮（`armed` 标志）。缓存键 (size, mtime_ns, hash(句子))，热构建 0.09 s。
 
 ## 已验证 / 踩坑
-- 2026-10-19 全绿：20 篇 / validate 867 / pytest 225 / Android 真机三态 / 朗读高亮 `a63c2f3`。
+- 2026-10-19 全绿：22 篇 / validate 949 / pytest 229 / Android 真机三态 / 朗读高亮 `a63c2f3`。
 - **validate 三档倍速断言必须分支**：无 WAV 的页只有 `player-unavailable`，无条件查得 `rates=[]` 假
   FAIL。有 `data-player` 才查 `0.75/1/1.25` 且无 `back/forward`。⚠️ 别用 `'data-action=' not in html`
   判「无控件」——题目区 Check/Reset 也带它。
