@@ -13,6 +13,11 @@
 (function () {
   "use strict";
 
+  /* 判分结果变更时抛给上层（study-completion.js）：
+     文章页需要知道「是不是所有题目都答对了」，但只有这里知道判分结果。
+     事件挂在 document 上，detail 就是当前快照，订阅方不必反查 DOM。 */
+  var QUIZ_EVENT = "dailylingo:quiz";
+
   /* 与 scripts/build.py 的 normalize_answer() 保持一致：
      去首尾空白 → 压缩内部空白 → 去尾部标点 → 忽略大小写 */
   function normalizeAnswer(text) {
@@ -67,6 +72,38 @@
     } catch (err) {
       return {};
     }
+  }
+
+  /**
+   * 当前答题快照。只数 DOM 上的 `is-correct` / `is-wrong` 标记 ——
+   * 这两个 class 是判分唯一的事实来源，改动答案时会被 clearMarks() 清掉，
+   * 因此「改完答案还没重新检查」不会被误判成答对。
+   */
+  function quizSnapshot() {
+    var questions = Array.prototype.slice.call(document.querySelectorAll(".question"));
+    var correct = 0;
+    var answered = 0;
+    questions.forEach(function (question) {
+      if (question.classList.contains("is-correct")) {
+        correct++;
+        answered++;
+      } else if (question.classList.contains("is-wrong")) {
+        answered++;
+      }
+    });
+    return {
+      total: questions.length,
+      correct: correct,
+      answered: answered,
+      allCorrect: questions.length > 0 && correct === questions.length,
+    };
+  }
+
+  function reportQuiz() {
+    if (typeof CustomEvent !== "function" || !document.dispatchEvent) {
+      return;
+    }
+    document.dispatchEvent(new CustomEvent(QUIZ_EVENT, { detail: quizSnapshot() }));
   }
 
   function setFeedback(node, text, kind) {
@@ -144,6 +181,7 @@
         if (fill && entry.type !== "choice") {
           fill.setAttribute("aria-invalid", "true");
         }
+        reportQuiz();
         return;
       }
 
@@ -170,6 +208,8 @@
           right ? "is-correct" : "is-wrong"
         );
       }
+
+      reportQuiz();
     }
 
     function reset() {
@@ -183,6 +223,7 @@
         input.focus();
       }
       setFeedback(feedback, "", null);
+      reportQuiz();
     }
 
     var checkBtn = question.querySelector('[data-action="check"]');
@@ -209,6 +250,7 @@
         clearMarks(question);
         markSelection(question);
         setFeedback(feedback, "", null);
+        reportQuiz(); // 改了选项 ⇒ 先前的「答对」作废，快照要跟着退回去
       });
     });
   }
@@ -221,6 +263,7 @@
         bindQuestion(question, entry);
       }
     });
+    reportQuiz(); // 给上层一个初始快照（题目总数 / 全部未答）
   }
 
   /* ---------------------------------------------------------------- 本地设置

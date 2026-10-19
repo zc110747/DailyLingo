@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#快速开始)
 [![运行期依赖: 无](https://img.shields.io/badge/%E8%BF%90%E8%A1%8C%E6%9C%9F%E4%BE%9D%E8%B5%96-none-success.svg)](#快速开始)
-[![测试: 229 passed](https://img.shields.io/badge/tests-229%20passed-success.svg)](#验证结果)
+[![测试: 257 passed](https://img.shields.io/badge/tests-257%20passed-success.svg)](#验证结果)
 [![部署: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#部署到-github-pages)
 
 **线上站点：** <https://zc110747.github.io/DailyLingo/>
@@ -60,6 +60,9 @@
 - **学习进度只存在你自己的浏览器里** —— 每篇一个完成开关、Chapter 全部学完才变绿的汇总、
   实时更新的 `已完成 / 总数 · 百分比` 进度条，以及藏在左上角设置里的 JSON 导出 / 导入
   （合并或覆盖）与 Android 安装包下载。无账号、无后端、不上传任何数据 —— 详见[学习进度](#学习进度)。
+- **文章页自动打勾** —— 听完音频（真的听够 ≥ 90%，中途拖动不算）**且**全部题目答对，这篇文章
+  会自己写进首页读的那份进度；标题下方一行状态实时显示「听力 x% · 答对 n/m」，首页的开关仍然
+  保留用于手动改 —— 详见[文章页自动打勾](#文章页自动打勾)。
 - **每篇文章五个固定区域** —— `Article` / `Words` / `Questions` / `Answers` / `Continue`，
   顺序恒定，所有文章共用同一套模板、样式与脚本。
 - **真实音频，不是模拟** —— HTML5 Audio 播放器直连真实 WAV。播放暂停、已播时间、总时长、
@@ -133,7 +136,8 @@ DailyLingo/
 │   ├── css/style.css           # 全站统一样式（桌面 + 移动）
 │   ├── js/audio-player.js      # 音频播放器
 │   ├── js/main.js              # 题目判分 / 页面交互
-│   ├── js/progress.js          # 学习进度：localStorage + JSON 导出 / 导入（仅首页）
+│   ├── js/progress.js          # 学习进度存储：localStorage + JSON 导出 / 导入（两处共用）
+│   ├── js/study-completion.js  # 文章页：听完 ≥90% + 全部答对 ⇒ 自动标记完成
 │   └── images/                 # 站点图标（原样提交，非构建产物）
 │       ├── favicon.svg         # 设计源文件：打开的书 + 声波
 │       ├── favicon-32.png      # 不支持 SVG 图标时的光栅回退
@@ -148,7 +152,9 @@ DailyLingo/
 │   ├── test_frontend.py        # 在 Node 中真实执行判分逻辑
 │   ├── test_progress.py        # 进度结构 + 纯逻辑（在 Node 中执行）
 │   ├── test_progress_dom.py    # 用 jsdom 驱动进度交互（可选）
-│   └── js/progress_dom.js      # 上一个测试用到的 jsdom 驱动脚本
+│   ├── test_auto_complete.py   # 自动打勾逻辑 + 生成结构
+│   ├── test_auto_complete_dom.py  # 用 jsdom 驱动自动打勾（可选）
+│   └── js/                     # 上面几个测试用到的 jsdom / Node 驱动脚本
 ├── watch.bat                   # Windows 双击即开始监听
 ├── apps/
 │   ├── windows/                # 桌面端（WinForms + WebView2）+ publisher/ 发布产物
@@ -381,8 +387,8 @@ end   = start + 99
 
 ## 学习进度
 
-首页会记录每篇文章是否学完。所有数据都只存在浏览器里 —— 没有账号、没有后端、没有同步服务，
-文章页本身没有被改动。
+首页会记录每篇文章是否学完。所有数据都只存在浏览器里 —— 没有账号、没有后端、没有同步服务。
+写入有两条路径：首页的勾选开关，以及**文章页在「听完音频 + 全部答对」后的自动标记**。
 
 ### 每篇标记与 Chapter 汇总
 
@@ -395,6 +401,31 @@ end   = start + 99
   每一篇**都完成后才变绿。分母取自生成时的标记（`data-chapter-total`），**不假定 100 篇**；
   状态每次渲染都实时算，不存在「Chapter 完成标记」这种会发霉的字段。
 - 新增文章自动以未完成状态出现，不需要任何配置：存储里只有「已完成编号的集合」，不是每篇一条记录。
+
+### 文章页自动打勾
+
+学完一篇不必再回首页：
+
+- **两个条件同时成立**才算：音频听到 **≥ 90%**，**并且**全部题目判分为正确。只满足一个，
+  除了页面上的状态行之外什么都不会变。
+- **怎样算「听完」**：`audio-player.js` 按 `timeupdate` 累计**媒体秒数**，通过
+  `dailylingo:listen` 事件上报比例。单步增量超过 1.5 s 的一律丢弃 —— `timeupdate` 大约 4 Hz，
+  不丢的话拖一次进度条就会把跳过的整段算成听过，「拖到结尾」就能刷出完成。累计的是媒体时间
+  而不是墙上时间，所以 0.75x / 1.25x 播放与 1x 的判定完全一致。
+- **怎样算「全部答对」**：`main.js` 从判分状态（每个 `.question` 上的 `is-correct`）推导，
+  每次检查 / 重做 / 改选项后都会广播一份 `dailylingo:quiz` 快照。改选项会清掉判分标记，
+  因此改动过的题目在重新检查前不再计入「答对」。
+- **只增不减**：已经完成的文章，之后改答案或重播都不会被取消 —— 撤销是明确动作，留给首页。
+  写入是与现有集合求并集，不会覆盖你在别处做出的勾选。
+- **看得见的反馈**：文章页头部有一行状态：初始是构建期的说明，之后随进度显示
+  `听力 45% · 答对 3/5`，打勾成功变绿显示 `✅ 本篇已标记为完成`；`localStorage` 不可用时
+  明确提示（带 `⚠️`）标记没能保存。
+- **没有音频或没有题目 ⇒ 不会自动打勾**：两者都是前提，所以构建时会写
+  `data-study-auto="false"`，页面一进来就说清楚，而不是给一个永远不成立的约定；
+  这类文章仍可在首页手动勾选。
+
+写入走的是与首页同一个 `markCompleted()`，所以自动标记和手动标记的存储结构完全一致 ——
+下次打开首页就能看到那个绿勾。
 
 ### 首页统计
 
@@ -760,7 +791,7 @@ DailyLingo 构建完成
 
 ```text
 $ python scripts/validate.py
-结果：PASS 949 / FAIL 0 / WARN 0
+结果：PASS 1024 / FAIL 0 / WARN 0
 ```
 
 覆盖：文章数据；编号唯一性与升序；Chapter 区间边界与「只输出有真实文章的 Chapter」；
@@ -775,24 +806,28 @@ $ python scripts/validate.py
 首末篇边界；无绝对根路径；静态资源存在性；重复构建字节级一致（若差异**纯粹来自行尾**，会直接
 点明是行尾问题，而不是报一个语焉不详的字节不一致）；**进度卡、每篇恰好一个完成按钮
 （全部初始未完成）、统计总数与进度条上限等于真实文章数、各 Chapter 汇总篇数等于该章真实
-篇数、设置对话框及其导出 / 导入控件、以及 `progress.js` 带存储键与 schema 版本且不含任何
-网络请求**。
+篇数、设置对话框及其导出 / 导入控件、`progress.js` 带存储键与 schema 版本且不含任何
+网络请求**；**每个文章页都声明 `data-article-id` 与学习状态行、`data-study-auto` 与该篇是否
+真的有音频与题目一致、两个新脚本都带内容指纹、收听 / 判分事件名在收发两侧完全一致、
+自动完成脚本不发网络请求**。
 
 ### 自动化测试
 
 ```text
 $ pytest -q
-229 passed in 19.3s
+257 passed in 12.7s
 ```
 
 | 文件 | 用例数 | 覆盖内容 |
 |---|---|---|
 | `tests/test_build.py` | 105 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`，含被转义的 `1\.` 写法，题干与答案都测）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**播放器与正文之间有分隔线**、**无 ±5 秒按钮且恰好三档倍速**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、**CSS/JS 的 URL 带内容指纹（`?v=` + 8 位十六进制）**、GitHub Pages 子路径、构建可重复 |
-| `tests/test_frontend.py` | 4 | 在 Node 中真实执行 `assets/js/main.js`：单选正确 / 错误 / 空选、大小写不敏感、首尾空格、尾部标点、多个可接受答案、空白输入不判正确；并与 `build.normalize_answer` 做逐样本一致性比对 |
+| `tests/test_frontend.py` | 7 | 在 Node 中真实执行 `assets/js/main.js`：单选正确 / 错误 / 空选、大小写不敏感、首尾空格、尾部标点、多个可接受答案、空白输入不判正确；并与 `build.normalize_answer` 做逐样本一致性比对 |
 | `tests/test_progress.py` | 32 | 学习进度的首页结构（每篇一个完成按钮且初始未完成、统计总数 / `aria-valuemax` / Chapter 汇总等于真实篇数、设置对话框与导出导入控件、Android 安装包直链带 `download` 与内容指纹且 APK 缺失时整块省略、空站点渲染 `0 / 0`）**外加在 Node 中真实执行的纯逻辑**：编号补零、文件校验（JSON 语法 / `schemaVersion` / 结构）、去重与非法条目计数、忽略不存在编号、合并取并集、统计不除零、按真实篇数判定 Chapter 完成、导出载荷结构与文件名、导出内容可被导入解析器读回 |
-| `tests/test_progress_dom.py` | 14 | 在 **jsdom** 中用真实 click 事件与真实 `localStorage` 驱动生成的首页：首次访问为空、勾选同步统计与存储、取消回退、Chapter 全完成才变绿、刷新恢复、损坏数据隔离、存储禁用降级、导入预览、合并、覆盖需二次确认、取消覆盖、非法 JSON / 不支持版本不改动进度、未知编号忽略并计数、导出载荷与对话框开关。未安装 jsdom 时自动跳过 |
+| `tests/test_progress_dom.py` | 16 | 在 **jsdom** 中用真实 click 事件与真实 `localStorage` 驱动生成的首页：首次访问为空、勾选同步统计与存储、取消回退、Chapter 全完成才变绿、刷新恢复、损坏数据隔离、存储禁用降级、导入预览、合并、覆盖需二次确认、取消覆盖、非法 JSON / 不支持版本不改动进度、未知编号忽略并计数、导出载荷与对话框开关。未安装 jsdom 时自动跳过 |
 | `tests/test_timeline.py` | 67 | `scripts/timeline.py`：切句（`Mrs.` 缩写、引号内的句末标点、引号后的叙述语并回、引号后真正的新句子不并）、**对每篇文章的每一段**验证切分不丢字、音节估算、合成 WAV 上的静音检测、DP 选中「最接近音节比例」的停顿、完全没有停顿时退回网格、时间轴覆盖整段音频、逐句首尾相接、8 bit / 缺失音频时优雅返回空、真实文章 × 真实音频的一致性、以及构建是否真的输出 `data-start` / `data-end`（缺音频时退回纯段落） |
-| `tests/test_player_dom.py` | 7 | 在 **jsdom** 中用替身 `Audio` 驱动生成的文章页：播放前不高亮、高亮跟随 `currentTime`（0 / 2 / 4 秒 → 第 0 / 1 / 2 句）、点句子跳到句首并开始播放、选中文字时点击不跳转、快退后高亮回退、始终只有一句处于高亮。未安装 jsdom 时自动跳过 |
+| `tests/test_player_dom.py` | 9 | 在 **jsdom** 中用替身 `Audio` 驱动生成的文章页：播放前不高亮、高亮跟随 `currentTime`（0 / 2 / 4 秒 → 第 0 / 1 / 2 句）、点句子跳到句首并开始播放、选中文字时点击不跳转、快退后高亮回退、始终只有一句处于高亮。未安装 jsdom 时自动跳过 |
+| `tests/test_auto_complete.py` | 8 | 在 Node 里**不带 DOM**执行 `audio-player.js` 与 `study-completion.js`：收听累计（第一拍只记基准、正常 0.25 s 累加、恰好 1.5 s 仍算、向前 / 向后跳转丢弃、时间不动不加）与完成判定边界（0.89 不算、0.90 算、错一题不算、无题目不算、无快照不算）；外加生成结构 —— 每页的 `data-article-id`、`data-study-auto` 是否与「真的有音频且真的有题目」一致、两个脚本都带指纹、首页手动开关仍在 |
+| `tests/test_auto_complete_dom.py` | 13 | 在 jsdom 里用真实的 `main.js` / `progress.js` / `study-completion.js` 驱动**生成的文章页**：首次进入不动、只答题不完成、只听不完成、听一半不完成、听完且全对即标记并落库、反过来先听完再答题也打勾、重开显示已完成、完成后改答案不撤销、写入与已有记录取并集、坏数据先留档再标记、存储不可用明确报错。文章编号与题目数从构建结果读取，不写死；没装 jsdom 时整组 skip |
 
 测试全部使用临时目录，不会污染或覆盖真实的 `content/` 与 `sources/`。
 `test_progress_dom.py` 额外需要本机装有 `jsdom`；它只是开发期辅助工具（不是站点依赖），
@@ -925,6 +960,13 @@ WAV 响应支持 HTTP Range 请求（`206 Partial Content`，已实测），因�
    1.25 倍速、键盘快退、长文自动滚动、390 px 移动端截图；**但「读的与高亮的是不是同一句」仍需
    按[本地预览](#本地预览)亲耳听一遍**，尤其是音频与正文已经不同步的文章（见上文「改了正文必须
    重新生成 WAV」）。
+
+9. **自动打勾的「听了多少」是靠算术与事件接线验证的，没有真的放音**：累计函数有独立单测
+   （`addListenStep`），整条流程也在 jsdom 里用合成的 `dailylingo:listen` / `dailylingo:quiz`
+   事件驱动过，但本次环境没有浏览器与声卡，所以 0.75x / 1.25x 下真实的 `timeupdate` 节奏、
+   以及 `ended` 是否恰好在预期时刻触发，都没有实测。两个阈值都是单个具名常量 ——
+   `assets/js/study-completion.js` 的 `REQUIRED_RATIO` 与 `assets/js/audio-player.js` 的
+   `LISTEN_STEP_LIMIT` —— 想调只需改一行，`validate.py` 会断言比例仍是 0.9。
 
 ---
 

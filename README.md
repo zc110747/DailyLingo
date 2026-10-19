@@ -12,7 +12,7 @@ committed as-is and served straight from GitHub Pages.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#quick-start)
 [![Runtime dependencies: none](https://img.shields.io/badge/runtime%20dependencies-none-success.svg)](#quick-start)
-[![Tests: 229 passed](https://img.shields.io/badge/tests-229%20passed-success.svg)](#verification-results)
+[![Tests: 257 passed](https://img.shields.io/badge/tests-257%20passed-success.svg)](#verification-results)
 [![Deploy: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#deployment-to-github-pages)
 
 **Live site:** <https://zc110747.github.io/DailyLingo/>
@@ -64,6 +64,11 @@ committed as-is and served straight from GitHub Pages.
   `completed / total · percent` bar, and JSON export/import (merge or overwrite) plus an Android
   package download behind a settings dialog in the top-left corner. No account, no backend, nothing
   uploaded — see [Learning Progress](#learning-progress).
+- **Auto-complete on the article page** — finish the audio (≥ 90 % actually listened, seeks inside
+  it do not count) **and** get every question right, and the article marks itself done in the same
+  store the homepage reads. A status line under the title shows how far you are; the homepage
+  toggle stays for manual overrides — see
+  [Auto-complete from the article page](#auto-complete-from-the-article-page).
 - **Five fixed sections per article** — `Article` / `Words` / `Questions` / `Answers` / `Continue`,
   always in that order, sharing one template, one stylesheet and one script.
 - **Real audio, not a mock** — an HTML5 Audio player wired to the actual WAV file. Play/pause,
@@ -143,7 +148,8 @@ DailyLingo/
 │   ├── css/style.css           # Site-wide styles (desktop + mobile)
 │   ├── js/audio-player.js      # Audio player
 │   ├── js/main.js              # Question grading / page interactions
-│   ├── js/progress.js          # Learning progress: localStorage + JSON export/import (homepage)
+│   ├── js/progress.js          # Progress store: localStorage + JSON export/import (both pages)
+│   ├── js/study-completion.js  # Article page: listened ≥90% + all answers right ⇒ mark done
 │   └── images/                 # Site icon (committed as-is, not generated)
 │       ├── favicon.svg         # Source design: open book + sound bars
 │       ├── favicon-32.png      # Raster fallback for browsers without SVG icons
@@ -158,7 +164,9 @@ DailyLingo/
 │   ├── test_frontend.py        # Grading logic executed for real in Node
 │   ├── test_progress.py        # Progress markup + pure logic (executed in Node)
 │   ├── test_progress_dom.py    # Progress interactions driven in jsdom (optional)
-│   └── js/progress_dom.js      # The jsdom driver used by the test above
+│   ├── test_auto_complete.py   # Auto-mark logic + generated markup
+│   ├── test_auto_complete_dom.py  # Auto-mark driven in jsdom (optional)
+│   └── js/                     # jsdom / Node drivers used by the tests above
 ├── watch.bat                   # Double-click to start watching on Windows
 ├── apps/
 │   ├── windows/                # Desktop app (WinForms + WebView2) + publisher/ output
@@ -406,7 +414,9 @@ never leak into the template and can be unit-tested directly.
 ## Learning Progress
 
 The homepage tracks which articles you have finished. Everything lives in the browser — no account,
-no backend, no sync service — and the article pages themselves are untouched.
+no backend, no sync service. A mark is written from two places: the toggle on the homepage, and an
+**automatic mark on the article page** once you have listened through the audio *and* answered every
+question correctly.
 
 ### Per-article marks and Chapter roll-up
 
@@ -422,6 +432,35 @@ no backend, no sync service — and the article pages themselves are untouched.
   derived on every render, so there is no separate "chapter completed" flag that can drift.
 - A new article joins the list unchecked with nothing to configure: storage holds only the set of
   completed IDs, not one record per article.
+
+### Auto-complete from the article page
+
+Finishing an article no longer requires going back to the homepage:
+
+- **Both conditions, not either.** The audio must be listened to **≥ 90 %** *and* every question must
+  be graded correct. Meeting one of them changes nothing but the status line.
+- **What counts as "listened".** `audio-player.js` accumulates *media* seconds from `timeupdate`
+  ticks and reports the ratio through a `dailylingo:listen` event. Any single step larger than
+  1.5 s is discarded, because `timeupdate` fires roughly four times a second — a drag or a
+  sentence jump would otherwise credit the whole skipped span and let you "finish" an article by
+  dragging the handle to the end. Accumulating media time (not wall-clock) also means 0.75x and
+  1.25x playback are judged exactly like 1x.
+- **What counts as "all correct".** `main.js` derives it from the graded state (`is-correct` on
+  every `.question`) and broadcasts a `dailylingo:quiz` snapshot after every check, reset or option
+  change. Changing an option clears the graded mark, so a previously correct answer no longer
+  counts until you check it again.
+- **It only ever adds, never removes.** A completed article stays completed even if you later change
+  an answer or replay the audio; removing a mark stays a deliberate act on the homepage. The write
+  is a union with the existing set, so marks you made elsewhere are never overwritten.
+- **Visible feedback.** The article header carries a status line that starts with the build-time
+  hint, then shows `听力 45% · 答对 3/5` while you work, turns green with `✅ 本篇已标记为完成` when
+  the mark lands, and says the mark could not be saved (with `⚠️`) if `localStorage` is unavailable.
+- **No audio or no questions ⇒ no auto-mark.** Both are prerequisites, so the build writes
+  `data-study-auto="false"` and the page says so up front instead of promising something that can
+  never happen; the homepage toggle remains the way to mark those articles.
+
+Because the write goes through the same `markCompleted()` used by the homepage, the record is
+byte-for-byte the same shape as a manual mark — the index shows the check the next time you open it.
 
 ### Homepage statistics
 
@@ -833,7 +872,7 @@ every title under its Chapter. The CLI output is currently in Chinese; the forma
 
 ```text
 $ python scripts/validate.py
-结果：PASS 949 / FAIL 0 / WARN 0
+结果：PASS 1024 / FAIL 0 / WARN 0
 ```
 
 Covers: article data; number uniqueness and ascending order; Chapter range boundaries and the
@@ -855,24 +894,30 @@ root-absolute paths; existence of static assets; byte-identical rebuilds (a mism
 by line endings is called out as such, instead of being reported as an unexplained byte difference);
 **the progress card, one toggle per real article (all initially unchecked), a stats total and
 `aria-valuemax` equal to the real article count, Chapter roll-up totals equal to each Chapter's
-real count, the settings dialog with its export/import controls, and `progress.js` carrying the
-storage key plus the schema version while making no network calls**.
+real count, the settings dialog with its export/import controls, `progress.js` carrying the
+storage key plus the schema version while making no network calls**; **every article page declaring
+its `data-article-id` and a status line whose `data-study-auto` matches whether that article really
+has both audio and questions, both new scripts referenced with a content fingerprint, the listen /
+quiz event names identical on both sides of the contract, and the auto-mark script making no
+network calls**.
 
 ### Automated tests
 
 ```text
 $ pytest -q
-229 passed in 19.3s
+257 passed in 12.7s
 ```
 
 | File | Cases | Coverage |
 |---|---|---|
 | `tests/test_build.py` | 105 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`, both the plain and the escaped `1\.` spelling, for stems and answers alike), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, **the player rendered above the body text (with and without a WAV)**, **a divider between the player and the body text**, **no ±5 s buttons and exactly three speed buttons**, **icon declarations carrying the correct relative prefix, home page icon next to the brand, icon assets valid PNG/SVG with the expected dimensions**, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, **CSS/JS URLs carrying a content fingerprint (`?v=` + 8 hex digits)**, GitHub Pages subpath, reproducible builds |
-| `tests/test_frontend.py` | 4 | Executes `assets/js/main.js` for real in Node: correct / incorrect / empty single-choice selections, case insensitivity, leading and trailing whitespace, trailing punctuation, multiple acceptable answers, blank input never correct; plus a sample-by-sample consistency check against `build.normalize_answer` |
+| `tests/test_frontend.py` | 7 | Executes `assets/js/main.js` for real in Node: correct / incorrect / empty single-choice selections, case insensitivity, leading and trailing whitespace, trailing punctuation, multiple acceptable answers, blank input never correct; plus a sample-by-sample consistency check against `build.normalize_answer` |
 | `tests/test_progress.py` | 32 | Homepage structure for the progress feature (one toggle per real article, all starting unchecked, stats total / `aria-valuemax` / Chapter totals matching reality, settings dialog and its export-import controls, an Android package link carrying `download` and a content fingerprint, the block omitted when the APK is missing, empty site rendering `0 / 0`) **plus the pure logic executed in Node**: zero-padded IDs, payload validation (JSON syntax / `schemaVersion` / structure), dedupe and invalid-entry counting, ignoring unknown IDs, merge union, statistics without dividing by zero, Chapter completion on the real count, export payload shape, filename and import round-trip |
-| `tests/test_progress_dom.py` | 14 | Drives the generated homepage in **jsdom** with real click events and a real `localStorage`: first visit empty, toggle updates stats / storage / Chapter, unchecking reverts, Chapter turns green only when complete, reload restores, corrupt data quarantined, storage-disabled degradation, import preview, merge, overwrite behind a second confirmation, cancelling overwrite, invalid JSON / unsupported version leaving progress intact, unknown IDs ignored and counted, export payload and dialog open/close. Skipped automatically when jsdom is not installed |
+| `tests/test_progress_dom.py` | 16 | Drives the generated homepage in **jsdom** with real click events and a real `localStorage`: first visit empty, toggle updates stats / storage / Chapter, unchecking reverts, Chapter turns green only when complete, reload restores, corrupt data quarantined, storage-disabled degradation, import preview, merge, overwrite behind a second confirmation, cancelling overwrite, invalid JSON / unsupported version leaving progress intact, unknown IDs ignored and counted, export payload and dialog open/close. Skipped automatically when jsdom is not installed |
 | `tests/test_timeline.py` | 67 | `scripts/timeline.py`: sentence splitting (abbreviations such as `Mrs.`, terminators inside quotes, an attribution after a quote merged back, a long following sentence *not* merged), lossless splitting verified against **every paragraph of every article**, syllable estimation, silence detection on synthesised WAVs, the DP picking the pause closest to the syllable ratio, falling back to a grid when there is no pause at all, timeline covering the whole file, monotonic contiguous windows, graceful empty results for 8-bit / missing audio, consistency against the real articles and real WAVs, and the build emitting `data-start` / `data-end` (or plain paragraphs when audio is absent) |
-| `tests/test_player_dom.py` | 7 | Drives the generated article page in **jsdom** with a stand-in `Audio`: nothing highlighted before playback, highlight follows `currentTime` (0 / 2 / 4 s → sentences 0 / 1 / 2), clicking a sentence seeks to its start and starts playing, clicking while text is selected does nothing, rewinding moves the highlight back, exactly one sentence active. Skipped automatically when jsdom is not installed |
+| `tests/test_player_dom.py` | 9 | Drives the generated article page in **jsdom** with a stand-in `Audio`: nothing highlighted before playback, highlight follows `currentTime` (0 / 2 / 4 s → sentences 0 / 1 / 2), clicking a sentence seeks to its start and starts playing, clicking while text is selected does nothing, rewinding moves the highlight back, exactly one sentence active. Skipped automatically when jsdom is not installed |
+| `tests/test_auto_complete.py` | 8 | Executes `audio-player.js` + `study-completion.js` in Node **without a DOM**: the listen accumulator (first tick only sets the baseline, a normal 0.25 s step accumulates, a step of exactly 1.5 s still counts, forward / backward seeks are discarded, a frozen clock adds nothing) and the completion boundary (0.89 no, 0.90 yes, one wrong answer no, empty question set no, no snapshot no); plus the generated markup — `data-article-id` on every page, `data-study-auto` matching whether audio *and* questions really exist, both scripts referenced with a fingerprint, and the homepage manual toggle still present |
+| `tests/test_auto_complete_dom.py` | 13 | Drives a **generated article page** in jsdom with the real `main.js` / `progress.js` / `study-completion.js`: first visit untouched, quiz-only does not complete, playback-only does not complete, 50 % playback does not complete, full playback + all correct marks and persists, the reverse order (listen first, then answer) marks too, reopening shows the existing mark, changing an answer afterwards keeps it, the write is a union with existing records, corrupt storage is quarantined then marked, unavailable storage reports failure. Article ID and question count are read from the build, never hard-coded. Skipped automatically when jsdom is not installed |
 
 Every test uses temporary directories and never touches the real `content/` or `sources/`.
 `test_progress_dom.py` additionally needs `jsdom` on this machine; it is a development-only
@@ -1034,6 +1079,15 @@ on this machine, so no "verified" claim is made for them:
    that is bolded still needs one pass through [Local Preview](#local-preview)** — especially for an
    article whose WAV no longer matches its edited body (see "Re-generate the WAV after editing the
    body" above).
+
+9. **The auto-mark's "listened" ratio is verified by arithmetic and event wiring, not by playing
+   real audio.** The accumulator has its own unit tests (`addListenStep`) and the whole flow is
+   driven in jsdom with synthetic `dailylingo:listen` / `dailylingo:quiz` events, but this session
+   had no browser or audio device, so the real `timeupdate` cadence at 0.75x / 1.25x, and whether
+   `ended` fires exactly when expected, were not observed. Both thresholds are single named
+   constants — `REQUIRED_RATIO` in `assets/js/study-completion.js` and `LISTEN_STEP_LIMIT` in
+   `assets/js/audio-player.js` — so tuning them is a one-line change, and `validate.py` asserts
+   that the ratio stays at 0.9.
 
 ---
 

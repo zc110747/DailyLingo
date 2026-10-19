@@ -76,7 +76,8 @@ THEME_COLOR = "#3166a4"  # 与图标底色中值一致
 STYLE_CSS = "assets/css/style.css"
 MAIN_JS = "assets/js/main.js"
 PLAYER_JS = "assets/js/audio-player.js"
-PROGRESS_JS = "assets/js/progress.js"  # 仅首页引用：学习进度的本地存储 / 导入导出
+PROGRESS_JS = "assets/js/progress.js"  # 首页 + 文章页共用：学习进度的本地存储 / 导入导出
+COMPLETION_JS = "assets/js/study-completion.js"  # 仅文章页：听完 + 全答对 ⇒ 自动标记完成
 
 # Android 安装包（随仓库提交，不是构建产物）。站点根 = 仓库根，所以相对路径就是仓库里的位置。
 # 首页设置面板给出直链，手机点一下就能下载安装；`?v=` 只按文件内容算，重新打包必然换 URL。
@@ -1231,6 +1232,32 @@ def _attach_timeline(article: Article, audio_path: Path, warnings: list[str]) ->
         )
 
 
+def _render_study_status(article: Article) -> str:
+    """文章页头部的学习状态行。
+
+    初始文案由构建期决定（脚本未执行时也能看懂），JS 之后会按实际进度改写。
+    「听完 + 全部答对 ⇒ 自动标记完成」需要音频与题目两样都在，缺任何一样
+    都只能回首页手动勾选 —— 这一点必须写在页面上，否则用户会以为自动标记坏了。
+    """
+    if article.has_audio and article.questions:
+        autoable = True
+        text = "听完音频并答对全部题目后，本篇会自动标记为已完成。"
+    elif article.has_audio:
+        autoable = False
+        text = "本篇暂无练习题，无法自动标记；可在首页手动勾选完成。"
+    elif article.questions:
+        autoable = False
+        text = "本篇暂无音频，无法自动标记；可在首页手动勾选完成。"
+    else:
+        autoable = False
+        text = "本篇暂无音频与练习题，无法自动标记；可在首页手动勾选完成。"
+    return (
+        f'      <p class="article-progress" data-study-status '
+        f'data-study-auto="{"true" if autoable else "false"}" '
+        f'role="status" aria-live="polite">{esc(text)}</p>'
+    )
+
+
 def render_article_page(article: Article) -> str:
     words_html = _render_words(article)
     questions_html, quiz_data = _render_questions(article)
@@ -1248,11 +1275,12 @@ def render_article_page(article: Article) -> str:
 {_render_icons("../")}
   <link rel="stylesheet" href="../{asset_url(STYLE_CSS)}">
 </head>
-<body class="page page-article">
+<body class="page page-article" data-article-id="{esc(article.number_text)}">
   <main class="container">
     <header class="article-header">
       <p class="article-number-large">{esc(article.number_text)}</p>
       <h1 class="article-title-main">{esc(article.title)}</h1>
+{_render_study_status(article)}
     </header>
 
     <section class="section section-article" id="article">
@@ -1288,6 +1316,8 @@ def render_article_page(article: Article) -> str:
   </script>
   <script src="../{asset_url(PLAYER_JS)}" defer></script>
   <script src="../{asset_url(MAIN_JS)}" defer></script>
+  <script src="../{asset_url(PROGRESS_JS)}" defer></script>
+  <script src="../{asset_url(COMPLETION_JS)}" defer></script>
 </body>
 </html>
 """

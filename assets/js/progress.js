@@ -1,10 +1,16 @@
 /* ==========================================================================
-   DailyLingo — 首页学习进度
+   DailyLingo — 学习进度（本地存储 + 首页交互）
    职责：
      1. 每篇文章的「已完成」标记（localStorage 持久化）
      2. Chapter 汇总完成状态（由内部文章实时计算，不单独存储）
      3. 首页统计：已完成 / 总数 / 百分比 / 进度条
      4. 左上角设置入口里的进度导出与导入（合并 / 覆盖）
+
+   同一份存储被两处使用：
+     * 首页（本文档下半部分）：勾选 / 取消、统计、导入导出
+     * 文章页（study-completion.js）：听完音频 + 全部题目答对 ⇒ 调用
+       markCompleted() 自动写入同一条记录。首页下次打开就能看到勾。
+   写作入口只有这里一处，避免两边各写一份 JSON 而造成格式漂移。
 
    设计约束：
      * 只依赖浏览器原生 API，无框架、无网络请求、无后端
@@ -280,6 +286,48 @@
     } catch (err) {
       return { ok: false, payload: payload, error: String(err && err.message ? err.message : err) };
     }
+  }
+
+  /**
+   * 读取「已完成」编号（文章页用，只读不写）。
+   * 存储不可用时返回空数组 —— 调用方靠 status 判断要不要提示。
+   */
+  function readCompleted() {
+    return loadState();
+  }
+
+  /** 某篇文章是否已标记完成。 */
+  function isCompleted(id) {
+    var articleId = normalizeId(id);
+    if (!articleId) {
+      return false;
+    }
+    return loadState().completed.indexOf(articleId) !== -1;
+  }
+
+  /**
+   * 把一篇文章标记为已完成（幂等）。
+   *
+   * 文章页的自动标记走这里：先读、再并集、再写，全程不碰别的编号，
+   * 因此不会覆盖用户在首页做出的任何勾选 / 取消。
+   *
+   * @returns {{ok: boolean, already: boolean, completed: string[], error?: string}}
+   */
+  function markCompleted(id) {
+    var articleId = normalizeId(id);
+    if (!articleId) {
+      return { ok: false, already: false, completed: [], error: "文章编号不合法。" };
+    }
+    var loaded = loadState();
+    if (loaded.completed.indexOf(articleId) !== -1) {
+      return { ok: true, already: true, completed: loaded.completed };
+    }
+    var next = uniqueSorted(loaded.completed.concat([articleId]));
+    var saved = saveState(next, new Date().toISOString());
+    if (!saved.ok) {
+      return { ok: false, already: false, completed: loaded.completed, error: "本地存储不可用或已写满。" };
+    }
+    return { ok: true, already: false, completed: next };
   }
 
   /* -------------------------------------------------------------- DOM 层 */
@@ -819,6 +867,9 @@
       chapterStatus: chapterStatus,
       buildExport: buildExport,
       exportFileName: exportFileName,
+      readCompleted: readCompleted,
+      isCompleted: isCompleted,
+      markCompleted: markCompleted,
     };
   }
 

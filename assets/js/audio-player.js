@@ -6,12 +6,46 @@
         0.75x / 1x / 1.25x 倍速、音量、加载状态、播放结束、加载失败；
         进度条支持键盘左右键（Shift 加速）微调。
         句子高亮：读到哪句就把哪句标粗，拖动/点按跳转后立即跟着走。
+        收听进度：按 timeupdate 累计实际播过的媒体秒数，通过
+        `dailylingo:listen` 事件上报（文章页据此判断「听完了没有」）。
    ========================================================================== */
 
 (function () {
   "use strict";
 
   var RATES = [0.75, 1, 1.25];
+
+  /* ------------------------------------------------------------- 收听进度
+     文章页要判断「这篇听完了没有」，但 TTS 出来的 WAV 没有任何标记，
+     所以只能按 timeupdate 累计「真的播过去」的媒体秒数，再除以时长。
+
+     两条关键处理（都由实测的失败模式推出来的）：
+       1. **单步增量超过 1.5 s 直接丢弃** —— timeupdate 大约 4 Hz，
+          正常增量在 0.25 s 量级；拖进度条 / 点句子跳转会产生巨大增量，
+          不丢的话「拖到结尾」就能瞬间把收听时长刷满。
+       2. **累计的是媒体时间，不是墙上时间** —— 1.25x 播放同样走完全程，
+          比率天然按倍率无关的方式计算。
+
+     结果通过 `dailylingo:listen` 事件抛给上层（study-completion.js），
+     播放器本身不关心「完成」这件事。 */
+  var LISTEN_EVENT = "dailylingo:listen";
+  var LISTEN_STEP_LIMIT = 1.5;
+
+  /**
+   * 累计收听秒数的一步。`previous === null` 表示刚开始播放 / 刚跳转过，
+   * 只记基准不累加；增量为负（后退跳转）或超过 `limit`（拖动 / 点句子）
+   * 一律丢弃。抽成纯函数是为了能在 Node 里直接把边界测掉。
+   */
+  function addListenStep(listened, previous, now, limit) {
+    if (previous === null || previous === undefined) {
+      return listened;
+    }
+    var delta = now - previous;
+    if (!(delta > 0) || delta > (limit || LISTEN_STEP_LIMIT)) {
+      return listened;
+    }
+    return listened + delta;
+  }
 
   function formatTime(seconds) {
     if (!isFinite(seconds) || seconds < 0) {
@@ -176,6 +210,43 @@
     // 一旦开始播放或用户主动跳转，高亮就接管并一直跟随。
     var armed = false;
     var tracker = createSentenceTracker(root);
+    // 收听时长累计（媒体秒）；lastMark 是上一次 timeupdate 的播放位置
+    var listened = 0;
+    var lastMark = null;
+    var lastBucket = -1;
+
+    function reportListen(ended) {
+      if (!(duration > 0) || typeof CustomEvent !== "function" || !root.dispatchEvent) {
+        return;
+      }
+      var ratio = clamp(listened / duration, 0, 1);
+      var bucket = Math.floor(ratio * 100);
+      if (!ended && bucket === lastBucket) {
+        return; // 每 1% 才上报一次，避免 timeupdate 把事件刷爆
+      }
+      lastBucket = bucket;
+      root.dispatchEvent(
+        new CustomEvent(LISTEN_EVENT, {
+          bubbles: true,
+          detail: { ratio: ratio, seconds: listened, duration: duration, ended: !!ended },
+        })
+      );
+    }
+
+    function trackListen() {
+      if (!(duration > 0)) {
+        lastMark = null;
+        return;
+      }
+      if (audio.paused || audio.ended) {
+        lastMark = null;
+        return;
+      }
+      var now = audio.currentTime;
+      listened = addListenStep(listened, lastMark, now, LISTEN_STEP_LIMIT);
+      lastMark = now;
+      reportListen(false);
+    }
 
     function setState(text, kind) {
       if (!stateEl) {
@@ -307,6 +378,7 @@
       if (!seeking) {
         renderProgress();
       }
+      trackListen();
     });
 
     audio.addEventListener("progress", function () {
@@ -319,12 +391,14 @@
 
     audio.addEventListener("play", function () {
       armed = true;
+      lastMark = audio.currentTime; // 暂停期间的时间不算收听
       setToggleLabel(true);
       setState("正在播放");
       renderProgress();
     });
 
     audio.addEventListener("pause", function () {
+      lastMark = null;
       setToggleLabel(false);
       if (!audio.ended) {
         setState("已暂停");
@@ -342,9 +416,15 @@
     });
 
     audio.addEventListener("ended", function () {
+      // 最后一个 timeupdate 通常离结尾还差几十毫秒，这里把这截尾巴补上
+      if (lastMark !== null) {
+        listened = addListenStep(listened, lastMark, audio.currentTime, LISTEN_STEP_LIMIT);
+        lastMark = null;
+      }
       setToggleLabel(false);
       setState("播放结束");
       renderProgress();
+      reportListen(true);
     });
 
     audio.addEventListener("error", function () {
@@ -454,6 +534,20 @@
 
   function init() {
     document.querySelectorAll("[data-player]").forEach(createAudioPlayer);
+  }
+
+  /* 供自动化测试使用的纯逻辑 + 事件契约 */
+  if (typeof globalThis !== "undefined") {
+    globalThis.DailyLingoPlayer = {
+      LISTEN_EVENT: LISTEN_EVENT,
+      LISTEN_STEP_LIMIT: LISTEN_STEP_LIMIT,
+      RATES: RATES,
+      addListenStep: addListenStep,
+    };
+  }
+
+  if (typeof document === "undefined") {
+    return; // 非浏览器环境（测试）不绑定事件
   }
 
   if (document.readyState === "loading") {

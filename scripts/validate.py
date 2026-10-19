@@ -281,6 +281,24 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
             and f'src="../{build.asset_url(build.MAIN_JS)}"' in html
             and f'src="../{build.asset_url(build.PLAYER_JS)}"' in html,
         )
+        # 自动完成：页面必须自带文章编号，并由构建期决定「能不能自动标记」
+        # 注意：validate 走的是 load_articles()，此时 has_audio 还没被 build_site 填上，
+        # 所以这里要自己看一眼 sources/ 里有没有同名 WAV。
+        autoable = bool((sources_dir / article.audio_name).is_file() and article.questions)
+        report.check(
+            f"{article.html_name} 声明文章编号（自动完成写库用）",
+            f'data-article-id="{article.number_text}"' in html,
+        )
+        report.check(
+            f"{article.html_name} 学习状态行与自动标记可用性一致",
+            f'data-study-status data-study-auto="{"true" if autoable else "false"}"' in html,
+        )
+        report.check(
+            f"{article.html_name} 引用进度与自动完成脚本（带内容指纹）",
+            f'src="../{build.asset_url(build.PROGRESS_JS)}"' in html
+            and f'src="../{build.asset_url(build.COMPLETION_JS)}"' in html,
+        )
+
         report.check(
             f"{article.html_name} 返回目录链接存在",
             'href="../index.html"' in html,
@@ -469,6 +487,7 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
         "assets/js/main.js",
         "assets/js/audio-player.js",
         build.PROGRESS_JS,
+        build.COMPLETION_JS,
         build.FAVICON_SVG,
         build.FAVICON_PNG32,
         build.FAVICON_PNG180,
@@ -517,6 +536,32 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
         "语音跟随开关默认关闭（读取失败一律按不跟随处理）",
         player_src.count("shouldFollow()") >= 1
         and "return false; // 存储不可用 ⇒ 用默认值（不跟随）" in main_src,
+    )
+
+    # 文章页自动完成：两个脚本不能各写一套事件名，靠这两个断言锁住契约
+    completion_js = out_dir / build.COMPLETION_JS
+    completion_src = completion_js.read_text(encoding="utf-8") if completion_js.is_file() else ""
+    report.check(
+        "收听事件名在播放器与自动完成脚本里一致",
+        '"dailylingo:listen"' in player_src and '"dailylingo:listen"' in completion_src,
+    )
+    report.check(
+        "判分事件名在 main.js 与自动完成脚本里一致",
+        '"dailylingo:quiz"' in main_src and '"dailylingo:quiz"' in completion_src,
+    )
+    report.check(
+        "自动完成阈值声明为 0.9（听够才打勾）",
+        "REQUIRED_RATIO = 0.9" in completion_src,
+    )
+    report.check(
+        f"{build.COMPLETION_JS} 不发起网络请求",
+        "fetch(" not in completion_src
+        and "XMLHttpRequest" not in completion_src
+        and "sendBeacon" not in completion_src,
+    )
+    report.check(
+        f"{build.PROGRESS_JS} 暴露文章页需要的写入接口",
+        "markCompleted" in progress_src and "isCompleted" in progress_src,
     )
 
     print("== 6. 构建可重复性 ==")

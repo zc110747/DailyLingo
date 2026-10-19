@@ -217,6 +217,24 @@ summary:focus-visible,
   color: var(--text);
 }
 
+/* 文章页头部的学习状态：平时是一句灰色说明，自动打勾后变绿 */
+.article-progress {
+  margin: 12px 0 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-faint);
+}
+
+.article-progress.is-done {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.article-progress.is-error {
+  color: var(--err);
+  font-weight: 600;
+}
+
 .section {
   margin-top: 40px;
 }
