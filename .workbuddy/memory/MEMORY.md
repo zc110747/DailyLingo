@@ -102,8 +102,18 @@ SDK 读 `ANDROID_SDK_ROOT`、JDK 读 `JAVA_HOME` 或 Studio 的 `jbr`）。细�
 设置面板末尾「手机应用」= 安装包直链（`build.render_app_download()`）：`apps/android/publisher/
 DailyLingo.apk?v=<sha8>` + `download`；**APK 缺失整块省略**。
 
+## 朗读高亮（音频 ↔ 网页联动）
+正文按句包 `<span class="sentence" data-start data-end>`（无时间轴时退回纯 `<p>`），当前句
+`is-active`（加粗 + 淡蓝底）。时间轴由 **`scripts/timeline.py`** 在**构建期**从 WAV 反推
+（TTS 无时间戳）：帧峰值包络 → ≥100 ms 静音段 → DP 按「每句**有声时长** ∝ 音节数」挑 N-1 个边界。
+四条铁律（都是实测踩出来的，改算法前先读文件注释）：**候选只能是停顿中心**（网格点会让一次长停顿
+吞出空句）；**代价按每段算**（累计偏差会允许某句被压扁）；**用有声时长不用墙钟**（逗号停顿会推偏）；
+**引号 + ≤6 词叙述语并成一句**（中间无停顿，硬切会整体错位）。
+前端：`renderProgress()` 里统一 `tracker.sync(audio.currentTime)` —— 播放/拖动/←→/点句子共用一条路径；
+播放前不高亮（`armed` 标志）。缓存键 (size, mtime_ns, hash(句子))，热构建 0.09 s。
+
 ## 已验证 / 踩坑
-- 2026-10-19 全绿：20 篇 / validate 765 / pytest 155 / Android 真机三态。
+- 2026-10-19 全绿：20 篇 / validate 867 / pytest 225 / Android 真机三态 / 朗读高亮 `a63c2f3`。
 - **validate 的三档倍速断言必须分支**：无 WAV 的页只有 `player-unavailable`，无条件查会得 `rates=[]`
   假 FAIL。有 `data-player` 才查 `0.75/1/1.25` 且无 `back/forward`，否则只断言播放器专属类名不出现。
   ⚠️ 别用 `'data-action=' not in html` 判「无控件」——题目区 Check/Reset 也带它。
