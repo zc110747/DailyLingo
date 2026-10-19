@@ -5,6 +5,7 @@
    支持：播放/暂停、当前时间、总时长、实时进度、点击与拖动跳转、
         0.75x / 1x / 1.25x 倍速、音量、加载状态、播放结束、加载失败；
         进度条支持键盘左右键（Shift 加速）微调。
+        句子高亮：读到哪句就把哪句标粗，拖动/点按跳转后立即跟着走。
    ========================================================================== */
 
 (function () {
@@ -27,6 +28,115 @@
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
+  }
+
+  /* ---------------------------------------------------------------- 句子高亮
+     正文里每个句子都是 <span class="sentence" data-start="12.34" data-end="15.67">，
+     时间轴由构建脚本从 WAV 的静音结构反推（见 scripts/timeline.py）。
+
+     设计要点：
+     * 状态只有「当前句」一个整数，靠 class 切换，不重建 DOM（进度条每 250 ms 触发一次）；
+     * 用二分查找定位，几十句的长文也不会拖慢 timeupdate；
+     * 快进/后退/拖动都走同一条路径（renderProgress → sync），不需要额外分支。
+  */
+  function createSentenceTracker(root) {
+    var scope = root.closest ? root.closest(".section-article") : null;
+    var nodes = Array.prototype.slice.call(
+      (scope || document).querySelectorAll("[data-start]")
+    );
+    if (!nodes.length) {
+      return null;
+    }
+
+    var starts = nodes.map(function (node) {
+      var value = parseFloat(node.getAttribute("data-start"));
+      return isFinite(value) ? value : 0;
+    });
+    var current = -1;
+
+    function indexAt(seconds) {
+      var low = 0;
+      var high = starts.length - 1;
+      var found = 0;
+      while (low <= high) {
+        var mid = (low + high) >> 1;
+        if (starts[mid] <= seconds) {
+          found = mid;
+          low = mid + 1;
+        } else {
+          high = mid - 1;
+        }
+      }
+      return found;
+    }
+
+    function reveal(node) {
+      if (!node.getBoundingClientRect || !node.scrollIntoView) {
+        return;
+      }
+      var rect = node.getBoundingClientRect();
+      var viewport = window.innerHeight || document.documentElement.clientHeight || 0;
+      if (!viewport) {
+        return;
+      }
+      // 吸顶播放器会遮住正文上沿，可视为「可见区顶部」的额外下移量
+      var top = 0;
+      if (root.getBoundingClientRect) {
+        var player = root.getBoundingClientRect();
+        if (player.bottom > 0) {
+          top = Math.min(player.bottom, viewport * 0.4);
+        }
+      }
+      if (rect.top >= top + 8 && rect.bottom <= viewport - 8) {
+        return;
+      }
+      var reduce =
+        window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      node.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+    }
+
+    function activate(index, shouldReveal) {
+      if (index === current || !nodes[index]) {
+        return;
+      }
+      if (current >= 0 && nodes[current]) {
+        nodes[current].classList.remove("is-active");
+        nodes[current].removeAttribute("aria-current");
+      }
+      current = index;
+      nodes[current].classList.add("is-active");
+      nodes[current].setAttribute("aria-current", "true");
+      if (shouldReveal) {
+        reveal(nodes[current]);
+      }
+    }
+
+    function sync(seconds) {
+      if (!isFinite(seconds) || seconds < 0) {
+        return;
+      }
+      activate(indexAt(seconds), true);
+    }
+
+    function hasSelection() {
+      var selection = window.getSelection && window.getSelection();
+      return !!(selection && String(selection).length);
+    }
+
+    return {
+      sync: sync,
+      /* 点击某句 → 从这句开头播放。句首时间落在停顿里，不会切掉第一个音。 */
+      onSelect: function (handler) {
+        nodes.forEach(function (node, index) {
+          node.addEventListener("click", function () {
+            if (hasSelection()) {
+              return; // 正在选词/复制，不当作跳转
+            }
+            handler(starts[index], index);
+          });
+        });
+      }
+    };
   }
 
   function createAudioPlayer(root) {
@@ -54,6 +164,10 @@
     var duration = 0;
     var seeking = false;
     var failed = false;
+    // 播放前不高亮（页面一打开就有一句加粗会让人以为在播放）；
+    // 一旦开始播放或用户主动跳转，高亮就接管并一直跟随。
+    var armed = false;
+    var tracker = createSentenceTracker(root);
 
     function setState(text, kind) {
       if (!stateEl) {
@@ -92,6 +206,11 @@
         track.setAttribute("aria-valuemax", String(Math.round(duration)));
         track.setAttribute("aria-valuenow", String(Math.round(audio.currentTime)));
         track.setAttribute("aria-valuetext", formatTime(audio.currentTime) + " / " + formatTime(duration));
+      }
+      // 所有时间变化（播放 / 拖动 / 左右键 / 点句子）最终都会经过这里，
+      // 高亮只需挂在这一个点上，就不会出现「快进后高亮还停在旧句子」。
+      if (tracker && armed) {
+        tracker.sync(audio.currentTime);
       }
     }
 
@@ -176,6 +295,7 @@
     });
 
     audio.addEventListener("timeupdate", function () {
+      armed = true;
       if (!seeking) {
         renderProgress();
       }
@@ -190,8 +310,10 @@
     });
 
     audio.addEventListener("play", function () {
+      armed = true;
       setToggleLabel(true);
       setState("正在播放");
+      renderProgress();
     });
 
     audio.addEventListener("pause", function () {
@@ -253,6 +375,7 @@
           return;
         }
         seeking = true;
+        armed = true;
         if (track.setPointerCapture) {
           track.setPointerCapture(event.pointerId);
         }
@@ -297,7 +420,22 @@
         } else {
           return;
         }
+        armed = true;
         event.preventDefault();
+      });
+    }
+
+    if (tracker) {
+      tracker.onSelect(function (start) {
+        if (failed) {
+          return;
+        }
+        armed = true;
+        audio.currentTime = clamp(start, 0, duration || start);
+        renderProgress();
+        if (audio.paused) {
+          play();
+        }
       });
     }
 

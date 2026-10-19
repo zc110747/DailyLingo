@@ -12,7 +12,7 @@ committed as-is and served straight from GitHub Pages.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#quick-start)
 [![Runtime dependencies: none](https://img.shields.io/badge/runtime%20dependencies-none-success.svg)](#quick-start)
-[![Tests: 155 passed](https://img.shields.io/badge/tests-155%20passed-success.svg)](#verification-results)
+[![Tests: 225 passed](https://img.shields.io/badge/tests-225%20passed-success.svg)](#verification-results)
 [![Deploy: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#deployment-to-github-pages)
 
 **Live site:** <https://zc110747.github.io/DailyLingo/>
@@ -73,6 +73,10 @@ committed as-is and served straight from GitHub Pages.
   body text**, separated from it by a thin divider with breathing room on both sides, and sticks
   to the top of the viewport while you scroll, so you can start the audio and then read along
   without ever scrolling back to the controls.
+- **Read-along highlight** — the sentence being spoken is bolded and tinted, following playback
+  through seeks, speed changes and rewinds; clicking any sentence plays from that sentence. The
+  timings are inferred from the WAV at build time (the TTS tool emits none), so this needs no
+  backend and no runtime alignment — see [Read-Along Highlight](#read-along-highlight).
 - **A real site icon** — a hand-authored SVG (open book + sound bars) with raster fallbacks, wired
   into every page. No CDN, no icon font, no build step: the files are committed as-is.
 - **Instant grading with no backend** — single-choice and fill-in-the-blank questions graded in the
@@ -524,6 +528,44 @@ When the duration is not yet available, it is shown as `--:--` and nothing else 
 table, questions, answers and navigation **all keep working**. The build emits a warning instead of
 aborting the other pages.
 
+### Read-Along Highlight
+
+While the audio plays, the sentence being spoken is **bolded and tinted**, and it follows playback.
+Seeking works the same way as before — dragging the progress bar, `←` / `→`, `Home` / `End`, or
+clicking a sentence — and the highlight re-syncs immediately, so there is never a stale highlight
+sitting on the previous sentence after a jump.
+
+**Clicking a sentence plays from there** (it starts playing if the audio was paused). Selecting text
+with the mouse does **not** trigger a jump, otherwise copying a word would rewind the audio.
+
+Where the timing comes from — the TTS tool emits **no timestamps**, so `scripts/timeline.py` derives
+them from the WAV itself at build time:
+
+1. a 10 ms **peak** envelope separates speech from silence (peak rather than RMS, because -60 dB
+   residue in a pause drags an RMS window up);
+2. every silence run of at least 100 ms becomes a **candidate boundary**. A pause is an atomic unit:
+   one pause carries at most one boundary — otherwise a long paragraph break swallows a whole
+   sentence;
+3. dynamic programming picks exactly *N-1* of them for *N* sentences, under the expectation that each
+   sentence's **voiced duration** (silence excluded) is proportional to its syllable count.
+
+Three details turned out to matter:
+
+- **Voiced time, not wall-clock time.** Pauses after commas inflate wall-clock duration and would
+  systematically push boundaries towards long sentences.
+- **Cost per sentence, not cumulative drift.** A cumulative measure lets one sentence be squeezed
+  while its neighbour absorbs the drift — measured: 13 syllables crammed into 0.87 s. Per-sentence
+  cost has no such hole.
+- **Quoted speech plus its attribution is one unit.** `“Oh no! Where is my ticket?” she says.` is read
+  with no pause between the quote and `she says.`, so that boundary is not observable in the audio at
+  all; splitting it forces the optimizer to dump a boundary somewhere else and shifts every later
+  sentence.
+
+Nothing is computed at runtime — the timings ship as `data-start` / `data-end` attributes on each
+sentence. If the WAV is missing or cannot be analysed (not 16-bit PCM, for example), the body is
+rendered as plain paragraphs and only the highlight is absent; the player and everything else keep
+working.
+
 ### Generating Audio with EnglishAudio
 
 Audio is produced by an external tool — the build script **never** synthesises speech and **never**
@@ -590,7 +632,10 @@ removed.
 
 Behaviour:
 
-- **Full rebuild** (twenty articles, ~0.20 s in process): adding or removing an article changes the
+- **Full rebuild** (twenty articles, ~0.12 s in process; the first run of a process takes ~1.2 s
+  because it analyses each WAV for sentence timings, which are then cached against the file's
+  size/mtime and only recomputed when the audio itself changes): adding or removing an article
+  changes the
   previous/next links of its neighbours, so rewriting only the changed page would leave the site
   subtly inconsistent.
 - A malformed Markdown file **prints an error and keeps watching** — fix it and save again.
@@ -788,7 +833,7 @@ every title under its Chapter. The CLI output is currently in Chinese; the forma
 
 ```text
 $ python scripts/validate.py
-结果：PASS 765 / FAIL 0 / WARN 0
+结果：PASS 867 / FAIL 0 / WARN 0
 ```
 
 Covers: article data; number uniqueness and ascending order; Chapter range boundaries and the
@@ -799,6 +844,9 @@ and above the first paragraph**; **a divider between the player and the body tex
 controls being volume plus exactly three speed buttons (`0.75x` / `1x` / `1.25x`, no ±5 s)** on pages
 whose WAV exists — a page whose audio has not been generated yet must instead emit no player
 controls at all (only the `player-unavailable` note);
+**the body split into sentences carrying a strictly increasing, contiguous timeline that starts at 0
+and ends exactly at the WAV duration, with the sentence texts joining back into the original
+paragraphs character for character**;
 **the icon files existing, being valid PNG/SVG, and being declared
 on every page with the right relative prefix**; browser title and heading consistency; word-table
 row counts; question counts; the grading key matching the Answers section; Answers being collapsed
@@ -814,7 +862,7 @@ storage key plus the schema version while making no network calls**.
 
 ```text
 $ pytest -q
-155 passed in 11.8s
+225 passed in 15.5s
 ```
 
 | File | Cases | Coverage |
@@ -823,6 +871,8 @@ $ pytest -q
 | `tests/test_frontend.py` | 4 | Executes `assets/js/main.js` for real in Node: correct / incorrect / empty single-choice selections, case insensitivity, leading and trailing whitespace, trailing punctuation, multiple acceptable answers, blank input never correct; plus a sample-by-sample consistency check against `build.normalize_answer` |
 | `tests/test_progress.py` | 32 | Homepage structure for the progress feature (one toggle per real article, all starting unchecked, stats total / `aria-valuemax` / Chapter totals matching reality, settings dialog and its export-import controls, an Android package link carrying `download` and a content fingerprint, the block omitted when the APK is missing, empty site rendering `0 / 0`) **plus the pure logic executed in Node**: zero-padded IDs, payload validation (JSON syntax / `schemaVersion` / structure), dedupe and invalid-entry counting, ignoring unknown IDs, merge union, statistics without dividing by zero, Chapter completion on the real count, export payload shape, filename and import round-trip |
 | `tests/test_progress_dom.py` | 14 | Drives the generated homepage in **jsdom** with real click events and a real `localStorage`: first visit empty, toggle updates stats / storage / Chapter, unchecking reverts, Chapter turns green only when complete, reload restores, corrupt data quarantined, storage-disabled degradation, import preview, merge, overwrite behind a second confirmation, cancelling overwrite, invalid JSON / unsupported version leaving progress intact, unknown IDs ignored and counted, export payload and dialog open/close. Skipped automatically when jsdom is not installed |
+| `tests/test_timeline.py` | 63 | `scripts/timeline.py`: sentence splitting (abbreviations such as `Mrs.`, terminators inside quotes, an attribution after a quote merged back, a long following sentence *not* merged), lossless splitting verified against **every paragraph of every article**, syllable estimation, silence detection on synthesised WAVs, the DP picking the pause closest to the syllable ratio, falling back to a grid when there is no pause at all, timeline covering the whole file, monotonic contiguous windows, graceful empty results for 8-bit / missing audio, consistency against the real articles and real WAVs, and the build emitting `data-start` / `data-end` (or plain paragraphs when audio is absent) |
+| `tests/test_player_dom.py` | 7 | Drives the generated article page in **jsdom** with a stand-in `Audio`: nothing highlighted before playback, highlight follows `currentTime` (0 / 2 / 4 s → sentences 0 / 1 / 2), clicking a sentence seeks to its start and starts playing, clicking while text is selected does nothing, rewinding moves the highlight back, exactly one sentence active. Skipped automatically when jsdom is not installed |
 
 Every test uses temporary directories and never touches the real `content/` or `sources/`.
 `test_progress_dom.py` additionally needs `jsdom` on this machine; it is a development-only
@@ -941,9 +991,11 @@ live site.
 Everything the automated tests can prove is listed above. The following items were **not** executed
 on this machine, so no "verified" claim is made for them:
 
-1. **No end-to-end browser-interaction automation.** This environment has no usable browser
-   automation channel, so "click a Chapter to expand, drag the progress bar to seek, switch playback
-   speed, type an answer and press Check" are not covered by automated cases. What *is* covered:
+1. **No end-to-end browser-interaction automation.** Nothing in `pytest` drives a browser (the
+   read-along highlight is the exception — it was checked by hand-driven headless Chromium, see
+   item 8 — but that check is not part of the suite), so "click a Chapter to expand, drag the
+   progress bar to seek, switch playback speed, type an answer and press Check" are not covered by
+   automated cases. What *is* covered:
    the grading rules are executed for real in Node (see above), and the structure and semantics of
    the generated HTML (`<details>` / `<summary>` / `role="slider"` / `aria-live` / `aria-controls`)
    are statically asserted by `validate.py`. Please walk through [Local Preview](#local-preview) by
@@ -971,6 +1023,17 @@ on this machine, so no "verified" claim is made for them:
    events and a real `localStorage` — but pixels are not verified: this environment cannot launch
    a browser, so the gear position, the 6 px bar, the two icon states and the dialog at 390 px
    still deserve a quick look through [Local Preview](#local-preview).
+
+8. **Whether the read-along highlight is *correct* needs ears, not tests.** The timeline is not
+   supplied by the TTS tool — it is inferred from the WAV's silence structure plus a syllable
+   ratio, with boundaries landing on pauses and a typical error of 0.1–0.3 s; a very short sentence
+   (`Who knows?`) can flash by. This machine did check the *behaviour* in headless Chromium: the
+   highlight advances with playback, jumping to 80 % lands on the right sentence immediately,
+   clicking a sentence plays from it, 1.25× keeps up, rewinding moves the highlight back, long
+   articles auto-scroll, and a 390 px screenshot looks right. **Whether what you hear is the sentence
+   that is bolded still needs one pass through [Local Preview](#local-preview)** — especially for an
+   article whose WAV no longer matches its edited body (see "Re-generate the WAV after editing the
+   body" above).
 
 ---
 

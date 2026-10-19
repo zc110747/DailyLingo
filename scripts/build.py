@@ -43,6 +43,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Sequence
 
+# 同目录的 timeline.py：句子级音频时间轴（朗读高亮）。
+# validate.py 用 importlib 直接加载本文件，那时 scripts/ 不一定在 sys.path 里，故显式补上。
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
+import timeline  # noqa: E402  （必须在上面的 sys.path 处理之后）
+
 # --------------------------------------------------------------------------
 # 常量
 # --------------------------------------------------------------------------
@@ -295,6 +303,9 @@ class Article:
     # 运行时填充
     html_name: str = ""
     has_audio: bool = False
+    # 句子切分（每个段落一组）与对应的音频时间轴；两者都为空时不渲染高亮
+    sentence_paragraphs: list[list[str]] = field(default_factory=list)
+    sentence_timeline: list[tuple[float, float]] = field(default_factory=list)
     prev: "Article | None" = None
     next: "Article | None" = None
 
@@ -1085,6 +1096,42 @@ def _render_answers(article: Article) -> str:
     )
 
 
+def _render_article_body(article: Article) -> str:
+    """正文段落；有音频时间轴时逐句包一层 ``<span class="sentence">`` 供朗读高亮。
+
+    没有时间轴（音频缺失 / 分析失败）时退回纯文本段落，页面表现与加入高亮之前一致。
+    句子之间用换行分隔 —— 浏览器把换行折叠成一个空格，阅读排版不变。
+    """
+    if not article.sentence_timeline:
+        return "\n".join(f"          <p>{esc(p)}</p>" for p in article.paragraphs)
+
+    index = 0
+    paragraphs: list[str] = []
+    for group in article.sentence_paragraphs:
+        spans: list[str] = []
+        for sentence in group:
+            if index < len(article.sentence_timeline):
+                start, end = article.sentence_timeline[index]
+                spans.append(
+                    f'<span class="sentence" data-start="{start:.2f}" data-end="{end:.2f}">'
+                    f"{esc(sentence)}</span>"
+                )
+            else:  # 理论上不会发生：时间轴与句子一一对应，多出来的句子照常渲染
+                spans.append(esc(sentence))
+            index += 1
+        paragraphs.append("          <p>" + "\n            ".join(spans) + "</p>")
+    return "\n".join(paragraphs)
+
+
+def _render_article_note(article: Article) -> str:
+    """正文上方的一句提示：说明「读到哪句高亮哪句，点句子可跳转」。"""
+    if not article.sentence_timeline:
+        return ""
+    return (
+        '        <p class="reading-hint">播放时当前句会加粗；点任意一句可从那里开始播放。</p>'
+    )
+
+
 def _render_player(article: Article) -> str:
     if not article.has_audio:
         return (
@@ -1145,6 +1192,43 @@ def _render_continue(article: Article) -> str:
     )
 
 
+# 语速落在 [1.0, 8.0] 音节/秒之外就说明这一句的对齐明显不对称（正常朗读 1.5–5.6）
+PLAUSIBLE_RATE = (1.0, 8.0)
+
+
+def _attach_timeline(article: Article, audio_path: Path, warnings: list[str]) -> None:
+    """切句 + 从 WAV 反推每句话的起止时间（缺音频时只切句、不产生时间轴）。"""
+    article.sentence_paragraphs = []
+    for paragraph in article.paragraphs:
+        sentences = timeline.split_sentences_checked(paragraph)
+        # 切分自检失败时整段当作一句：绝不因为高亮而丢字
+        article.sentence_paragraphs.append(sentences or [paragraph])
+    article.sentence_timeline = []
+
+    if not article.has_audio:
+        return
+    flat = [sentence for group in article.sentence_paragraphs for sentence in group]
+    article.sentence_timeline = timeline.build_timeline(audio_path, flat)
+    if not article.sentence_timeline:
+        warnings.append(
+            f"{article.source.name}: 无法从音频推导句子时间轴"
+            "（正文不高亮，播放器其余功能正常）"
+        )
+        return
+
+    low, high = PLAUSIBLE_RATE
+    bad = [
+        sentence
+        for sentence, rate in zip(flat, timeline.syllables_per_second(flat, article.sentence_timeline))
+        if rate and not low <= rate <= high
+    ]
+    if bad:
+        warnings.append(
+            f"{article.source.name}: {len(bad)} 句的语速不合常理（对齐可能有偏差），"
+            f"例如 {bad[0][:40]!r}"
+        )
+
+
 def render_article_page(article: Article) -> str:
     words_html = _render_words(article)
     questions_html, quiz_data = _render_questions(article)
@@ -1152,9 +1236,9 @@ def render_article_page(article: Article) -> str:
     player_html = _render_player(article)
     continue_html = _render_continue(article)
     quiz_json = json.dumps(quiz_data, ensure_ascii=False, sort_keys=True, indent=2)
-    paragraph_html = "\n".join(
-        f"          <p>{esc(p)}</p>" for p in article.paragraphs
-    )
+    body_html = _render_article_body(article)
+    note_html = _render_article_note(article)
+    lead_html = (note_html + "\n" if note_html else "") + body_html
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -1175,7 +1259,7 @@ def render_article_page(article: Article) -> str:
       <h2 class="section-title">Article</h2>
 {player_html}
         <hr class="player-divider">
-{paragraph_html}
+{lead_html}
     </section>
 
     <section class="section section-words" id="words">
@@ -1271,6 +1355,7 @@ def build_site(
                 f"{article.source.name}: 缺少音频 sources/{article.audio_name}"
                 "（页面其余部分仍会正常生成）"
             )
+        _attach_timeline(article, audio_path, warnings)
 
     index_path = out_dir / "index.html"
     index_path.write_text(render_index(chapters), encoding="utf-8", newline="\n")

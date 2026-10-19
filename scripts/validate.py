@@ -20,6 +20,7 @@ import re
 import shutil
 import sys
 import tempfile
+import wave
 from pathlib import Path
 from typing import Sequence
 
@@ -342,6 +343,59 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
                 "player-unavailable" in html and all(h in html for h in SECTION_ORDER),
             )
 
+        # 朗读高亮：正文按句切成 <span data-start/data-end>，时间轴由构建脚本从 WAV 反推
+        sentence_re = re.compile(
+            r'<span class="sentence" data-start="([0-9.]+)" data-end="([0-9.]+)">(.*?)</span>',
+            re.S,
+        )
+        spans = sentence_re.findall(html)
+        if audio_file.is_file():
+            starts = [float(s) for s, _e, _t in spans]
+            ends = [float(e) for _s, e, _t in spans]
+            report.check(
+                f"{article.html_name} 正文逐句标注时间轴",
+                len(spans) > 1,
+                f"spans={len(spans)}",
+            )
+            report.check(
+                f"{article.html_name} 句子时间轴严格递增且首尾相接",
+                starts == sorted(starts)
+                and len(set(starts)) == len(starts)
+                and all(a < b for a, b in zip(starts, ends))
+                and all(abs(ends[i] - starts[i + 1]) < 0.005 for i in range(len(starts) - 1)),
+                f"starts={starts[:3]}…",
+            )
+            report.check(
+                f"{article.html_name} 第一句时间轴从 0 开始",
+                bool(starts) and starts[0] == 0.0,
+                f"starts[0]={starts[0] if starts else None}",
+            )
+            with wave.open(str(audio_file), "rb") as wav:
+                audio_duration = wav.getnframes() / float(wav.getframerate())
+            report.check(
+                f"{article.html_name} 时间轴覆盖到音频结尾",
+                bool(ends) and abs(ends[-1] - audio_duration) <= 0.05,
+                f"last_end={ends[-1] if ends else None} duration={audio_duration:.2f}",
+            )
+            # 句子拼回去必须与原文逐字一致（切分不允许吞字或重复，否则高亮会整体错位）
+            expected = [" ".join(build.html.unescape(p).split()) for p in article.paragraphs]
+            rebuilt = [
+                " ".join(build.html.unescape(text).split())
+                for paragraph in re.findall(r"<p>(.*?)</p>", html, re.S)
+                for text in [" ".join(t for _s, _e, t in sentence_re.findall(paragraph))]
+                if text.strip()
+            ]
+            report.check(
+                f"{article.html_name} 逐句切分不丢字、不改字",
+                rebuilt == expected,
+                f"段落数 {len(rebuilt)} vs 原文 {len(expected)}",
+            )
+        else:
+            report.check(
+                f"{article.html_name} 缺音频时不输出句子时间轴",
+                not spans,
+            )
+
         # 单词表
         if article.words:
             report.check(
@@ -433,6 +487,16 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
     report.check(
         f"{build.PROGRESS_JS} 只操作相对资源、不发网络请求",
         "fetch(" not in progress_src and "XMLHttpRequest" not in progress_src,
+    )
+    style_src = (out_dir / build.STYLE_CSS).read_text(encoding="utf-8")
+    report.check(
+        "style.css 定义「当前句」高亮样式",
+        ".section-article .sentence" in style_src and ".sentence.is-active" in style_src,
+    )
+    player_src = (out_dir / build.PLAYER_JS).read_text(encoding="utf-8")
+    report.check(
+        f"{build.PLAYER_JS} 依据 data-start 驱动句子高亮",
+        'querySelectorAll("[data-start]")' in player_src,
     )
 
     print("== 6. 构建可重复性 ==")

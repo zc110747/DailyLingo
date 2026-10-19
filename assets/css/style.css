@@ -239,6 +239,40 @@ summary:focus-visible,
   color: var(--text);
 }
 
+/* 朗读高亮：读到哪句就把哪句标粗（时间轴来自构建脚本 scripts/timeline.py） */
+.section-article .sentence {
+  border-radius: 3px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* 可以直接点句子跳转，给一点悬停反馈 */
+.section-article .sentence[data-start] {
+  cursor: pointer;
+}
+
+.section-article .sentence[data-start]:hover {
+  background: var(--surface-alt);
+}
+
+/* 当前句：加粗 + 淡蓝底。
+   加粗会让这一句的字宽略增、所在段落重新折行 —— 这是「真加粗」的代价。
+   若不希望版面随朗读跳动，把 font-weight 换成下面这行（描边加粗，零重排）：
+     -webkit-text-stroke: 0.45px currentColor; */
+.section-article .sentence.is-active {
+  font-weight: 700;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent-soft);
+}
+
+/* 播放器下方的一句使用说明（只在有音频时间轴时渲染） */
+.reading-hint {
+  margin: 0 0 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-faint);
+}
+
 .empty-note {
   margin: 0;
   padding: 14px 16px;
