@@ -307,7 +307,7 @@ def test_build_emits_sentence_timeline(tmp_path):
     assert result.warnings == []
     assert html.count('class="sentence"') == 3
     assert 'data-start="0.00"' in html
-    assert 'class="reading-hint"' in html
+    assert "reading-hint" not in html  # 正文上方不放使用提示，避免干扰阅读
     article = result.articles[0]
     assert len(article.sentence_timeline) == 3
     assert len(article.sentence_paragraphs) == 1

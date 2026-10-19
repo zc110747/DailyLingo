@@ -265,14 +265,6 @@ summary:focus-visible,
   box-shadow: 0 0 0 1px var(--accent-soft);
 }
 
-/* 播放器下方的一句使用说明（只在有音频时间轴时渲染） */
-.reading-hint {
-  margin: 0 0 14px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--text-faint);
-}
-
 .empty-note {
   margin: 0;
   padding: 14px 16px;

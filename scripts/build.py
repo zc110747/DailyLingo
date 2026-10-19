@@ -1123,15 +1123,6 @@ def _render_article_body(article: Article) -> str:
     return "\n".join(paragraphs)
 
 
-def _render_article_note(article: Article) -> str:
-    """正文上方的一句提示：说明「读到哪句高亮哪句，点句子可跳转」。"""
-    if not article.sentence_timeline:
-        return ""
-    return (
-        '        <p class="reading-hint">播放时当前句会加粗；点任意一句可从那里开始播放。</p>'
-    )
-
-
 def _render_player(article: Article) -> str:
     if not article.has_audio:
         return (
@@ -1237,8 +1228,6 @@ def render_article_page(article: Article) -> str:
     continue_html = _render_continue(article)
     quiz_json = json.dumps(quiz_data, ensure_ascii=False, sort_keys=True, indent=2)
     body_html = _render_article_body(article)
-    note_html = _render_article_note(article)
-    lead_html = (note_html + "\n" if note_html else "") + body_html
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -1259,7 +1248,7 @@ def render_article_page(article: Article) -> str:
       <h2 class="section-title">Article</h2>
 {player_html}
         <hr class="player-divider">
-{lead_html}
+{body_html}
     </section>
 
     <section class="section section-words" id="words">
