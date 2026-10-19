@@ -7,11 +7,14 @@
 `https://zc110747.github.io/DailyLingo/`。只用 HTML/CSS/原生 JS 不引框架；构建与验证
 **只用 Python 标准库**（`requirements.txt` 的 pytest 仅服务测试）。
 
+经验已沉淀 4 个全局 skill：`web-static-site-pipeline` / `web-local-progress-store` /
+`app-webview-shell` / `android-apk-no-gradle`。
+
 ## 目录职责
 `content/*.md` 是文章唯一维护源；`index.html` + `src/*.html` 由构建生成、**必须提交**
 （Pages 以仓库根为站点根）；`sources/*.wav` 由外部 TTS 写；`assets/`（CSS / JS / 静态图标）、
 `scripts/{build,watch,validate}.py`、`tests/`、`watch.bat`（纯 ASCII + CRLF，每条退出路径 pause）
-可手改；`tools/`（EnglishAudio 整包 ~100 MB）已 gitignore、不进仓库。
+可手改；`tools/`（EnglishAudio 整包）gitignore。
 
 ## 文档约定
 `README.md` 英文（默认）+ `README-CH.md` 中文，**两份同步、结构对齐**（各 24 个 H2），顶/底互链；
@@ -62,16 +65,15 @@
 - `extract_choice_key()` 判据严格（`cook` 不会读成 `C`）；题干 `______` 是内容，不得当强调处理。
 
 ## 音频链路
-WAV 由 **EnglishAudio**（Piper + ONNX，离线）生成。**工具已在系统 PATH，仓库与记忆都不记绝对路径**
-（各机安装位置不同，写死换机即失效 —— 已坏过两次）。定位顺序：`--audio-tool` >
-`DAILYLINGO_AUDIO_TOOL` > **PATH 按名字查**（`eaudio.cmd` / `EnglishAudio.exe` / `EnglishAudio`）>
-`<仓库>/tools/eaudio.cmd`。排查「找不到」先 `command -v`，**别改路径**。只读 `## Article`；输出同名
-WAV；正文含非英文被拒（退出码 4）；md 必须 UTF-8。现有 20 个 WAV 全为单声道 / 16 bit / 22 050 Hz，
-单篇 5–7 s。弯引号 `“ ”` 不拦（`0010` 实测 exit 0）。直接 `EnglishAudio.exe <md> --dist=sources`
-（`MSYS_NO_PATHCONV=1`，仓库根）比走 `.cmd` 省事：stdout 有字数 / 时长 / 字节数。
+WAV 由 **EnglishAudio**（Piper + ONNX，离线）生成。**工具在系统 PATH，不记绝对路径**（各机位置不同，
+写死换机即失效 —— 坏过两次）。定位：`--audio-tool` > `DAILYLINGO_AUDIO_TOOL` > **PATH 按名字**
+（`eaudio.cmd` / `EnglishAudio.exe` / `EnglishAudio`）> `<仓库>/tools/eaudio.cmd`；报「找不到」先
+`command -v`。只读 `## Article`，输出同名 WAV；正文含非英文被拒（退出码 4）；md 必须 UTF-8。
+20 个 WAV 均单声道 / 16 bit / 22 050 Hz，单篇 5–7 s；弯引号不拦。直接
+`EnglishAudio.exe <md> --dist=sources`（`MSYS_NO_PATHCONV=1`）比 `.cmd` 省事，stdout 有字数/时长/字节。
 
 ## 文章清单
-**0001–0020 共 20 篇**，全在 Chapter 0001–0100，不逐篇罗列（以 `content/` 为准，标题看 H1）。
+**0001–0020 共 20 篇**，全在 Chapter 0001–0100，不逐篇罗列。
 改名史：`0005` 撞名、`0016` 去撇号、`0018` 笔误 `fro`→`from`。
 
 ## 首页学习进度（纯前端）
@@ -83,8 +85,7 @@ WAV；正文含非英文被拒（退出码 4）；md 必须 UTF-8。现有 20 �
   导入先预览再并集或覆盖，**覆盖二次确认**）；纯逻辑挂 `globalThis.DailyLingoProgress`，无 document 早退。
 - ⚠️ jsdom 测真 DOM 必须 `runScripts: "outside-only"`（否则 `window.eval` 静默不执行），且等
   `load` 再点（脚本 defer 在 DOMContentLoaded 前跑）。⚠️ **jsdom 会被环境清掉**：曾让 14 条 DOM
-  用例整组 skip（仍"全绿"，极易漏看）；恢复 `cd ~/.workbuddy/binaries/node/workspace && npm install
-  jsdom`，跑完应 **155 passed**。
+  用例整组 skip（仍"全绿"，极易漏看）；在 node workspace 里 `npm install jsdom` 即恢复，跑完应 **155 passed**。
 - ✅ **headless Chromium 可用**：playwright + 本机 chromium，`file://` 直开可量尺寸 / 截图 / 发 pointer
   事件（`NODE_PATH=~/.workbuddy/binaries/node/workspace/node_modules`）。⚠️ 别用 `msedge --dump-dom` 判可用
   （假成功：空输出 + exit 0）。
@@ -102,7 +103,7 @@ SDK 读 `ANDROID_SDK_ROOT`、JDK 读 `JAVA_HOME` 或 Studio 的 `jbr`）。细�
 DailyLingo.apk?v=<sha8>` + `download`；**APK 缺失整块省略**。
 
 ## 已验证 / 踩坑
-- 2026-10-19：build 20 篇 / 0 警告；validate 765；pytest 155；Android 真机三态通过。
+- 2026-10-19 全绿：20 篇 / validate 765 / pytest 155 / Android 真机三态。
 - **validate 的三档倍速断言必须分支**：无 WAV 的页只有 `player-unavailable`，无条件查会得 `rates=[]`
   假 FAIL。有 `data-player` 才查 `0.75/1/1.25` 且无 `back/forward`，否则只断言播放器专属类名不出现。
   ⚠️ 别用 `'data-action=' not in html` 判「无控件」——题目区 Check/Reset 也带它。
