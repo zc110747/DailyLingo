@@ -157,7 +157,8 @@ DailyLingo/
 │   └── js/progress_dom.js      # The jsdom driver used by the test above
 ├── watch.bat                   # Double-click to start watching on Windows
 ├── apps/
-│   └── windows/                # Desktop app (WinForms + WebView2) + publisher/ output
+│   ├── windows/                # Desktop app (WinForms + WebView2) + publisher/ output
+│   └── android/                # Android app (system WebView) + publisher/ output
 ├── requirements.txt
 ├── .gitignore
 ├── .gitattributes              # LF in the repo, CRLF for *.bat (see the note below)
@@ -652,6 +653,30 @@ cd apps/windows && dotnet publish -c Release -r win-x64 --self-contained false -
 
 Startup flow, progress syncing, debug switches and known limits are documented in
 [`apps/windows/README.md`](apps/windows/README.md).
+
+---
+
+## Android App
+
+`apps/android/` is a system-WebView shell: it also loads the live site directly, with the same
+startup flow as the desktop app (a `Lingo` splash screen, then the site only once the navigation
+succeeds; offline or timed out shows "请连接网络，当前无资源"). Learning progress is mirrored to
+`dailylingo-progress.json` in the app's private directory, **byte-for-byte compatible with the web
+export** (LF endings).
+
+```bash
+cd apps/android
+python tools/build_apk.py                        # builds publisher/DailyLingo.apk
+adb install -r publisher/DailyLingo.apk          # install on the phone
+adb shell am start -n com.dailylingo.app/.MainActivity
+```
+
+No Gradle: the build script drives the SDK's own `aapt2 / javac / d8 / zipalign / apksigner` and
+uses nothing outside the Python standard library. The SDK is located through `ANDROID_SDK_ROOT`
+(or `--sdk`) and the JDK through `JAVA_HOME` (or Android Studio's bundled `jbr`).
+
+Progress file location, two-way syncing, debug switches (`--ez force_offline true`) and known
+limits are documented in [`apps/android/README.md`](apps/android/README.md).
 
 ---
 

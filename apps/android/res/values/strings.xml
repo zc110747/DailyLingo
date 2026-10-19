@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DailyLingo</string>
+    <string name="app_name_offline">DailyLingo（未连接）</string>
+    <string name="app_name_done">DailyLingo — 已完成 %1$d 篇</string>
+
+    <!-- 启动页 -->
+    <string name="splash_tagline">每天一篇小故事 · 听得见的英语</string>
+    <string name="splash_starting">正在启动内置浏览器…</string>
+    <string name="splash_connecting">正在连接 zc110747.github.io …</string>
+    <string name="splash_opening">正在打开今天的内容…</string>
+
+    <!-- 错误菜单 -->
+    <string name="offline_headline">请连接网络，当前无资源</string>
+    <string name="offline_detail">没有检测到可用的网络连接。DailyLingo 的内容托管在 GitHub Pages 上，联网后即可正常阅读。</string>
+    <string name="offline_detail_failed">页面加载失败（%1$s）。请检查网络后重试。</string>
+    <string name="offline_detail_timeout">连接 %1$s 超时（%2$d 秒内没有响应）。请检查网络后重试。</string>
+    <string name="offline_retry">重新连接</string>
+    <string name="offline_browser">在浏览器中打开</string>
+    <string name="offline_progress_empty">本机尚未保存学习进度（联网后自动写入 %1$s）。</string>
+    <string name="offline_progress_saved">本机已保存学习进度：%1$d 篇（%2$s）。</string>
+</resources>

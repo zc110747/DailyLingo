@@ -148,7 +148,8 @@ DailyLingo/
 │   └── js/progress_dom.js      # 上一个测试用到的 jsdom 驱动脚本
 ├── watch.bat                   # Windows 双击即开始监听
 ├── apps/
-│   └── windows/                # 桌面端（WinForms + WebView2）+ publisher/ 发布产物
+│   ├── windows/                # 桌面端（WinForms + WebView2）+ publisher/ 发布产物
+│   └── android/                # Android 端（系统 WebView）+ publisher/ 发布产物
 ├── requirements.txt
 ├── .gitignore
 ├── .gitattributes              # 仓库内 LF、*.bat 为 CRLF（见下方说明）
@@ -601,6 +602,28 @@ cd apps/windows && dotnet publish -c Release -r win-x64 --self-contained false -
 ```
 
 启动流程、进度同步机制、调试开关与已知边界见 [`apps/windows/README.md`](apps/windows/README.md)。
+
+---
+
+## Android 端
+
+`apps/android/` 是一个系统 WebView 外壳：同样直接加载线上站点，启动流程与桌面端一致
+（`Lingo` 启动页 → 联网成功才显示网页；断网 / 超时进「请连接网络，当前无资源」）。
+学习进度镜像到应用私有目录的 `dailylingo-progress.json`，**与网页端导出逐字同构**（LF）。
+
+```bash
+cd apps/android
+python tools/build_apk.py                        # 构建 publisher/DailyLingo.apk
+adb install -r publisher/DailyLingo.apk          # 装到手机
+adb shell am start -n com.dailylingo.app/.MainActivity
+```
+
+不依赖 Gradle：构建脚本直接调用 SDK 的 `aapt2 / javac / d8 / zipalign / apksigner`，
+只用 Python 标准库。SDK 位置走 `ANDROID_SDK_ROOT`（或 `--sdk`），JDK 走 `JAVA_HOME`
+（或 Android Studio 自带的 `jbr`）。
+
+进度文件位置、双向同步细节、调试开关（`--ez force_offline true`）与已知边界见
+[`apps/android/README.md`](apps/android/README.md)。
 
 ---
 

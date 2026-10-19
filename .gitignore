@@ -35,7 +35,8 @@ desktop.ini
 # （各台电脑安装位置不同，写死只在换机后失效）。也可用 --audio-tool 或
 # DAILYLINGO_AUDIO_TOOL 指定，或把整包放进 tools/ 作为兜底。
 # 详见 README-CH.md「用 EnglishAudio 生成音频」/ README.md "Generating Audio with EnglishAudio"。
-tools/
+# 注意这条要锚定仓库根：写成 `tools/` 会连 apps/android/tools/（构建脚本）一起忽略。
+/tools/
 
 # ---- Windows 桌面端 ----
 # 发布产物（apps/windows/publisher/）要提交：双击就能运行，不要求装 SDK 或自己编译。
@@ -44,3 +45,9 @@ apps/windows/bin/
 apps/windows/obj/
 apps/windows/publisher/dailylingo-progress.json
 apps/windows/publisher/dailylingo-progress.corrupt-*.json
+
+# ---- Android 端 ----
+# 发布产物（apps/android/publisher/DailyLingo.apk）与固定签名的 keystore 要提交：
+# keystore 固定下来，adb install -r 才能覆盖升级而不报签名不一致。
+# 只忽略构建中间目录。
+apps/android/build/

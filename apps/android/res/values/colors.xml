@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 与站点 assets/css/style.css 的配色保持一致 -->
+    <color name="page_background">#F7F9FC</color>
+    <color name="card_background">#FFFFFF</color>
+    <color name="card_border">#E2E8F0</color>
+    <color name="accent">#3166A4</color>
+    <color name="accent_deep">#1B4574</color>
+    <color name="accent_light">#7CBEF0</color>
+    <color name="title_text">#1F2937</color>
+    <color name="muted_text">#5B667A</color>
+    <color name="ic_launcher_background">#F7F9FC</color>
+</resources>
