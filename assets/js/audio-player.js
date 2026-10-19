@@ -115,12 +115,20 @@
       if (!isFinite(seconds) || seconds < 0) {
         return;
       }
-      activate(indexAt(seconds), true);
+      activate(indexAt(seconds), shouldFollow());
     }
 
     function hasSelection() {
       var selection = window.getSelection && window.getSelection();
       return !!(selection && String(selection).length);
+    }
+
+    /* 「页面语音跟随」开关（设置在首页，实现见 assets/js/main.js）。
+       默认关闭：播放时只换高亮，不滚动页面 —— 否则边听边做题会被反复拽回正文。 */
+    function shouldFollow() {
+      var api = typeof globalThis !== "undefined" ? globalThis.DailyLingo : null;
+      var settings = api && api.readingFollow;
+      return !!(settings && typeof settings.enabled === "function" && settings.enabled());
     }
 
     return {

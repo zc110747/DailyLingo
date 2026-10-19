@@ -29,6 +29,7 @@ from conftest import find_jsdom, find_node
 ROOT = Path(__file__).resolve().parent.parent
 DOM_SCRIPT = ROOT / "tests" / "js" / "progress_dom.js"
 PROGRESS_JS = ROOT / "assets" / "js" / "progress.js"
+MAIN_JS = ROOT / "assets" / "js" / "main.js"
 
 NODE = find_node()
 JSDOM_PATH = find_jsdom()
@@ -67,7 +68,13 @@ def observations(tmp_path_factory) -> dict:
     env = dict(os.environ)
     env["NODE_PATH"] = JSDOM_PATH or ""
     proc = subprocess.run(
-        [NODE, str(DOM_SCRIPT), str(out / "index.html"), str(PROGRESS_JS)],
+        [
+            NODE,
+            str(DOM_SCRIPT),
+            str(out / "index.html"),
+            str(PROGRESS_JS),
+            str(MAIN_JS),
+        ],
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -108,6 +115,10 @@ def test_dom_script_reports_all_scenarios(observations):
         "dialog_closed",
         "dialog_open",
         "dialog_after_close",
+        "follow_default",
+        "follow_on",
+        "follow_reopen",
+        "follow_off",
     }
     assert expected <= set(observations)
 
@@ -289,3 +300,24 @@ def test_settings_dialog_toggles(observations):
     closed = observations["dialog_after_close"]
     assert closed["expanded"] == "false"
     assert closed["previewVisible"] is False
+
+
+# 设置里的「页面语音跟随」：默认关闭，切换写进独立的存储键
+def test_reading_follow_off_by_default(observations):
+    step = observations["follow_default"]
+    assert step["exists"] is True
+    assert step["checked"] is False
+    assert step["stored"] is None
+
+
+def test_reading_follow_toggle_persists(observations):
+    on = observations["follow_on"]
+    assert on["checked"] is True
+    assert on["stored"] == "1"
+    assert "已开启" in on["message"]
+    assert observations["follow_reopen"]["checked"] is True
+
+    off = observations["follow_off"]
+    assert off["checked"] is False
+    assert off["stored"] == "0"
+    assert "已关闭" in off["message"]

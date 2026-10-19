@@ -962,6 +962,17 @@ def render_index(chapters: Sequence[Chapter]) -> str:
           <button class="btn btn-primary" type="button" data-action="confirm-overwrite">确认覆盖</button>
           <button class="btn btn-ghost" type="button" data-action="cancel-overwrite">返回</button>
         </div>
+      </section>
+      <section class="settings-section" aria-labelledby="settings-reading-title">
+        <h3 class="settings-subtitle" id="settings-reading-title">朗读</h3>
+        <p class="settings-desc">播放音频时，正在朗读的句子会在正文里加粗。下面的开关只决定页面要不要跟着滚动。</p>
+        <label class="settings-toggle">
+          <input type="checkbox" id="setting-reading-follow" data-setting="reading-follow">
+          <span class="settings-toggle-body">
+            <span class="settings-toggle-label">页面语音跟随</span>
+            <span class="settings-toggle-hint">开启后，播放到哪句页面就滚到哪句；默认关闭 —— 边听边做题时页面不会自己移动。</span>
+          </span>
+        </label>
       </section>{app_block}
     </div>
   </dialog>

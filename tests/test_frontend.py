@@ -158,3 +158,93 @@ def test_js_blank_guard_exists_in_source():
     source = MAIN_JS.read_text(encoding="utf-8")
     assert "空白答案永远不判为正确" in source
     assert "judge" in source and "normalizeAnswer" in source
+
+
+# ---------------------------------------------------------------- 本地设置
+# 「页面语音跟随」的存储层在 main.js（文章页与首页共用），这里用假 window 直接跑。
+
+READING_FOLLOW_KEY = "dailylingo_reading_follow_v1"
+
+FOLLOW_HARNESS = r"""
+const fs = require('fs');
+const vm = require('vm');
+const src = fs.readFileSync(process.argv[2], 'utf8');
+const mode = process.argv[3]; // memory | broken | no-window
+
+function memoryStorage() {
+  const data = new Map();
+  return {
+    getItem: function (k) { return data.has(k) ? data.get(k) : null; },
+    setItem: function (k, v) { data.set(k, String(v)); }
+  };
+}
+
+const ctx = {};
+if (mode !== 'no-window') {
+  ctx.window = {
+    localStorage: mode === 'broken'
+      ? { getItem: function () { throw new Error('denied'); },
+          setItem: function () { throw new Error('denied'); } }
+      : memoryStorage()
+  };
+}
+vm.createContext(ctx);
+vm.runInContext(src, ctx, { filename: 'main.js' });
+
+const api = ctx.DailyLingo && ctx.DailyLingo.readingFollow;
+if (!api) {
+  process.stderr.write('main.js did not expose DailyLingo.readingFollow');
+  process.exit(2);
+}
+
+const out = { key: api.key, initial: api.enabled() };
+out.setTrue = api.set(true);
+out.afterTrue = api.enabled();
+out.raw = mode === 'memory' ? ctx.window.localStorage.getItem(api.key) : null;
+out.setFalse = api.set(false);
+out.afterFalse = api.enabled();
+out.rawFalse = mode === 'memory' ? ctx.window.localStorage.getItem(api.key) : null;
+process.stdout.write(JSON.stringify(out));
+"""
+
+
+def _run_follow(mode: str) -> dict:
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        harness = Path(tmp) / "follow.js"
+        harness.write_text(FOLLOW_HARNESS, encoding="utf-8", newline="\n")
+        proc = subprocess.run(
+            [NODE, str(harness), str(MAIN_JS), mode],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+    assert proc.returncode == 0, proc.stderr
+    return json.loads(proc.stdout)
+
+
+def test_reading_follow_defaults_to_off():
+    """没设置过 ⇒ 关闭；这正是「边听边做题页面别乱跳」的默认行为。"""
+    out = _run_follow("memory")
+    assert out["key"] == READING_FOLLOW_KEY
+    assert out["initial"] is False
+
+
+def test_reading_follow_round_trips():
+    out = _run_follow("memory")
+    assert out["setTrue"] is True
+    assert out["afterTrue"] is True
+    assert out["raw"] == "1"
+    assert out["setFalse"] is True
+    assert out["afterFalse"] is False
+    assert out["rawFalse"] == "0"
+
+
+def test_reading_follow_degrades_to_off():
+    """存储不可用（隐私模式 / 无 window）时既不报错、也不假装已开启。"""
+    for mode in ("broken", "no-window"):
+        out = _run_follow(mode)
+        assert out["initial"] is False, mode
+        assert out["setTrue"] is False, mode
+        assert out["afterTrue"] is False, mode

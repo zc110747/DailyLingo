@@ -154,3 +154,17 @@ def test_highlight_moves_back_after_rewind(observations):
 
 def test_only_one_sentence_is_active(observations):
     assert observations["activeCount"] == 1
+
+
+def test_page_does_not_scroll_by_default(observations):
+    """默认「页面语音跟随」关闭：播放期间换句只改高亮，页面一次都不滚。"""
+    assert observations["scrollWhileDefault"] == 0
+
+
+def test_scroll_only_after_setting_enabled(observations):
+    after = observations["scrollAfterEnable"]
+    assert after["calls"] == 1
+    assert after["last"] is not None  # 滚到的是当前句本身
+    # 关掉以后高亮照样跟着时间走，但不再动滚动条
+    assert observations["scrollAfterDisable"] == 1
+    assert observations["highlightStillFollows"] == 2

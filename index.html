@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/images/favicon-180.png">
   <meta name="theme-color" content="#3166a4">
-  <link rel="stylesheet" href="assets/css/style.css?v=e9a3151c">
+  <link rel="stylesheet" href="assets/css/style.css?v=04fd160b">
 </head>
 <body class="page page-index">
   <main class="container">
@@ -183,6 +183,17 @@
           <button class="btn btn-ghost" type="button" data-action="cancel-overwrite">返回</button>
         </div>
       </section>
+      <section class="settings-section" aria-labelledby="settings-reading-title">
+        <h3 class="settings-subtitle" id="settings-reading-title">朗读</h3>
+        <p class="settings-desc">播放音频时，正在朗读的句子会在正文里加粗。下面的开关只决定页面要不要跟着滚动。</p>
+        <label class="settings-toggle">
+          <input type="checkbox" id="setting-reading-follow" data-setting="reading-follow">
+          <span class="settings-toggle-body">
+            <span class="settings-toggle-label">页面语音跟随</span>
+            <span class="settings-toggle-hint">开启后，播放到哪句页面就滚到哪句；默认关闭 —— 边听边做题时页面不会自己移动。</span>
+          </span>
+        </label>
+      </section>
       <section class="settings-section" aria-labelledby="settings-app-title">
         <h3 class="settings-subtitle" id="settings-app-title">手机应用</h3>
         <p class="settings-desc">Android 客户端打开的就是本站内容，学习进度保存在手机本地，与网页端用同一个导出格式。下载后点开安装包即可安装，首次需要在系统里允许「安装未知应用」。</p>
@@ -196,7 +207,7 @@
       </section>
     </div>
   </dialog>
-  <script src="assets/js/main.js?v=1c9c29b8" defer></script>
-  <script src="assets/js/progress.js?v=9f45dbb5" defer></script>
+  <script src="assets/js/main.js?v=ca8d635a" defer></script>
+  <script src="assets/js/progress.js?v=52467dc8" defer></script>
 </body>
 </html>

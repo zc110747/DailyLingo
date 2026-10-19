@@ -1225,6 +1225,41 @@ summary:focus-visible,
   gap: 10px;
 }
 
+/* 开关式设置项（目前只有「页面语音跟随」）：整行可点，说明跟在标题下面 */
+.settings-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.settings-toggle input {
+  flex: none;
+  margin: 3px 0 0;
+  accent-color: var(--accent);
+}
+
+.settings-toggle-body {
+  display: block;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.settings-toggle-label {
+  display: block;
+  font-weight: 600;
+}
+
+.settings-toggle-hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
 /* 下载 Android 安装包：一个链接充当按钮，主标题 + 文件名 / 体积小字两行 */
 .settings-download {
   display: inline-flex;

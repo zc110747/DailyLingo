@@ -181,6 +181,13 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
         and "data-import-input" in index_html,
     )
     report.check(
+        "首页设置里有「页面语音跟随」开关且默认关闭",
+        'id="setting-reading-follow"' in index_html
+        and 'data-setting="reading-follow"' in index_html
+        and "页面语音跟随" in index_html
+        and 'id="setting-reading-follow" checked' not in index_html,
+    )
+    report.check(
         "首页统计总数等于实际文章数",
         f"data-progress-total>{len(articles)}<" in index_html,
         f"articles={len(articles)}",
@@ -497,6 +504,19 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
     report.check(
         f"{build.PLAYER_JS} 依据 data-start 驱动句子高亮",
         'querySelectorAll("[data-start]")' in player_src,
+    )
+    main_src = (out_dir / build.MAIN_JS).read_text(encoding="utf-8")
+    report.check(
+        f"{build.MAIN_JS} 提供「页面语音跟随」设置（键在两侧一致）",
+        "dailylingo_reading_follow_v1" in main_src
+        and "readingFollow" in main_src
+        and "readingFollow" in player_src
+        and "readingFollow" in progress_src,
+    )
+    report.check(
+        "语音跟随开关默认关闭（读取失败一律按不跟随处理）",
+        player_src.count("shouldFollow()") >= 1
+        and "return false; // 存储不可用 ⇒ 用默认值（不跟随）" in main_src,
     )
 
     print("== 6. 构建可重复性 ==")

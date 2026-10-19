@@ -1,6 +1,7 @@
 /* ==========================================================================
    DailyLingo — 页面交互
-   职责：阅读理解练习的判分（单选 + 填空）、答案反馈、可访问性状态维护。
+   职责：阅读理解练习的判分（单选 + 填空）、答案反馈、可访问性状态维护，
+        以及跨页面共用的本地设置（页面语音跟随）。
 
    正确答案来自页面内嵌的 <script type="application/json" id="quiz-data">，
    与构建脚本生成的数据同源，因此自动判分与 Answers 区域显示的答案必然一致。
@@ -222,9 +223,65 @@
     });
   }
 
+  /* ---------------------------------------------------------------- 本地设置
+     「页面语音跟随」：播放到哪句，正文要不要自动滚到那一句。
+
+     默认**关闭** —— 很多人的用法是边听边做题，播放器每换一句就把页面滚一次，
+     等于每隔几秒把人拽回正文，题目就做不成了。开启后才跟随。
+
+     单独一个 localStorage 键，不混进学习进度的四键导出契约（那是跨端镜像的格式）。
+     写入在首页设置面板（progress.js），读取在文章页（audio-player.js），
+     两边都通过 globalThis.DailyLingo.readingFollow 走这一份实现。
+  */
+  var READING_FOLLOW_KEY = "dailylingo_reading_follow_v1";
+
+  function settingStorage() {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    try {
+      return window.localStorage || null;
+    } catch (error) {
+      return null; // 隐私模式下连取用 localStorage 本身都可能抛错
+    }
+  }
+
+  function readingFollowEnabled() {
+    var store = settingStorage();
+    if (!store) {
+      return false; // 存储不可用 ⇒ 用默认值（不跟随）
+    }
+    try {
+      return store.getItem(READING_FOLLOW_KEY) === "1";
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function setReadingFollow(enabled) {
+    var store = settingStorage();
+    if (!store) {
+      return false;
+    }
+    try {
+      store.setItem(READING_FOLLOW_KEY, enabled ? "1" : "0");
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   /* 供自动化测试使用的纯逻辑导出（无 DOM 依赖） */
   if (typeof globalThis !== "undefined") {
-    globalThis.DailyLingo = { normalizeAnswer: normalizeAnswer, judge: judge };
+    globalThis.DailyLingo = {
+      normalizeAnswer: normalizeAnswer,
+      judge: judge,
+      readingFollow: {
+        key: READING_FOLLOW_KEY,
+        enabled: readingFollowEnabled,
+        set: setReadingFollow
+      }
+    };
   }
 
   if (typeof document === "undefined") {

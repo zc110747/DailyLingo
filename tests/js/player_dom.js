@@ -21,6 +21,8 @@ const html = fs.readFileSync(PAGE, 'utf8');
 const source = fs.readFileSync(SCRIPT, 'utf8');
 
 const out = { errors: [] };
+/* 记录 scrollIntoView 调用：用来验证「页面语音跟随」开关真的在管滚动 */
+const scrollLog = [];
 
 function fakeAudio() {
   const listeners = {};
@@ -72,6 +74,10 @@ async function boot() {
   const audio = fakeAudio();
   w.Audio = function () {
     return audio;
+  };
+  // jsdom 不实现滚动：自己记一笔，方便断言「有没有滚」
+  w.Element.prototype.scrollIntoView = function () {
+    scrollLog.push(this.getAttribute('data-start'));
   };
   w.eval(source);
   // 真实浏览器里 audio-player.js 以 defer 执行：解析完成、load 之前
@@ -144,6 +150,22 @@ function activeIndex(w) {
 
   // 高亮只应有一个
   out.activeCount = w.document.querySelectorAll('.sentence.is-active').length;
+
+  /* 「页面语音跟随」：上面所有时间推进都没开过开关（main.js 未加载 ⇒ 视为关闭），
+     因此一次都不该滚动；把开关置为开启后才允许滚，再关掉又要停。 */
+  out.scrollWhileDefault = scrollLog.length;
+  w.DailyLingo = { readingFollow: { enabled: function () { return true; } } };
+  audio.currentTime = 2.0; // 换到第 2 句（此时当前句还停在第 1 句）
+  audio.emit('timeupdate');
+  out.scrollAfterEnable = {
+    calls: scrollLog.length,
+    last: scrollLog[scrollLog.length - 1]
+  };
+  w.DailyLingo = { readingFollow: { enabled: function () { return false; } } };
+  audio.currentTime = 4.0;
+  audio.emit('timeupdate');
+  out.scrollAfterDisable = scrollLog.length;
+  out.highlightStillFollows = activeIndex(w);
 
   process.stdout.write(JSON.stringify(out));
 })();

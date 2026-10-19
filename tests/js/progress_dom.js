@@ -1,6 +1,6 @@
 /* ==========================================================================
    DailyLingo — 学习进度的真实 DOM 测试（jsdom）
-   用法：node progress_dom.js <index.html> <progress.js>
+   用法：node progress_dom.js <index.html> <progress.js> [main.js]
    输出：一行 JSON，形如 {"fresh": {...}, "toggle_one": {...}, ...}
 
    jsdom 只是开发期的临时依赖（不随站点发布）；tests/test_progress_dom.py 找不到
@@ -14,10 +14,13 @@ const { JSDOM } = require('jsdom');
 
 const INDEX = process.argv[2];
 const SCRIPT = process.argv[3];
+const MAIN = process.argv[4]; // 可选：main.js（提供「页面语音跟随」设置）
 const html = fs.readFileSync(INDEX, 'utf8');
 const source = fs.readFileSync(SCRIPT, 'utf8');
+const mainSource = MAIN ? fs.readFileSync(MAIN, 'utf8') : null;
 
 const KEY = 'dailylingo_learning_progress_v1';
+const FOLLOW_KEY = 'dailylingo_reading_follow_v1';
 const out = {};
 
 function tick(ms) {
@@ -34,6 +37,9 @@ async function boot(seed, options) {
   const w = dom.window;
   if (seed !== undefined && seed !== null) {
     w.localStorage.setItem(KEY, seed);
+  }
+  if (mainSource) {
+    w.eval(mainSource); // 真实页面上 main.js 先于 progress.js 执行
   }
   w.eval(source);
   // 真实浏览器里 progress.js 以 defer 执行：解析完成、DOMContentLoaded 之前
@@ -342,6 +348,36 @@ async function pickFile(w, text, name) {
     out.dialog_after_close = {
       expanded: btn.getAttribute('aria-expanded'),
       previewVisible: !q(w, '[data-import-preview]').hidden,
+    };
+    w.close();
+  }
+
+  /* 17. 「页面语音跟随」开关：默认关闭、切换即写存储、重开对话框保持状态 */
+  {
+    const w = await boot(null);
+    const input = q(w, '#setting-reading-follow');
+    out.follow_default = {
+      exists: !!input,
+      checked: input ? input.checked : null,
+      stored: w.localStorage.getItem(FOLLOW_KEY),
+    };
+    q(w, '[data-action="open-settings"]').click();
+    input.checked = true;
+    input.dispatchEvent(new w.Event('change', { bubbles: true }));
+    out.follow_on = {
+      checked: input.checked,
+      stored: w.localStorage.getItem(FOLLOW_KEY),
+      message: q(w, '[data-settings-message]').textContent,
+    };
+    q(w, '[data-action="close-settings"]').click();
+    q(w, '[data-action="open-settings"]').click(); // 重开：应从存储恢复
+    out.follow_reopen = { checked: input.checked };
+    input.checked = false;
+    input.dispatchEvent(new w.Event('change', { bubbles: true }));
+    out.follow_off = {
+      checked: input.checked,
+      stored: w.localStorage.getItem(FOLLOW_KEY),
+      message: q(w, '[data-settings-message]').textContent,
     };
     w.close();
   }
