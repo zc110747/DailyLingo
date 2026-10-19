@@ -70,6 +70,11 @@ MAIN_JS = "assets/js/main.js"
 PLAYER_JS = "assets/js/audio-player.js"
 PROGRESS_JS = "assets/js/progress.js"  # 仅首页引用：学习进度的本地存储 / 导入导出
 
+# Android 安装包（随仓库提交，不是构建产物）。站点根 = 仓库根，所以相对路径就是仓库里的位置。
+# 首页设置面板给出直链，手机点一下就能下载安装；`?v=` 只按文件内容算，重新打包必然换 URL。
+ANDROID_APK = "apps/android/publisher/DailyLingo.apk"
+ANDROID_APK_NAME = "DailyLingo.apk"
+
 
 def asset_version(rel: str) -> str:
     """静态资源内容指纹（sha256 前 8 位十六进制）。文件缺失时返回 ``"0"``。
@@ -790,6 +795,46 @@ _CLOSE_ICON = (
 )
 
 
+def human_size(size: int) -> str:
+    """把字节数写成设置面板里显示的短标签（1 KB = 1024 B）。"""
+    if size >= 1024 * 1024:
+        return f"{size / (1024 * 1024):.1f} MB"
+    return f"{max(1, round(size / 1024))} KB"
+
+
+def render_app_download() -> str:
+    """设置面板里的 Android 安装包下载区。
+
+    APK 不在仓库里（例如刚 clone 还没跑过打包）时整块省略 —— 宁可少一块，
+    也不要在首页留一个点了 404 的死链。
+    """
+    apk = ROOT / ANDROID_APK
+    try:
+        size = apk.stat().st_size
+    except OSError:
+        return ""
+    if size <= 0:
+        return ""
+    href = f"{ANDROID_APK}?v={asset_version(ANDROID_APK)}"
+    return (
+        '      <section class="settings-section" aria-labelledby="settings-app-title">\n'
+        '        <h3 class="settings-subtitle" id="settings-app-title">手机应用</h3>\n'
+        '        <p class="settings-desc">Android 客户端打开的就是本站内容，学习进度保存在手机本地，'
+        '与网页端用同一个导出格式。下载后点开安装包即可安装，首次需要在系统里允许'
+        '「安装未知应用」。</p>\n'
+        '        <div class="settings-actions">\n'
+        f'          <a class="btn btn-primary settings-download" href="{href}" '
+        f'download="{ANDROID_APK_NAME}">\n'
+        '            <span>下载 Android 安装包</span>\n'
+        f'            <span class="settings-download-meta">{ANDROID_APK_NAME} · '
+        f"{human_size(size)}</span>\n"
+        '          </a>\n'
+        '        </div>\n'
+        '        <p class="settings-message is-hint">iPhone 无需安装，直接用浏览器打开本站即可。</p>\n'
+        '      </section>'
+    )
+
+
 def render_index(chapters: Sequence[Chapter]) -> str:
     total = sum(len(chapter.articles) for chapter in chapters)
     parts: list[str] = []
@@ -822,6 +867,9 @@ def render_index(chapters: Sequence[Chapter]) -> str:
             f"      </details>"
         )
     chapters_html = "\n".join(parts)
+    app_download_html = render_app_download()
+    # 空串时不占一行，避免首页多出无意义的空行
+    app_block = f"\n{app_download_html}" if app_download_html else ""
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -903,7 +951,7 @@ def render_index(chapters: Sequence[Chapter]) -> str:
           <button class="btn btn-primary" type="button" data-action="confirm-overwrite">确认覆盖</button>
           <button class="btn btn-ghost" type="button" data-action="cancel-overwrite">返回</button>
         </div>
-      </section>
+      </section>{app_block}
     </div>
   </dialog>
   <script src="{asset_url(MAIN_JS)}" defer></script>

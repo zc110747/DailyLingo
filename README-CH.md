@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#快速开始)
 [![运行期依赖: 无](https://img.shields.io/badge/%E8%BF%90%E8%A1%8C%E6%9C%9F%E4%BE%9D%E8%B5%96-none-success.svg)](#快速开始)
-[![测试: 152 passed](https://img.shields.io/badge/tests-152%20passed-success.svg)](#验证结果)
+[![测试: 155 passed](https://img.shields.io/badge/tests-155%20passed-success.svg)](#验证结果)
 [![部署: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#部署到-github-pages)
 
 **线上站点：** <https://zc110747.github.io/DailyLingo/>
@@ -59,7 +59,7 @@
   100 号区间分组的 `<details>` 文章目录。没有摘要、没有难度、没有音频状态。
 - **学习进度只存在你自己的浏览器里** —— 每篇一个完成开关、Chapter 全部学完才变绿的汇总、
   实时更新的 `已完成 / 总数 · 百分比` 进度条，以及藏在左上角设置里的 JSON 导出 / 导入
-  （合并或覆盖）。无账号、无后端、不上传任何数据 —— 详见[学习进度](#学习进度)。
+  （合并或覆盖）与 Android 安装包下载。无账号、无后端、不上传任何数据 —— 详见[学习进度](#学习进度)。
 - **每篇文章五个固定区域** —— `Article` / `Words` / `Questions` / `Answers` / `Continue`，
   顺序恒定，所有文章共用同一套模板、样式与脚本。
 - **真实音频，不是模拟** —— HTML5 Audio 播放器直连真实 WAV。播放暂停、已播时间、总时长、
@@ -416,6 +416,9 @@ end   = start + 99
   情况下现有进度一律不动，并给出明确提示。
 - 编号是四位补零的字符串（`"0001"`）。不存在的编号会被忽略**并报数量**，格式非法的条目被跳过
   并计数，重复编号自动去重。
+- **手机应用**：面板最下方是 Android 安装包直链（`apps/android/publisher/DailyLingo.apk?v=<指纹>`，
+  带 `download` 属性），手机上点一下就把 APK 存到本地，再点开即可安装。安装包不在仓库里时整块
+  **省略**，不在首页留一个点了 404 的死链。
 
 ### 存储结构
 
@@ -726,7 +729,7 @@ DailyLingo 构建完成
 
 ```text
 $ python scripts/validate.py
-结果：PASS 762 / FAIL 0 / WARN 0
+结果：PASS 765 / FAIL 0 / WARN 0
 ```
 
 覆盖：文章数据；编号唯一性与升序；Chapter 区间边界与「只输出有真实文章的 Chapter」；
@@ -746,14 +749,14 @@ $ python scripts/validate.py
 
 ```text
 $ pytest -q
-152 passed in 7.84s
+155 passed in 11.8s
 ```
 
 | 文件 | 用例数 | 覆盖内容 |
 |---|---|---|
 | `tests/test_build.py` | 105 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`，含被转义的 `1\.` 写法，题干与答案都测）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**播放器与正文之间有分隔线**、**无 ±5 秒按钮且恰好三档倍速**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、**CSS/JS 的 URL 带内容指纹（`?v=` + 8 位十六进制）**、GitHub Pages 子路径、构建可重复 |
 | `tests/test_frontend.py` | 4 | 在 Node 中真实执行 `assets/js/main.js`：单选正确 / 错误 / 空选、大小写不敏感、首尾空格、尾部标点、多个可接受答案、空白输入不判正确；并与 `build.normalize_answer` 做逐样本一致性比对 |
-| `tests/test_progress.py` | 29 | 学习进度的首页结构（每篇一个完成按钮且初始未完成、统计总数 / `aria-valuemax` / Chapter 汇总等于真实篇数、设置对话框与导出导入控件、空站点渲染 `0 / 0`）**外加在 Node 中真实执行的纯逻辑**：编号补零、文件校验（JSON 语法 / `schemaVersion` / 结构）、去重与非法条目计数、忽略不存在编号、合并取并集、统计不除零、按真实篇数判定 Chapter 完成、导出载荷结构与文件名、导出内容可被导入解析器读回 |
+| `tests/test_progress.py` | 32 | 学习进度的首页结构（每篇一个完成按钮且初始未完成、统计总数 / `aria-valuemax` / Chapter 汇总等于真实篇数、设置对话框与导出导入控件、Android 安装包直链带 `download` 与内容指纹且 APK 缺失时整块省略、空站点渲染 `0 / 0`）**外加在 Node 中真实执行的纯逻辑**：编号补零、文件校验（JSON 语法 / `schemaVersion` / 结构）、去重与非法条目计数、忽略不存在编号、合并取并集、统计不除零、按真实篇数判定 Chapter 完成、导出载荷结构与文件名、导出内容可被导入解析器读回 |
 | `tests/test_progress_dom.py` | 14 | 在 **jsdom** 中用真实 click 事件与真实 `localStorage` 驱动生成的首页：首次访问为空、勾选同步统计与存储、取消回退、Chapter 全完成才变绿、刷新恢复、损坏数据隔离、存储禁用降级、导入预览、合并、覆盖需二次确认、取消覆盖、非法 JSON / 不支持版本不改动进度、未知编号忽略并计数、导出载荷与对话框开关。未安装 jsdom 时自动跳过 |
 
 测试全部使用临时目录，不会污染或覆盖真实的 `content/` 与 `sources/`。

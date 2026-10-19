@@ -1199,6 +1199,26 @@ summary:focus-visible,
   gap: 10px;
 }
 
+/* 下载 Android 安装包：一个链接充当按钮，主标题 + 文件名 / 体积小字两行 */
+.settings-download {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.35;
+  text-align: left;
+  text-decoration: none;
+}
+
+.settings-download:hover {
+  text-decoration: none;
+}
+
+.settings-download-meta {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+}
+
 .settings-message {
   min-height: 1.2em;
   margin: 10px 0 0;

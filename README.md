@@ -12,7 +12,7 @@ committed as-is and served straight from GitHub Pages.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#quick-start)
 [![Runtime dependencies: none](https://img.shields.io/badge/runtime%20dependencies-none-success.svg)](#quick-start)
-[![Tests: 152 passed](https://img.shields.io/badge/tests-152%20passed-success.svg)](#verification-results)
+[![Tests: 155 passed](https://img.shields.io/badge/tests-155%20passed-success.svg)](#verification-results)
 [![Deploy: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#deployment-to-github-pages)
 
 **Live site:** <https://zc110747.github.io/DailyLingo/>
@@ -61,9 +61,9 @@ committed as-is and served straight from GitHub Pages.
   summaries, no difficulty labels, no audio status.
 - **Learning progress, stored in your own browser** — a per-article completed toggle, a Chapter
   roll-up that turns green only when every article in that Chapter is done, a live
-  `completed / total · percent` bar, and JSON export/import (merge or overwrite) behind a
-  settings dialog in the top-left corner. No account, no backend, nothing uploaded — see
-  [Learning Progress](#learning-progress).
+  `completed / total · percent` bar, and JSON export/import (merge or overwrite) plus an Android
+  package download behind a settings dialog in the top-left corner. No account, no backend, nothing
+  uploaded — see [Learning Progress](#learning-progress).
 - **Five fixed sections per article** — `Article` / `Words` / `Questions` / `Answers` / `Continue`,
   always in that order, sharing one template, one stylesheet and one script.
 - **Real audio, not a mock** — an HTML5 Audio player wired to the actual WAV file. Play/pause,
@@ -445,6 +445,10 @@ there, deliberately out of the reading path.
   nothing in this project all leave the stored progress untouched, with a message saying so.
 - IDs are zero-padded strings (`"0001"`). Unknown IDs are ignored **and counted**, malformed
   entries are skipped and counted, and duplicates collapse.
+- **Mobile app**: the bottom of the panel links straight to the Android package
+  (`apps/android/publisher/DailyLingo.apk?v=<fingerprint>`, with a `download` attribute), so a tap on
+  a phone saves the APK locally and it installs from there. When the package is not in the
+  repository the whole block is **omitted** rather than leaving a link that 404s.
 
 ### Storage format
 
@@ -784,7 +788,7 @@ every title under its Chapter. The CLI output is currently in Chinese; the forma
 
 ```text
 $ python scripts/validate.py
-结果：PASS 762 / FAIL 0 / WARN 0
+结果：PASS 765 / FAIL 0 / WARN 0
 ```
 
 Covers: article data; number uniqueness and ascending order; Chapter range boundaries and the
@@ -810,14 +814,14 @@ storage key plus the schema version while making no network calls**.
 
 ```text
 $ pytest -q
-152 passed in 7.84s
+155 passed in 11.8s
 ```
 
 | File | Cases | Coverage |
 |---|---|---|
 | `tests/test_build.py` | 105 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`, both the plain and the escaped `1\.` spelling, for stems and answers alike), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, **the player rendered above the body text (with and without a WAV)**, **a divider between the player and the body text**, **no ±5 s buttons and exactly three speed buttons**, **icon declarations carrying the correct relative prefix, home page icon next to the brand, icon assets valid PNG/SVG with the expected dimensions**, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, **CSS/JS URLs carrying a content fingerprint (`?v=` + 8 hex digits)**, GitHub Pages subpath, reproducible builds |
 | `tests/test_frontend.py` | 4 | Executes `assets/js/main.js` for real in Node: correct / incorrect / empty single-choice selections, case insensitivity, leading and trailing whitespace, trailing punctuation, multiple acceptable answers, blank input never correct; plus a sample-by-sample consistency check against `build.normalize_answer` |
-| `tests/test_progress.py` | 29 | Homepage structure for the progress feature (one toggle per real article, all starting unchecked, stats total / `aria-valuemax` / Chapter totals matching reality, settings dialog and its export-import controls, empty site rendering `0 / 0`) **plus the pure logic executed in Node**: zero-padded IDs, payload validation (JSON syntax / `schemaVersion` / structure), dedupe and invalid-entry counting, ignoring unknown IDs, merge union, statistics without dividing by zero, Chapter completion on the real count, export payload shape, filename and import round-trip |
+| `tests/test_progress.py` | 32 | Homepage structure for the progress feature (one toggle per real article, all starting unchecked, stats total / `aria-valuemax` / Chapter totals matching reality, settings dialog and its export-import controls, an Android package link carrying `download` and a content fingerprint, the block omitted when the APK is missing, empty site rendering `0 / 0`) **plus the pure logic executed in Node**: zero-padded IDs, payload validation (JSON syntax / `schemaVersion` / structure), dedupe and invalid-entry counting, ignoring unknown IDs, merge union, statistics without dividing by zero, Chapter completion on the real count, export payload shape, filename and import round-trip |
 | `tests/test_progress_dom.py` | 14 | Drives the generated homepage in **jsdom** with real click events and a real `localStorage`: first visit empty, toggle updates stats / storage / Chapter, unchecking reverts, Chapter turns green only when complete, reload restores, corrupt data quarantined, storage-disabled degradation, import preview, merge, overwrite behind a second confirmation, cancelling overwrite, invalid JSON / unsupported version leaving progress intact, unknown IDs ignored and counted, export payload and dialog open/close. Skipped automatically when jsdom is not installed |
 
 Every test uses temporary directories and never touches the real `content/` or `sources/`.

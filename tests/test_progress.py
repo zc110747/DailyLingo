@@ -158,6 +158,39 @@ def test_index_has_settings_entry_and_dialog(site):
     assert 'data-action="confirm-overwrite"' in html
 
 
+def test_index_offers_android_apk_download(site):
+    _result, _out, html = site
+    # 安装包是随仓库提交的产物，不是构建产物
+    apk = ROOT / build.ANDROID_APK
+    assert apk.is_file() and apk.stat().st_size > 0
+
+    href = f'href="{build.ANDROID_APK}?v={build.asset_version(build.ANDROID_APK)}"'
+    assert href in html
+    assert f'download="{build.ANDROID_APK_NAME}"' in html
+    assert 'id="settings-app-title"' in html
+    # 站点部署在 /DailyLingo/ 子路径下，直链必须是相对路径
+    assert f'href="/{build.ANDROID_APK}' not in html
+
+
+def test_app_download_section_hidden_when_apk_missing(tmp_path, monkeypatch):
+    # 没有 APK 时整块省略，避免首页出现点了 404 的死链
+    monkeypatch.setattr(build, "ROOT", tmp_path)
+    assert build.render_app_download() == ""
+
+
+def test_app_download_section_reports_size(tmp_path, monkeypatch):
+    apk = tmp_path / build.ANDROID_APK
+    apk.parent.mkdir(parents=True)
+    apk.write_bytes(b"\0" * 70441)
+
+    monkeypatch.setattr(build, "ROOT", tmp_path)
+    html = build.render_app_download()
+
+    assert f'href="{build.ANDROID_APK}?v={build.asset_version(build.ANDROID_APK)}"' in html
+    assert build.human_size(70441) == "69 KB"
+    assert "69 KB" in html
+
+
 def test_index_references_progress_js_with_fingerprint(site):
     _result, _out, html = site
     # assets/ 不是构建产物（随仓库提交），由 validate.py 校验存在性

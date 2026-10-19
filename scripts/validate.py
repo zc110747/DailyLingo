@@ -226,6 +226,24 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
         and f'src="{build.asset_url(build.MAIN_JS)}"' in index_html,
     )
 
+    # 设置面板里的 Android 安装包直链：文件随仓库提交，路径是相对站点的（Pages 子路径）。
+    apk_path = build.ROOT / build.ANDROID_APK
+    report.check(
+        f"安装包 {build.ANDROID_APK} 存在于仓库",
+        apk_path.is_file() and apk_path.stat().st_size > 0,
+    )
+    report.check(
+        "设置面板有 Android 安装包下载直链（内容指纹 + download）",
+        f'href="{build.ANDROID_APK}?v={build.asset_version(build.ANDROID_APK)}"' in index_html
+        and f'download="{build.ANDROID_APK_NAME}"' in index_html
+        and 'id="settings-app-title"' in index_html,
+        "缺少下载区块（APK 不存在时构建会整块省略）",
+    )
+    report.check(
+        "下载直链是可点击的链接而不是按钮",
+        '<a class="btn btn-primary settings-download"' in index_html,
+    )
+
     print("== 4. 文章页 ==")
     for article in articles:
         page = out_dir / "src" / article.html_name

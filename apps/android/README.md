@@ -63,6 +63,12 @@ python tools/build_apk.py --clean    # 先清空 build/
 
 ## 3. 安装与运行
 
+**手机上直接装**：打开站点的设置面板（首页左上角齿轮）→「手机应用」→ 点「下载 Android 安装包」，
+APK 会存到手机的下载目录，点开安装包即可安装（首次需允许「安装未知应用」）。
+这个入口指向仓库里的 `apps/android/publisher/DailyLingo.apk`，重新打包后链接带的内容指纹会自动变。
+
+用 adb 装 / 起：
+
 ```bash
 adb install -r publisher/DailyLingo.apk
 adb shell am start -n com.dailylingo.app/.MainActivity
