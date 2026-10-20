@@ -295,6 +295,15 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
             f"{article.html_name} 浏览器标签包含编号",
             f"<title>{build.esc(article.page_title)}</title>" in html,
         )
+        # 左上角返回按钮：必须是链接、指向首页，而且真的排在标题之前
+        back_at = html.find('class="back-link"')
+        report.check(
+            f"{article.html_name} 左上角有返回目录按钮",
+            back_at >= 0
+            and 'href="../index.html"' in html[back_at : back_at + 200]
+            and 0 <= back_at < html.find("<h1"),
+            f"back_at={back_at} h1_at={html.find('<h1')}",
+        )
         report.check(
             f"{article.html_name} 主标题与首页一致",
             f'>{build.esc(article.title)}</h1>' in html,

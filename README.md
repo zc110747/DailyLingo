@@ -12,7 +12,7 @@ committed as-is and served straight from GitHub Pages.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#quick-start)
 [![Runtime dependencies: none](https://img.shields.io/badge/runtime%20dependencies-none-success.svg)](#quick-start)
-[![Tests: 265 passed](https://img.shields.io/badge/tests-265%20passed-success.svg)](#verification-results)
+[![Tests: 266 passed](https://img.shields.io/badge/tests-266%20passed-success.svg)](#verification-results)
 [![Deploy: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#deployment-to-github-pages)
 
 **Live site:** <https://zc110747.github.io/DailyLingo/>
@@ -71,6 +71,10 @@ committed as-is and served straight from GitHub Pages.
   [Auto-complete from the article page](#auto-complete-from-the-article-page).
 - **Five fixed sections per article** — `Article` / `Words` / `Questions` / `Answers` / `Continue`,
   always in that order, sharing one template, one stylesheet and one script.
+- **Back to the catalogue from the top-left** — every article page starts with a `返回目录` pill in
+  the top-left corner (above the number and title), so leaving a page never requires scrolling to
+  the bottom navigation. It is a real `<a href="../index.html">` with an `aria-label`, keyboard
+  focusable, and it is deliberately not sticky: the player already pins itself to the top edge.
 - **Real audio, not a mock** — an HTML5 Audio player wired to the actual WAV file. Play/pause,
   elapsed time, duration, live progress, click-to-seek, drag-to-seek, `0.75x` / `1x` / `1.25x`
   speed, volume, loading/finished/error states — every indicator is driven by real playback events.
@@ -875,13 +879,14 @@ every title under its Chapter. The CLI output is currently in Chinese; the forma
 
 ```text
 $ python scripts/validate.py
-结果：PASS 1158 / FAIL 0 / WARN 0
+结果：PASS 1183 / FAIL 0 / WARN 0
 ```
 
 Covers: article data; number uniqueness and ascending order; Chapter range boundaries and the
 "only non-empty Chapters" rule; the homepage containing the brand, the progress card and the directory (still with negative
 checks for summaries / difficulty / audio status); the first Chapter being
-expanded; the order of the five sections; **the player sitting inside `Article`, under the heading
+expanded; the order of the five sections; **a top-left `返回目录` link on every article page, placed
+before the `<h1>`**; **the player sitting inside `Article`, under the heading
 and above the first paragraph**; **a divider between the player and the body text**; **the player
 controls being volume plus exactly three speed buttons (`0.75x` / `1x` / `1.25x`, no ±5 s)** on pages
 whose WAV exists — a page whose audio has not been generated yet must instead emit no player
@@ -908,12 +913,12 @@ network calls**.
 
 ```text
 $ pytest -q
-265 passed in 29.0s
+266 passed in 29.0s
 ```
 
 | File | Cases | Coverage |
 |---|---|---|
-| `tests/test_build.py` | 105 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0025`/`0026`/`0050`/`0051`/`0075`/`9999`/`10001`, i.e. 25 per Chapter), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`, both the plain and the escaped `1\.` spelling, for stems and answers alike), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, **the player rendered above the body text (with and without a WAV)**, **a divider between the player and the body text**, **no ±5 s buttons and exactly three speed buttons**, **icon declarations carrying the correct relative prefix, home page icon next to the brand, icon assets valid PNG/SVG with the expected dimensions**, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, **CSS/JS URLs carrying a content fingerprint (`?v=` + 8 hex digits)**, GitHub Pages subpath, reproducible builds |
+| `tests/test_build.py` | 106 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0025`/`0026`/`0050`/`0051`/`0075`/`9999`/`10001`, i.e. 25 per Chapter), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`, both the plain and the escaped `1\.` spelling, for stems and answers alike), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, **the player rendered above the body text (with and without a WAV)**, **a divider between the player and the body text**, **no ±5 s buttons and exactly three speed buttons**, **icon declarations carrying the correct relative prefix, home page icon next to the brand, icon assets valid PNG/SVG with the expected dimensions**, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, **CSS/JS URLs carrying a content fingerprint (`?v=` + 8 hex digits)**, GitHub Pages subpath, reproducible builds |
 | `tests/test_frontend.py` | 7 | Executes `assets/js/main.js` for real in Node: correct / incorrect / empty single-choice selections, case insensitivity, leading and trailing whitespace, trailing punctuation, multiple acceptable answers, blank input never correct; plus a sample-by-sample consistency check against `build.normalize_answer` |
 | `tests/test_progress.py` | 32 | Homepage structure for the progress feature (one toggle per real article, all starting unchecked, stats total / `aria-valuemax` / Chapter totals matching reality, settings dialog and its export-import controls, an Android package link carrying `download` and a content fingerprint, the block omitted when the APK is missing, empty site rendering `0 / 0`) **plus the pure logic executed in Node**: zero-padded IDs, payload validation (JSON syntax / `schemaVersion` / structure), dedupe and invalid-entry counting, ignoring unknown IDs, merge union, statistics without dividing by zero, Chapter completion on the real count, export payload shape, filename and import round-trip |
 | `tests/test_progress_dom.py` | 18 | Drives the generated homepage in **jsdom** with real click events and a real `localStorage`: first visit empty, toggle updates stats / storage / Chapter, unchecking reverts, Chapter turns green only when complete, **each Chapter's own progress bar and counter move independently (checked on a synthetic two-Chapter site)**, reload restores, corrupt data quarantined, storage-disabled degradation, import preview, merge, overwrite behind a second confirmation, cancelling overwrite, invalid JSON / unsupported version leaving progress intact, unknown IDs ignored and counted, export payload and dialog open/close. Skipped automatically when jsdom is not installed |

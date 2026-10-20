@@ -199,6 +199,36 @@ summary:focus-visible,
   margin-bottom: 8px;
 }
 
+/* 文章页左上角的「返回目录」：静态放在标题栏最上方。
+   刻意不做吸顶 —— 播放器已经 sticky 在 top:8px，两者抢同一块位置会互相遮挡。 */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 7px 13px 7px 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  text-decoration: none;
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+  color: var(--accent-strong);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  text-decoration: none;
+}
+
+.back-icon {
+  flex: none;
+}
+
 .article-number-large {
   margin: 0 0 4px;
   font-family: var(--mono);

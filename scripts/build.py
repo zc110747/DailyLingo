@@ -1282,6 +1282,10 @@ def render_article_page(article: Article) -> str:
 <body class="page page-article" data-article-id="{esc(article.number_text)}">
   <main class="container">
     <header class="article-header">
+      <a class="back-link" href="../index.html" aria-label="返回目录">
+        <svg class="back-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>返回目录</span>
+      </a>
       <p class="article-number-large">{esc(article.number_text)}</p>
       <h1 class="article-title-main">{esc(article.title)}</h1>
 {_render_study_status(article)}

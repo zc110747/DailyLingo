@@ -431,6 +431,19 @@ def test_prev_next_navigation(tmp_path):
     assert 'href="0003.C.html"' in p2 and "下一篇：0003. C" in p2
 
 
+def test_every_article_has_a_back_link_in_the_top_left(tmp_path):
+    """每篇文章左上角都有「返回目录」，而且是在标题之前，不是只塞在文末导航里。"""
+    files = {f"{n:04d}.{c}.md": article_md(c) for n, c in ((1, "A"), (2, "B"), (30, "C"))}
+    result, out, _, _ = make_site(tmp_path, files)
+    assert len(result.articles) == 3
+    for article in result.articles:
+        page = read(out / "src" / article.html_name)
+        assert '<a class="back-link" href="../index.html" aria-label="返回目录">' in page
+        assert page.index('class="back-link"') < page.index("<h1")
+        # 文末的导航仍然在，两条入口都保留
+        assert 'class="nav-link nav-home" href="../index.html"' in page
+
+
 def test_first_and_last_article_navigation_boundaries(tmp_path):
     files = {"0001.A.md": article_md("A"), "0002.B.md": article_md("B")}
     result, out, _, _ = make_site(tmp_path, files)
