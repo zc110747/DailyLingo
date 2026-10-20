@@ -90,6 +90,12 @@ def total(observations) -> int:
     return observations["meta"]["total"]
 
 
+@pytest.fixture(scope="module")
+def chapter_total(observations) -> int:
+    """第一个 Chapter 的篇数：章节汇总是按本章算的，不等于全站篇数。"""
+    return observations["meta"]["chapterTotal"]
+
+
 def test_dom_script_reports_all_scenarios(observations):
     expected = {
         "meta",
@@ -136,27 +142,31 @@ def test_meta_matches_generated_pages(observations, total, tmp_path):
 
 
 # 需求 1：第一次访问没有任何文章被标记
-def test_first_visit_is_empty(observations, total):
+def test_first_visit_is_empty(observations, total, chapter_total):
     fresh = observations["fresh"]
     assert fresh["stats"]["done"] == "0"
     assert fresh["stats"]["total"] == str(total)
     assert fresh["stats"]["percent"] == "0%"
     assert set(fresh["pressed"]) == {"false"}
     assert len(fresh["pressed"]) == total
-    assert fresh["chapter"]["count"] == f"0/{total}"
+    assert fresh["chapter"]["count"] == f"0/{chapter_total}"
     assert fresh["chapter"]["complete"] is False
     assert fresh["storage"] is None
     assert fresh["notice"] == ""
 
 
 # 需求 2/3：勾选立即更新统计与存储，取消正确回退
-def test_toggle_updates_stats_and_storage(observations, total):
+def test_toggle_updates_stats_and_storage(observations, total, chapter_total):
     step = observations["toggle_one"]
     stats = step["stats"]
     assert (stats["done"], stats["total"], stats["valuenow"]) == ("1", str(total), "1")
     assert stats["percent"] == expected_percent(1, total)
     assert_fill(stats["fill"], 1, total)
-    assert step["chapter"] == {"count": f"1/{total}", "state": "未完成", "complete": False}
+    assert step["chapter"] == {
+        "count": f"1/{chapter_total}",
+        "state": "未完成",
+        "complete": False,
+    }
     assert step["pressed0001"] == "true"
     assert "未完成" in step["label0001"]  # 标签切换成「取消」语义
     assert step["itemDone"] is True
@@ -169,18 +179,18 @@ def test_toggle_updates_stats_and_storage(observations, total):
 
     off = observations["toggle_off"]
     assert (off["stats"]["done"], off["stats"]["percent"]) == ("0", "0%")
-    assert off["chapter"]["count"] == f"0/{total}"
+    assert off["chapter"]["count"] == f"0/{chapter_total}"
     assert off["pressed0001"] == "false"
     assert off["storage"]["completedArticles"] == []
 
 
 # 需求 4/5：Chapter 全完成才显示勾，取消任意一篇立即失效
-def test_chapter_auto_aggregates(observations, total):
+def test_chapter_auto_aggregates(observations, total, chapter_total):
     done = observations["all_done"]
     assert (done["stats"]["done"], done["stats"]["percent"]) == (str(total), "100%")
     assert done["stats"]["fill"] == "100%"
     assert done["chapter"] == {
-        "count": f"{total}/{total}",
+        "count": f"{chapter_total}/{chapter_total}",
         "state": "已完成",
         "complete": True,
     }
@@ -189,18 +199,18 @@ def test_chapter_auto_aggregates(observations, total):
     assert after["stats"]["done"] == str(total - 1)
     assert after["stats"]["percent"] == expected_percent(total - 1, total)
     assert after["chapter"] == {
-        "count": f"{total - 1}/{total}",
+        "count": f"{chapter_total - 1}/{chapter_total}",
         "state": "未完成",
         "complete": False,
     }
 
 
 # 需求 6/7：刷新、关闭浏览器后重开，状态仍在
-def test_state_survives_reload(observations, total):
+def test_state_survives_reload(observations, total, chapter_total):
     step = observations["reload"]
     assert step["stats"]["done"] == str(total - 1)
     assert step["stats"]["percent"] == expected_percent(total - 1, total)
-    assert step["chapter"]["count"] == f"{total - 1}/{total}"
+    assert step["chapter"]["count"] == f"{chapter_total - 1}/{chapter_total}"
     assert step["pressed0003"] == "false"
 
 
