@@ -20,6 +20,27 @@ import pytest
 import build
 
 # --------------------------------------------------------------------------
+# Chapter 期望值
+# --------------------------------------------------------------------------
+
+# 一章 CHUNK 篇（当前 25）。期望值用「模运算」独立算，而不是调用被测函数本身：
+# 改章节容量时这里自动跟随，测试仍然是独立的实现。
+CHUNK = build.CHUNK
+SECOND_CHAPTER = CHUNK + 1  # 第二章的第一个编号
+THIRD_CHAPTER = CHUNK * 2 + 1
+
+
+def chapter_bounds(number: int) -> tuple[int, int]:
+    offset = (number - 1) % CHUNK
+    start = number - offset
+    return start, start + CHUNK - 1
+
+
+def chapter_label(number: int) -> str:
+    start, end = chapter_bounds(number)
+    return f"Chapter {start:04d}\u2013{end:04d}"
+
+# --------------------------------------------------------------------------
 # 测试数据构造
 # --------------------------------------------------------------------------
 
@@ -233,71 +254,62 @@ def test_display_title_uses_number_prefix():
 
 
 @pytest.mark.parametrize(
-    "number,expected",
-    [
-        (1, (1, 100)),
-        (100, (1, 100)),
-        (101, (101, 200)),
-        (200, (101, 200)),
-        (201, (201, 300)),
-        (300, (201, 300)),
-        (301, (301, 400)),
-        (9999, (9901, 10000)),
-        (10001, (10001, 10100)),
-    ],
+    "number",
+    [1, CHUNK, CHUNK + 1, CHUNK * 2, CHUNK * 2 + 1, CHUNK * 3, 9999, 10001],
 )
-def test_chapter_bounds(number, expected):
-    assert build.chapter_bounds(number) == expected
+def test_chapter_bounds(number):
+    assert build.chapter_bounds(number) == chapter_bounds(number)
 
 
 @pytest.mark.parametrize(
-    "number,label",
-    [
-        (1, "Chapter 0001\u20130100"),
-        (100, "Chapter 0001\u20130100"),
-        (101, "Chapter 0101\u20130200"),
-        (200, "Chapter 0101\u20130200"),
-        (201, "Chapter 0201\u20130300"),
-    ],
+    "number",
+    [1, CHUNK, CHUNK + 1, CHUNK * 2, CHUNK * 2 + 1],
 )
-def test_chapter_label(number, label):
-    assert build.chapter_label(*build.chapter_bounds(number)) == label
+def test_chapter_label(number):
+    assert build.chapter_label(*build.chapter_bounds(number)) == chapter_label(number)
+
+
+def test_chapter_capacity_is_25():
+    """一章 25 篇 —— 首页目录按这个容量分组，别悄悄改回 100。"""
+    assert build.CHUNK == 25
 
 
 def test_single_article_creates_one_chapter(tmp_path):
     result, out, _, _ = make_site(tmp_path, {"0001.A.md": article_md("A")})
-    assert [c.label for c in result.chapters] == ["Chapter 0001\u20130100"]
+    assert [c.label for c in result.chapters] == [chapter_label(1)]
     assert "<details class=\"chapter\" open>" in read(out / "index.html")
 
 
 def test_only_existing_chapters_are_rendered(tmp_path):
+    second = f"{SECOND_CHAPTER:04d}.F.md"
     files = {
         "0001.A.md": article_md("A"),
         "0002.B.md": article_md("B"),
         "0005.E.md": article_md("E"),
-        "0101.F.md": article_md("F"),
+        second: article_md("F"),
     }
     result, out, _, _ = make_site(tmp_path, files)
     labels = [c.label for c in result.chapters]
-    assert labels == ["Chapter 0001\u20130100", "Chapter 0101\u20130200"]
+    assert labels == [chapter_label(1), chapter_label(SECOND_CHAPTER)]
     index = read(out / "index.html")
-    assert "Chapter 0201\u20130300" not in index
+    assert chapter_label(THIRD_CHAPTER) not in index
     assert index.count("<details class=\"chapter\"") == 2
 
 
 def test_gaps_do_not_change_boundaries(tmp_path):
+    second = f"{SECOND_CHAPTER:04d}.F.md"
     files = {
         "0001.A.md": article_md("A"),
         "0002.B.md": article_md("B"),
         "0005.E.md": article_md("E"),
-        "0101.F.md": article_md("F"),
+        second: article_md("F"),
     }
     result, _, _, _ = make_site(tmp_path, files)
     first, second = result.chapters
     assert [a.number for a in first.articles] == [1, 2, 5]
-    assert [a.number for a in second.articles] == [101]
-    assert (first.start, first.end) == (1, 100)
-    assert (second.start, second.end) == (101, 200)
+    assert [a.number for a in second.articles] == [SECOND_CHAPTER]
+    assert (first.start, first.end) == chapter_bounds(1)
+    assert (second.start, second.end) == chapter_bounds(SECOND_CHAPTER)
 
 
 def test_articles_sorted_ascending_inside_chapter(tmp_path):
@@ -312,12 +324,16 @@ def test_articles_sorted_ascending_inside_chapter(tmp_path):
 
 
 def test_first_chapter_open_others_closed(tmp_path):
-    files = {"0001.A.md": article_md("A"), "0101.B.md": article_md("B"), "0201.C.md": article_md("C")}
+    files = {
+        "0001.A.md": article_md("A"),
+        f"{SECOND_CHAPTER:04d}.B.md": article_md("B"),
+        f"{THIRD_CHAPTER:04d}.C.md": article_md("C"),
+    }
     result, out, _, _ = make_site(tmp_path, files)
     index = read(out / "index.html")
     assert index.count("<details class=\"chapter\" open>") == 1
     assert index.count("<details class=\"chapter\"") == 3
-    assert index.index("Chapter 0001\u20130100") < index.index("Chapter 0101\u20130200")
+    assert index.index(chapter_label(1)) < index.index(chapter_label(SECOND_CHAPTER))
 
 
 def test_new_article_creates_new_chapter_on_rebuild(tmp_path):
@@ -328,32 +344,34 @@ def test_new_article_creates_new_chapter_on_rebuild(tmp_path):
     first = build.build_site(content, out, sources)
     assert len(first.chapters) == 1
 
-    (content / "0101.B.md").write_text(article_md("B"), encoding="utf-8", newline="\n")
+    added = f"{SECOND_CHAPTER:04d}.B.md"
+    (content / added).write_text(article_md("B"), encoding="utf-8", newline="\n")
     second = build.build_site(content, out, sources)
     assert [c.label for c in second.chapters] == [
-        "Chapter 0001\u20130100",
-        "Chapter 0101\u20130200",
+        chapter_label(1),
+        chapter_label(SECOND_CHAPTER),
     ]
     index = read(out / "index.html")
-    assert "Chapter 0101\u20130200" in index
-    assert (out / "src" / "0101.B.html").is_file()
+    assert chapter_label(SECOND_CHAPTER) in index
+    assert (out / "src" / added.replace(".md", ".html")).is_file()
 
 
 def test_removing_last_article_removes_chapter_on_rebuild(tmp_path):
-    content = write_content(tmp_path, {"0001.A.md": article_md("A"), "0101.B.md": article_md("B")})
+    second = f"{SECOND_CHAPTER:04d}.B.md"
+    content = write_content(tmp_path, {"0001.A.md": article_md("A"), second: article_md("B")})
     out = tmp_path / "out"
     sources = tmp_path / "sources"
     build.build_site(content, out, sources)
-    assert "Chapter 0101\u20130200" in read(out / "index.html")
+    assert chapter_label(SECOND_CHAPTER) in read(out / "index.html")
 
-    (content / "0101.B.md").unlink()
+    (content / second).unlink()
     result = build.build_site(content, out, sources)
-    assert [c.label for c in result.chapters] == ["Chapter 0001\u20130100"]
-    assert "Chapter 0101\u20130200" not in read(out / "index.html")
+    assert [c.label for c in result.chapters] == [chapter_label(1)]
+    assert chapter_label(SECOND_CHAPTER) not in read(out / "index.html")
 
 
 def test_index_links_point_to_existing_pages(tmp_path):
-    files = {"0001.A.md": article_md("A"), "0101.B.md": article_md("B")}
+    files = {"0001.A.md": article_md("A"), f"{SECOND_CHAPTER:04d}.B.md": article_md("B")}
     result, out, _, _ = make_site(tmp_path, files)
     hrefs = re.findall(r'href="(src/[^"]+\.html)"', read(out / "index.html"))
     assert len(hrefs) == 2
@@ -365,12 +383,12 @@ def test_chapter_groups_cover_every_article(tmp_path):
     files = {
         "0001.A.md": article_md("A"),
         "0002.B.md": article_md("B"),
-        "0101.C.md": article_md("C"),
-        "0301.D.md": article_md("D"),
+        f"{SECOND_CHAPTER:04d}.C.md": article_md("C"),
+        f"{THIRD_CHAPTER:04d}.D.md": article_md("D"),
     }
     result, _, _, _ = make_site(tmp_path, files)
     grouped = sorted(a.number for c in result.chapters for a in c.articles)
-    assert grouped == [1, 2, 101, 301]
+    assert grouped == [1, 2, SECOND_CHAPTER, THIRD_CHAPTER]
 
 
 # --------------------------------------------------------------------------

@@ -12,7 +12,7 @@ committed as-is and served straight from GitHub Pages.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#quick-start)
 [![Runtime dependencies: none](https://img.shields.io/badge/runtime%20dependencies-none-success.svg)](#quick-start)
-[![Tests: 257 passed](https://img.shields.io/badge/tests-257%20passed-success.svg)](#verification-results)
+[![Tests: 259 passed](https://img.shields.io/badge/tests-259%20passed-success.svg)](#verification-results)
 [![Deploy: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#deployment-to-github-pages)
 
 **Live site:** <https://zc110747.github.io/DailyLingo/>
@@ -57,8 +57,8 @@ committed as-is and served straight from GitHub Pages.
 ## Features
 
 - **Collapsible Chapter directory** — the homepage shows the `DailyLingo` brand, a compact
-  progress card and a `<details>` tree of articles grouped into fixed 100-number Chapters. No
-  summaries, no difficulty labels, no audio status.
+  progress card and a `<details>` tree of articles grouped into fixed **25-article Chapters**, each
+  with its own counter and progress bar. No summaries, no difficulty labels, no audio status.
 - **Learning progress, stored in your own browser** — a per-article completed toggle, a Chapter
   roll-up that turns green only when every article in that Chapter is done, a live
   `completed / total · percent` bar, and JSON export/import (merge or overwrite) plus an Android
@@ -367,7 +367,7 @@ else.
 ```text
 DailyLingo
 
-▼ Chapter 0001–0100
+▼ Chapter 0001–0025
     0001. A New Hobby
     …
 ```
@@ -377,21 +377,22 @@ here. The real homepage is never abbreviated.)*
 
 ### Grouping algorithm (`build.chapter_bounds` / `build.group_chapters`)
 
-Every 100 numbers form a **fixed** range. Grouping depends on the **numeric** value of the article
-number — never on article count, array index or sort position:
+Every **25** numbers form a **fixed** range (`build.CHUNK`). Grouping depends on the **numeric**
+value of the article number — never on article count, array index or sort position:
 
 ```python
-start = ((number - 1) // 100) * 100 + 1
-end   = start + 99
+CHUNK = 25
+start = ((number - 1) // CHUNK) * CHUNK + 1
+end   = start + CHUNK - 1
 ```
 
 | Number | Chapter |
 |---|---|
-| `0001` | Chapter 0001–0100 |
-| `0100` | Chapter 0001–0100 |
-| `0101` | Chapter 0101–0200 |
-| `0200` | Chapter 0101–0200 |
-| `0201` | Chapter 0201–0300 |
+| `0001` | Chapter 0001–0025 |
+| `0025` | Chapter 0001–0025 |
+| `0026` | Chapter 0026–0050 |
+| `0050` | Chapter 0026–0050 |
+| `0051` | Chapter 0051–0075 |
 
 **Only Chapters that contain a real article are emitted.** Gaps in the numbering never shift the
 range boundaries, and empty groups are never created ahead of time. Adding an article and rebuilding
@@ -404,7 +405,7 @@ never leak into the template and can be unit-tested directly.
 
 - Uses semantic native `<details>` / `<summary>`; operable by mouse and keyboard, with a visible
   focus ring.
-- `Chapter 0001–0100` (the first group) is **expanded by default**; every other existing Chapter is
+- `Chapter 0001–0025` (the first group) is **expanded by default**; every other existing Chapter is
   **collapsed by default**.
 - Each Chapter is independent — expanding one never force-closes another.
 - State is conveyed by the arrow direction (`▸` / `▾`).
@@ -426,10 +427,12 @@ question correctly.
   area (34 px on mobile).
 - Clicking a toggle never navigates and never collapses or expands the Chapter: the handler calls
   `preventDefault()` + `stopPropagation()`, and the button lives outside `<summary>` anyway.
-- The Chapter header carries its own roll-up — `done/total` plus the same icon pair — that turns
-  green only when **every article that actually exists in that Chapter** is done. The denominator
-  comes from the generated markup (`data-chapter-total`), never from an assumed 100. The state is
-  derived on every render, so there is no separate "chapter completed" flag that can drift.
+- The Chapter header carries its own roll-up — `done/total`, **its own small progress bar** and the
+  same icon pair — that turns green only when **every article that actually exists in that Chapter**
+  is done. Each bar is driven by that Chapter's own articles, so finishing something in one Chapter
+  never moves another Chapter's bar. The denominator comes from the generated markup
+  (`data-chapter-total`), never from an assumed 25. The state is derived on every render, so there is
+  no separate "chapter completed" flag that can drift.
 - A new article joins the list unchecked with nothing to configure: storage holds only the set of
   completed IDs, not one record per article.
 
@@ -861,7 +864,7 @@ $ python scripts/build.py --verbose
 DailyLingo 构建完成
   文章总数：22
   Chapter 分组：1
-    Chapter 0001–0100（默认展开）：22 篇
+    Chapter 0001–0025（默认展开）：22 篇
   警告：0 条
 ```
 
@@ -872,7 +875,7 @@ every title under its Chapter. The CLI output is currently in Chinese; the forma
 
 ```text
 $ python scripts/validate.py
-结果：PASS 1024 / FAIL 0 / WARN 0
+结果：PASS 1026 / FAIL 0 / WARN 0
 ```
 
 Covers: article data; number uniqueness and ascending order; Chapter range boundaries and the
@@ -905,15 +908,15 @@ network calls**.
 
 ```text
 $ pytest -q
-257 passed in 12.7s
+259 passed in 12.7s
 ```
 
 | File | Cases | Coverage |
 |---|---|---|
-| `tests/test_build.py` | 105 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`, both the plain and the escaped `1\.` spelling, for stems and answers alike), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, **the player rendered above the body text (with and without a WAV)**, **a divider between the player and the body text**, **no ±5 s buttons and exactly three speed buttons**, **icon declarations carrying the correct relative prefix, home page icon next to the brand, icon assets valid PNG/SVG with the expected dimensions**, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, **CSS/JS URLs carrying a content fingerprint (`?v=` + 8 hex digits)**, GitHub Pages subpath, reproducible builds |
+| `tests/test_build.py` | 105 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0025`/`0026`/`0050`/`0051`/`0075`/`9999`/`10001`, i.e. 25 per Chapter), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`, both the plain and the escaped `1\.` spelling, for stems and answers alike), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, **the player rendered above the body text (with and without a WAV)**, **a divider between the player and the body text**, **no ±5 s buttons and exactly three speed buttons**, **icon declarations carrying the correct relative prefix, home page icon next to the brand, icon assets valid PNG/SVG with the expected dimensions**, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, **CSS/JS URLs carrying a content fingerprint (`?v=` + 8 hex digits)**, GitHub Pages subpath, reproducible builds |
 | `tests/test_frontend.py` | 7 | Executes `assets/js/main.js` for real in Node: correct / incorrect / empty single-choice selections, case insensitivity, leading and trailing whitespace, trailing punctuation, multiple acceptable answers, blank input never correct; plus a sample-by-sample consistency check against `build.normalize_answer` |
 | `tests/test_progress.py` | 32 | Homepage structure for the progress feature (one toggle per real article, all starting unchecked, stats total / `aria-valuemax` / Chapter totals matching reality, settings dialog and its export-import controls, an Android package link carrying `download` and a content fingerprint, the block omitted when the APK is missing, empty site rendering `0 / 0`) **plus the pure logic executed in Node**: zero-padded IDs, payload validation (JSON syntax / `schemaVersion` / structure), dedupe and invalid-entry counting, ignoring unknown IDs, merge union, statistics without dividing by zero, Chapter completion on the real count, export payload shape, filename and import round-trip |
-| `tests/test_progress_dom.py` | 16 | Drives the generated homepage in **jsdom** with real click events and a real `localStorage`: first visit empty, toggle updates stats / storage / Chapter, unchecking reverts, Chapter turns green only when complete, reload restores, corrupt data quarantined, storage-disabled degradation, import preview, merge, overwrite behind a second confirmation, cancelling overwrite, invalid JSON / unsupported version leaving progress intact, unknown IDs ignored and counted, export payload and dialog open/close. Skipped automatically when jsdom is not installed |
+| `tests/test_progress_dom.py` | 18 | Drives the generated homepage in **jsdom** with real click events and a real `localStorage`: first visit empty, toggle updates stats / storage / Chapter, unchecking reverts, Chapter turns green only when complete, **each Chapter's own progress bar and counter move independently (checked on a synthetic two-Chapter site)**, reload restores, corrupt data quarantined, storage-disabled degradation, import preview, merge, overwrite behind a second confirmation, cancelling overwrite, invalid JSON / unsupported version leaving progress intact, unknown IDs ignored and counted, export payload and dialog open/close. Skipped automatically when jsdom is not installed |
 | `tests/test_timeline.py` | 67 | `scripts/timeline.py`: sentence splitting (abbreviations such as `Mrs.`, terminators inside quotes, an attribution after a quote merged back, a long following sentence *not* merged), lossless splitting verified against **every paragraph of every article**, syllable estimation, silence detection on synthesised WAVs, the DP picking the pause closest to the syllable ratio, falling back to a grid when there is no pause at all, timeline covering the whole file, monotonic contiguous windows, graceful empty results for 8-bit / missing audio, consistency against the real articles and real WAVs, and the build emitting `data-start` / `data-end` (or plain paragraphs when audio is absent) |
 | `tests/test_player_dom.py` | 9 | Drives the generated article page in **jsdom** with a stand-in `Audio`: nothing highlighted before playback, highlight follows `currentTime` (0 / 2 / 4 s → sentences 0 / 1 / 2), clicking a sentence seeks to its start and starts playing, clicking while text is selected does nothing, rewinding moves the highlight back, exactly one sentence active. Skipped automatically when jsdom is not installed |
 | `tests/test_auto_complete.py` | 8 | Executes `audio-player.js` + `study-completion.js` in Node **without a DOM**: the listen accumulator (first tick only sets the baseline, a normal 0.25 s step accumulates, a step of exactly 1.5 s still counts, forward / backward seeks are discarded, a frozen clock adds nothing) and the completion boundary (0.89 no, 0.90 yes, one wrong answer no, empty question set no, no snapshot no); plus the generated markup — `data-article-id` on every page, `data-study-auto` matching whether audio *and* questions really exist, both scripts referenced with a fingerprint, and the homepage manual toggle still present |
@@ -962,7 +965,7 @@ $ curl -I https://zc110747.github.io/DailyLingo/
 206  Partial Content (Range)        <- /sources/0001.A_New_Hobby.wav
 ```
 
-The homepage served from GitHub Pages lists every article under `Chapter 0001–0100`. WAV
+The homepage served from GitHub Pages lists every article under `Chapter 0001–0025`. WAV
 responses support HTTP Range requests (`206 Partial Content`, verified), so seeking works on the
 live site.
 

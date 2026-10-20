@@ -14,7 +14,9 @@
 1. 编号=永久 ID：四位补零、超四位不截断；`NNNN.Title_With_Underscores.md`；编号/文件名/front matter 三者一致。
 2. **文件名只用 ASCII，无空格无标点**（同时是 URL 片段与音频名；`'`/`’` 会引出三层转义）。
    改名配套：改 H1 → 改相邻 `## Continue` → 重生成 WAV → 删旧 WAV/HTML → 重建。
-3. 标题统一 `build.display_title()`；Chapter 每 100 号一组，只输出有文章的组，首组 `<details open>`。
+3. 标题统一 `build.display_title()`；Chapter **每 25 篇一组**（`CHUNK = 25`），只输出有文章的组，
+   首组 `<details open>`；每章 summary 有**自己独立的进度条**（`data-chapter-bar/fill`），
+   分母取 `data-chapter-total`（该章实际篇数），progress.js 逐章更新、互不影响。
 4. 文章页五区固定：Article / Words / Questions / Answers / Continue；Answers 默认折叠；判分数据内嵌 `#quiz-data`（与 Answers 同源）。
 5. Article 区内：`<h2>` → 播放器 → `<hr class="player-divider">` → 正文；播放器 `sticky top:8px`。
 6. 全站相对路径，禁止 `/…` 开头；`validate.py` 断言。
@@ -49,7 +51,8 @@ WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不
   ID 用**四位补零字符串**，永不拿标题当身份；坏数据备份 `…__corrupt` 后重置；存储不可用走内存态。
 - `progress.js`：首页（勾选/统计/Chapter 汇总/导入导出/设置对话框）+ 对外写接口 `markCompleted(id)` /
   `isCompleted(id)` / `readCompleted()`；纯逻辑挂 `globalThis.DailyLingoProgress`。
-  Chapter 汇总分母取 `data-chapter-total`（实际篇数，不假定 100）。
+  Chapter 汇总分母取 `data-chapter-total`（实际篇数，不假定 25）；每章自己的进度条
+  `data-chapter-bar/fill` 按本章比例更新，跨章互不影响。
 - `study-completion.js`（文章页）：`dailylingo:listen`(播放器) + `dailylingo:quiz`(main.js) ⇒
   **听够 ≥90% 且全答对** 才 `markCompleted`；**只增不减**（撤销权留首页手动开关）；无音频/无题目时
   `data-study-auto="false"`，页面直说只能手动勾。
@@ -67,7 +70,7 @@ WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不
   进度镜像成 `dailylingo-progress.json`（Android 写 LF，Windows .NET 9 默认 CRLF）。
   ⚠️ Android：`WindowInsetsController` 要在 `setContentView` 之后取；隐藏 WebView 用 **GONE**。
 
-## 已验证（2026-10-19，22 篇）
-`build.py` 22 篇 / 1 Chapter / 0 警告；`validate.py` **PASS 1024 / FAIL 0 / WARN 0**；
-`pytest -q` **257 passed**；进程内全量重建约 0.1 s。文章改名史：0005 撞名、0016 去撇号、
+## 已验证（2026-10-20，22 篇）
+`build.py` 22 篇 / 1 Chapter（0001–0025）/ 0 警告；`validate.py` **PASS 1026 / FAIL 0 / WARN 0**；
+`pytest -q` **259 passed**；进程内全量重建约 0.1 s。文章改名史：0005 撞名、0016 去撇号、
 0018 笔误、0021 去弯撇号（H1 均保留排版符号）。

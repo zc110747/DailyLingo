@@ -119,6 +119,10 @@ def test_dom_script_reports_all_scenarios(observations):
         "follow_on",
         "follow_reopen",
         "follow_off",
+        "chapters_initial",
+        "chapters_after_first",
+        "chapters_two",
+        "chapters_after_second",
     }
     assert expected <= set(observations)
 
@@ -321,3 +325,100 @@ def test_reading_follow_toggle_persists(observations):
     assert off["checked"] is False
     assert off["stored"] == "0"
     assert "已关闭" in off["message"]
+
+
+# --------------------------------------------------------------------------
+# 每章独立的计数与进度条（一章 25 篇，跨章时互不影响）
+# --------------------------------------------------------------------------
+
+MARKER_MD = """# {title}
+
+## Article
+
+{title} is a very short story. It only has two sentences.
+
+## Words
+
+| Word | IPA | Meaning |
+| --- | --- | --- |
+| **story** | /ˈstɔːri/ | 故事 |
+
+## Questions
+
+Question 1：Is this a story?
+
+A. Yes.
+
+B. No.
+
+## Answers
+
+1\\. **A. Yes.** It is a story.
+"""
+
+
+@pytest.fixture(scope="module")
+def two_chapters(tmp_path_factory) -> dict:
+    """0001–0003 属第一章、0026–0027 属第二章（CHUNK = 25）。"""
+    root = tmp_path_factory.mktemp("two-chapters")
+    content = root / "content"
+    content.mkdir()
+    for number in (1, 2, 3, 26, 27):
+        (content / f"{number:04d}.Story_N{number}.md").write_text(
+            MARKER_MD.format(title=f"Story N{number}"), encoding="utf-8", newline="\n"
+        )
+    out = root / "out"
+    build.build_site(content, out, root / "sources")
+    env = dict(os.environ)
+    env["NODE_PATH"] = JSDOM_PATH or ""
+    proc = subprocess.run(
+        [
+            NODE,
+            str(DOM_SCRIPT),
+            str(out / "index.html"),
+            str(PROGRESS_JS),
+            str(MAIN_JS),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=env,
+        cwd=str(ROOT),
+    )
+    assert proc.returncode == 0, proc.stderr
+    return json.loads(proc.stdout)
+
+
+def _percent(entry: dict) -> float:
+    """jsdom 会把 `0.0%` 归一成 `0%`，所以按数值比，而不是逐字比。"""
+    width = entry["width"] or "0%"
+    assert width.endswith("%"), width
+    return float(width[:-1])
+
+
+def test_two_chapters_are_grouped_by_twenty_five(two_chapters):
+    assert two_chapters["chapters_two"] is True
+    initial = two_chapters["chapters_initial"]
+    assert len(initial) == 2
+    assert [c["max"] for c in initial] == ["3", "2"]
+    assert [c["count"] for c in initial] == ["0/3", "0/2"]
+    assert [_percent(c) for c in initial] == [0.0, 0.0]
+
+
+def test_chapter_meters_move_independently(two_chapters):
+    """勾第一章的一篇：只有第一章的条和计数变，第二章必须原地不动。"""
+    after_first = two_chapters["chapters_after_first"]
+    assert after_first[0]["count"] == "1/3"
+    assert after_first[0]["now"] == "1"
+    assert after_first[0]["max"] == "3"
+    assert _percent(after_first[0]) == pytest.approx(100 / 3, abs=0.05)
+
+    assert after_first[1]["count"] == "0/2"
+    assert after_first[1]["now"] == "0"
+    assert after_first[1]["max"] == "2"
+    assert _percent(after_first[1]) == 0.0
+
+    after_second = two_chapters["chapters_after_second"]
+    assert after_second[0]["count"] == "1/3"
+    assert after_second[1]["count"] == "1/2"
+    assert _percent(after_second[1]) == pytest.approx(50.0, abs=0.05)

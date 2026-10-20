@@ -415,11 +415,23 @@
         }
         var count = box.querySelector("[data-chapter-count]");
         var stateText = box.querySelector("[data-chapter-state]");
+        var meter = box.querySelector("[data-chapter-fill]");
+        var meterBar = box.querySelector("[data-chapter-bar]");
         if (count) {
           count.textContent = status.done + "/" + status.total;
         }
         if (stateText) {
           stateText.textContent = status.complete ? "已完成" : "未完成";
+        }
+        // 每章独立的进度条：宽度按本章完成比例算，不掺入其他 Chapter
+        if (meter) {
+          var ratio = status.total > 0 ? status.done / status.total : 0;
+          meter.style.width = (ratio * 100).toFixed(1) + "%";
+        }
+        if (meterBar) {
+          meterBar.setAttribute("aria-valuenow", String(status.done));
+          meterBar.setAttribute("aria-valuemax", String(status.total));
+          meterBar.setAttribute("aria-valuetext", status.done + "/" + status.total + " 篇");
         }
         box.classList.toggle("is-complete", status.complete);
         chapter.classList.toggle("is-complete", status.complete);

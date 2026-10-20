@@ -228,6 +228,31 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
         generated_totals == expected_totals,
         f"{generated_totals} != {expected_totals}",
     )
+    # 每章独立的进度条：条数、上限、计数文案都要与本章实际篇数对齐，
+    # 不能把首页总进度当作章节进度（那会让多章时每章都显示同一个比例）。
+    report.check(
+        "每个 Chapter 都有自己的进度条",
+        index_html.count("data-chapter-bar") == len(chapters)
+        and index_html.count("data-chapter-fill") == len(chapters),
+        f'bars={index_html.count("data-chapter-bar")} chapters={len(chapters)}',
+    )
+    chapter_bar_max = sorted(
+        int(m) for m in re.findall(r'data-chapter-bar role="progressbar"[^>]*aria-valuemax="(\d+)"', index_html)
+    )
+    report.check(
+        "章节进度条上限等于本章篇数",
+        chapter_bar_max == expected_totals,
+        f"{chapter_bar_max} != {expected_totals}",
+    )
+    report.check(
+        "章节进度条初始为空（未完成 0 篇）",
+        index_html.count('aria-valuenow="0"') >= len(chapters),
+    )
+    report.check(
+        f"Chapter 容量为 {build.CHUNK} 篇",
+        all(c.end - c.start + 1 == build.CHUNK for c in chapters),
+        f"{[(c.start, c.end) for c in chapters]}",
+    )
     report.check(
         "首页 CSS/JS 带内容指纹",
         f'href="{build.asset_url(build.STYLE_CSS)}"' in index_html

@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#快速开始)
 [![运行期依赖: 无](https://img.shields.io/badge/%E8%BF%90%E8%A1%8C%E6%9C%9F%E4%BE%9D%E8%B5%96-none-success.svg)](#快速开始)
-[![测试: 257 passed](https://img.shields.io/badge/tests-257%20passed-success.svg)](#验证结果)
+[![测试: 259 passed](https://img.shields.io/badge/tests-259%20passed-success.svg)](#验证结果)
 [![部署: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#部署到-github-pages)
 
 **线上站点：** <https://zc110747.github.io/DailyLingo/>
@@ -56,7 +56,8 @@
 ## 功能特性
 
 - **Chapter 折叠目录** —— 首页显示 `DailyLingo` 品牌名、一张紧凑的学习进度卡，以及按固定
-  100 号区间分组的 `<details>` 文章目录。没有摘要、没有难度、没有音频状态。
+  **25 篇一章**分组的 `<details>` 文章目录，每章带自己的计数与进度条。没有摘要、没有难度、
+  没有音频状态。
 - **学习进度只存在你自己的浏览器里** —— 每篇一个完成开关、Chapter 全部学完才变绿的汇总、
   实时更新的 `已完成 / 总数 · 百分比` 进度条，以及藏在左上角设置里的 JSON 导出 / 导入
   （合并或覆盖）与 Android 安装包下载。无账号、无后端、不上传任何数据 —— 详见[学习进度](#学习进度)。
@@ -345,7 +346,7 @@ audio: "0101.Some_Title.wav"
 ```text
 DailyLingo
 
-▼ Chapter 0001–0100
+▼ Chapter 0001–0025
     0001. A New Hobby
     …
 ```
@@ -354,21 +355,22 @@ DailyLingo
 
 ### 分组算法（`build.chapter_bounds` / `build.group_chapters`）
 
-每 100 个编号划分为一个**固定**区间。分组依据是编号的**数值**，与文章数量、数组下标、
-排序位置无关：
+每 **25** 个编号划分为一个**固定**区间（`build.CHUNK`）。分组依据是编号的**数值**，与文章数量、
+数组下标、排序位置无关：
 
 ```python
-start = ((number - 1) // 100) * 100 + 1
-end   = start + 99
+CHUNK = 25
+start = ((number - 1) // CHUNK) * CHUNK + 1
+end   = start + CHUNK - 1
 ```
 
 | 编号 | 所属 Chapter |
 |---|---|
-| `0001` | Chapter 0001–0100 |
-| `0100` | Chapter 0001–0100 |
-| `0101` | Chapter 0101–0200 |
-| `0200` | Chapter 0101–0200 |
-| `0201` | Chapter 0201–0300 |
+| `0001` | Chapter 0001–0025 |
+| `0025` | Chapter 0001–0025 |
+| `0026` | Chapter 0026–0050 |
+| `0050` | Chapter 0026–0050 |
+| `0051` | Chapter 0051–0075 |
 
 **只输出包含真实文章的 Chapter。** 中间缺号不会移动区间边界，也不会提前创建空分组。
 新增文章后重建，新分组自动出现；删除某组最后一篇文章后重建，该组不再显示。
@@ -379,7 +381,7 @@ end   = start + 99
 ### 折叠行为
 
 - 使用语义化的原生 `<details>` / `<summary>`；鼠标与键盘均可操作，焦点状态可见。
-- `Chapter 0001–0100`（第一组）**默认展开**；其他实际存在的 Chapter **默认折叠**。
+- `Chapter 0001–0025`（第一组）**默认展开**；其他实际存在的 Chapter **默认折叠**。
 - 每个 Chapter 独立控制，展开一个不会强制关闭其他。
 - 收起 / 展开状态由箭头方向体现（`▸` / `▾`）。
 
@@ -397,8 +399,9 @@ end   = start + 99
   （手机上 34 px）。
 - 点开关既不跳转文章，也不展开 / 折叠 Chapter：处理函数里 `preventDefault()` +
   `stopPropagation()`，而且按钮本来就在 `<summary>` 之外。
-- Chapter 标题右侧有自己的汇总：`已完成/总篇数` 加同一对图标，只有**该 Chapter 里实际存在的
-  每一篇**都完成后才变绿。分母取自生成时的标记（`data-chapter-total`），**不假定 100 篇**；
+- Chapter 标题右侧有自己的汇总：`已完成/总篇数`、**一条本章专属的进度条**，加同一对图标；
+  只有**该 Chapter 里实际存在的每一篇**都完成后才变绿。进度条只按本章自己的文章算，
+  在某一章勾选不会带动其他章；分母取自生成时的标记（`data-chapter-total`），**不假定 25 篇**；
   状态每次渲染都实时算，不存在「Chapter 完成标记」这种会发霉的字段。
 - 新增文章自动以未完成状态出现，不需要任何配置：存储里只有「已完成编号的集合」，不是每篇一条记录。
 
@@ -781,7 +784,7 @@ $ python scripts/build.py --verbose
 DailyLingo 构建完成
   文章总数：22
   Chapter 分组：1
-    Chapter 0001–0100（默认展开）：22 篇
+    Chapter 0001–0025（默认展开）：22 篇
   警告：0 条
 ```
 
@@ -791,7 +794,7 @@ DailyLingo 构建完成
 
 ```text
 $ python scripts/validate.py
-结果：PASS 1024 / FAIL 0 / WARN 0
+结果：PASS 1026 / FAIL 0 / WARN 0
 ```
 
 覆盖：文章数据；编号唯一性与升序；Chapter 区间边界与「只输出有真实文章的 Chapter」；
@@ -815,15 +818,15 @@ $ python scripts/validate.py
 
 ```text
 $ pytest -q
-257 passed in 12.7s
+259 passed in 12.7s
 ```
 
 | 文件 | 用例数 | 覆盖内容 |
 |---|---|---|
-| `tests/test_build.py` | 105 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0100`/`0101`/`0200`/`0201`/`0300`/`301`/`9999`/`10001`）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`，含被转义的 `1\.` 写法，题干与答案都测）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**播放器与正文之间有分隔线**、**无 ±5 秒按钮且恰好三档倍速**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、**CSS/JS 的 URL 带内容指纹（`?v=` + 8 位十六进制）**、GitHub Pages 子路径、构建可重复 |
+| `tests/test_build.py` | 105 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0025`/`0026`/`0050`/`0051`/`0075`/`9999`/`10001`，即每章 25 篇）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`，含被转义的 `1\.` 写法，题干与答案都测）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**播放器与正文之间有分隔线**、**无 ±5 秒按钮且恰好三档倍速**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、**CSS/JS 的 URL 带内容指纹（`?v=` + 8 位十六进制）**、GitHub Pages 子路径、构建可重复 |
 | `tests/test_frontend.py` | 7 | 在 Node 中真实执行 `assets/js/main.js`：单选正确 / 错误 / 空选、大小写不敏感、首尾空格、尾部标点、多个可接受答案、空白输入不判正确；并与 `build.normalize_answer` 做逐样本一致性比对 |
 | `tests/test_progress.py` | 32 | 学习进度的首页结构（每篇一个完成按钮且初始未完成、统计总数 / `aria-valuemax` / Chapter 汇总等于真实篇数、设置对话框与导出导入控件、Android 安装包直链带 `download` 与内容指纹且 APK 缺失时整块省略、空站点渲染 `0 / 0`）**外加在 Node 中真实执行的纯逻辑**：编号补零、文件校验（JSON 语法 / `schemaVersion` / 结构）、去重与非法条目计数、忽略不存在编号、合并取并集、统计不除零、按真实篇数判定 Chapter 完成、导出载荷结构与文件名、导出内容可被导入解析器读回 |
-| `tests/test_progress_dom.py` | 16 | 在 **jsdom** 中用真实 click 事件与真实 `localStorage` 驱动生成的首页：首次访问为空、勾选同步统计与存储、取消回退、Chapter 全完成才变绿、刷新恢复、损坏数据隔离、存储禁用降级、导入预览、合并、覆盖需二次确认、取消覆盖、非法 JSON / 不支持版本不改动进度、未知编号忽略并计数、导出载荷与对话框开关。未安装 jsdom 时自动跳过 |
+| `tests/test_progress_dom.py` | 18 | 在 **jsdom** 中用真实 click 事件与真实 `localStorage` 驱动生成的首页：首次访问为空、勾选同步统计与存储、取消回退、Chapter 全完成才变绿、**每章的进度条与计数各自独立（用合成的「两章」站点验证：勾第一章不动第二章）**、刷新恢复、损坏数据隔离、存储禁用降级、导入预览、合并、覆盖需二次确认、取消覆盖、非法 JSON / 不支持版本不改动进度、未知编号忽略并计数、导出载荷与对话框开关。未安装 jsdom 时自动跳过 |
 | `tests/test_timeline.py` | 67 | `scripts/timeline.py`：切句（`Mrs.` 缩写、引号内的句末标点、引号后的叙述语并回、引号后真正的新句子不并）、**对每篇文章的每一段**验证切分不丢字、音节估算、合成 WAV 上的静音检测、DP 选中「最接近音节比例」的停顿、完全没有停顿时退回网格、时间轴覆盖整段音频、逐句首尾相接、8 bit / 缺失音频时优雅返回空、真实文章 × 真实音频的一致性、以及构建是否真的输出 `data-start` / `data-end`（缺音频时退回纯段落） |
 | `tests/test_player_dom.py` | 9 | 在 **jsdom** 中用替身 `Audio` 驱动生成的文章页：播放前不高亮、高亮跟随 `currentTime`（0 / 2 / 4 秒 → 第 0 / 1 / 2 句）、点句子跳到句首并开始播放、选中文字时点击不跳转、快退后高亮回退、始终只有一句处于高亮。未安装 jsdom 时自动跳过 |
 | `tests/test_auto_complete.py` | 8 | 在 Node 里**不带 DOM**执行 `audio-player.js` 与 `study-completion.js`：收听累计（第一拍只记基准、正常 0.25 s 累加、恰好 1.5 s 仍算、向前 / 向后跳转丢弃、时间不动不加）与完成判定边界（0.89 不算、0.90 算、错一题不算、无题目不算、无快照不算）；外加生成结构 —— 每页的 `data-article-id`、`data-study-auto` 是否与「真的有音频且真的有题目」一致、两个脚本都带指纹、首页手动开关仍在 |
@@ -871,7 +874,7 @@ $ curl -I https://zc110747.github.io/DailyLingo/
 206  Partial Content (Range)        <- /sources/0001.A_New_Hobby.wav
 ```
 
-GitHub Pages 上返回的首页列出的正是仓库里的全部文章，归属于 `Chapter 0001–0100`。
+GitHub Pages 上返回的首页列出的正是仓库里的全部文章，归属于 `Chapter 0001–0025`。
 WAV 响应支持 HTTP Range 请求（`206 Partial Content`，已实测），因此线上拖动进度条可正常跳转。
 
 ### 开发过程中发现并修复的真实缺陷

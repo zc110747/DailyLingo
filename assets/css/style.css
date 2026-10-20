@@ -1134,6 +1134,31 @@ summary:focus-visible,
   display: inline-flex;
 }
 
+/* 每个 Chapter 自己的进度条：只反映本章，与首页总进度互不影响 */
+.chapter-meter {
+  display: block;
+  flex: none;
+  width: 88px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  box-shadow: inset 0 0 0 1px var(--border);
+  overflow: hidden;
+}
+
+.chapter-meter-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 160ms ease;
+}
+
+.chapter-status.is-complete .chapter-meter-fill {
+  background: var(--ok);
+}
+
 .chapter-mark .toggle-icon {
   width: 19px;
   height: 19px;
@@ -1386,6 +1411,22 @@ summary:focus-visible,
   body {
     padding: 0 12px 48px;
     font-size: 15.5px;
+  }
+
+  /* 章节行：窄屏下「标签 + 进度条 + 计数 + 勾」要挤在一行里，
+     所以缩短进度条、收紧间距，避免 Chapter 0001–0025 折成两行。 */
+  .chapter-summary {
+    gap: 8px;
+    padding: 13px 14px;
+    font-size: 15px;
+  }
+
+  .chapter-meter {
+    width: 56px;
+  }
+
+  .chapter-count {
+    font-size: 12px;
   }
 
   .site-header {

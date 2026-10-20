@@ -382,6 +382,43 @@ async function pickFile(w, text, name) {
     w.close();
   }
 
+  /* 18. 每章独立的计数与进度条：勾一篇只动它所在的那一章 */
+  {
+    const w = await boot(null);
+    const snap = function () {
+      return Array.prototype.map.call(
+        w.document.querySelectorAll('[data-chapter-status]'),
+        function (box) {
+          const fill = box.querySelector('[data-chapter-fill]');
+          const bar = box.querySelector('[data-chapter-bar]');
+          return {
+            count: box.querySelector('[data-chapter-count]').textContent,
+            width: fill ? fill.style.width : null,
+            max: bar ? bar.getAttribute('aria-valuemax') : null,
+            now: bar ? bar.getAttribute('aria-valuenow') : null,
+          };
+        }
+      );
+    };
+
+    out.chapters_initial = snap();
+    const firstItem = q(w, '.article-item');
+    const firstId = firstItem.getAttribute('data-article-id');
+    toggleBtn(w, firstId).click();
+    out.chapters_after_first = snap();
+
+    const chapters = w.document.querySelectorAll('.chapter');
+    const lastChapter = chapters[chapters.length - 1];
+    const secondId = lastChapter.querySelector('.article-item').getAttribute('data-article-id');
+    out.chapters_two = chapters.length > 1;
+    out.chapters_after_second = null;
+    if (secondId !== firstId) {
+      toggleBtn(w, secondId).click();
+      out.chapters_after_second = snap();
+    }
+    w.close();
+  }
+
   process.stdout.write(JSON.stringify(out));
 })().catch(function (err) {
   process.stderr.write(String((err && err.stack) || err));

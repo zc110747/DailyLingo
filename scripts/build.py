@@ -8,7 +8,7 @@
 2.  解析元数据 / 正文 / 单词表 / 题目 / 答案
 3.  校验编号、标题、结构、重复编号、文件名与编号一致性
 4.  按编号数值升序排列
-5.  计算 Chapter 分组（每 100 个编号一个固定区间，只输出含真实文章的分组）
+5.  计算 Chapter 分组（每 CHUNK = 25 个编号一个固定区间，只输出含真实文章的分组）
 6.  生成首页 ``index.html``（Chapter 折叠目录）
 7.  生成 ``src/*.html`` 文章详情页（Article / Words / Questions / Answers / Continue）
 8.  自动关联 ``sources/*.wav``
@@ -56,8 +56,8 @@ import timeline  # noqa: E402  （必须在上面的 sys.path 处理之后）
 # --------------------------------------------------------------------------
 
 BRAND = "DailyLingo"
-CHUNK = 100  # 每个 Chapter 覆盖的编号数量
-EN_DASH = "\u2013"  # – 用于 "Chapter 0001–0100"
+CHUNK = 25  # 每个 Chapter 覆盖的编号数量（一章 25 篇）
+EN_DASH = "\u2013"  # – 用于 "Chapter 0001–0025"
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CONTENT_DIR = ROOT / "content"
@@ -870,6 +870,10 @@ def render_index(chapters: Sequence[Chapter]) -> str:
             f'          <span class="chapter-label">{esc(chapter.label)}</span>\n'
             f'          <span class="chapter-status" data-chapter-status'
             f' data-chapter-total="{chapter_total}">\n'
+            f'            <span class="chapter-meter" data-chapter-bar role="progressbar"'
+            f' aria-valuemin="0" aria-valuemax="{chapter_total}" aria-valuenow="0"'
+            f' aria-label="{esc(chapter.label)} 完成进度">'
+            f'<span class="chapter-meter-fill" data-chapter-fill></span></span>\n'
             f'            <span class="chapter-count" data-chapter-count>0/{chapter_total}</span>\n'
             f'            <span class="chapter-mark" aria-hidden="true">{_TOGGLE_ICONS}</span>\n'
             f'            <span class="visually-hidden" data-chapter-state>未完成</span>\n'
