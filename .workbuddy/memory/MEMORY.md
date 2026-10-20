@@ -45,6 +45,12 @@
 WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不记绝对路径**（写死坏过两次）。
 定位：`--audio-tool` > `DAILYLINGO_AUDIO_TOOL` > PATH（`eaudio.cmd`/`EnglishAudio.exe`）> `tools/eaudio.cmd`。
 只读 `## Article`；正文含中文被拒（exit 4）；弯引号 `“ ” ’` **不拦**。WAV 均单声道/16 bit/22 050 Hz。
+⚠️ **`009.ai_voice/publisher/` 里的 exe 会过期**：runtimeconfig 仍是 `net10.0`，本机只有 7/8/9 时
+直接跑只吐 `You must install or update .NET…` 然后 exit 1（在 bash 里是**空输出 + 立即结束**，
+别误判成被沙箱杀）。正解 `dotnet build src/EnglishAudio/EnglishAudio.csproj -c Release`，
+跑 `src/EnglishAudio/bin/Release/net9.0-windows/EnglishAudio.exe <md> --dist=sources`
+（AppPaths 向上找 `tools/piper`，必须在仓库树内）。另：本机 `HTTPS_PROXY`/`https_proxy` 同时存在，
+PS 的 `Start-Process` 会抛「关键字重复」，别用它启动。
 
 ## 学习进度（纯前端，两处写入）
 - 存储 `localStorage["dailylingo_learning_progress_v1"]` = `{schemaVersion:1, completedArticles:["0001"], updatedAt}`；
@@ -70,7 +76,9 @@ WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不
   进度镜像成 `dailylingo-progress.json`（Android 写 LF，Windows .NET 9 默认 CRLF）。
   ⚠️ Android：`WindowInsetsController` 要在 `setContentView` 之后取；隐藏 WebView 用 **GONE**。
 
-## 已验证（2026-10-20，26 篇）
-`build.py` **26 篇 / 2 Chapter（0001–0025 满章 + 0026–0050 开篇）/ 0 警告**；`validate.py`
-**PASS 1231**；`pytest -q` **268 passed**；进程内全量重建约 0.1 s。文章改名史：0005 撞名、0016 去撇号、
-0018 笔误、0021 去弯撇号（H1 均保留排版符号）。
+## 已验证（2026-10-20，29 篇）
+`build.py` **29 篇 / 2 Chapter（0001–0025 满章 + 0026–0050 共 4 篇）/ 0 警告**；`validate.py`
+**PASS 1366**；`pytest -q` **274 passed**；全量重建冷 0.84 s / 时间轴缓存命中 0.38 s。
+文章改名史：0005 撞名、0016 去撇号、0018 笔误、0021 去弯撇号、0029 去文件名空格（H1 均保留排版符号）。
+`## Continue(s)` 段由构建忽略，但 md 里仍需自洽：previous/next 按**编号相邻**、缺号不跳空，
+目录写 `../index.html`（仓库无 `catalogue.md`）。
