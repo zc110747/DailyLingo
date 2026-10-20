@@ -70,7 +70,7 @@ WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不
   进度镜像成 `dailylingo-progress.json`（Android 写 LF，Windows .NET 9 默认 CRLF）。
   ⚠️ Android：`WindowInsetsController` 要在 `setContentView` 之后取；隐藏 WebView 用 **GONE**。
 
-## 已验证（2026-10-20，22 篇）
-`build.py` 22 篇 / 1 Chapter（0001–0025）/ 0 警告；`validate.py` **PASS 1026 / FAIL 0 / WARN 0**；
-`pytest -q` **259 passed**；进程内全量重建约 0.1 s。文章改名史：0005 撞名、0016 去撇号、
+## 已验证（2026-10-20，25 篇）
+`build.py` **25 篇 / 1 Chapter（0001–0025，正好满章）** / 0 警告；`validate.py` **PASS 1158**；
+`pytest -q` **265 passed**；进程内全量重建约 0.1 s。文章改名史：0005 撞名、0016 去撇号、
 0018 笔误、0021 去弯撇号（H1 均保留排版符号）。
