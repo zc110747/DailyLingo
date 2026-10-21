@@ -76,10 +76,12 @@ PS 的 `Start-Process` 会抛「关键字重复」，别用它启动。
   进度镜像成 `dailylingo-progress.json`（Android 写 LF，Windows .NET 9 默认 CRLF）。
   ⚠️ Android：`WindowInsetsController` 要在 `setContentView` 之后取；隐藏 WebView 用 **GONE**。
 
-## 已验证（2026-10-20，29 篇）
-`build.py` **29 篇 / 2 Chapter（0001–0025 满章 + 0026–0050 共 4 篇）/ 0 警告**；`validate.py`
-**PASS 1366**；`pytest -q` **274 passed**；全量重建冷 0.84 s / 时间轴缓存命中 0.38 s。
+## 已验证（2026-10-21，40 篇）
+`build.py` **40 篇 / 2 Chapter（0001–0025 满章 + 0026–0050 共 15 篇）/ 0 警告**；`validate.py`
+**PASS 1861**；`pytest -q` **296 passed**（test_timeline 按篇参数化，40 篇 = 103 例）；
+全量重建冷 2.66 s / 时间轴缓存命中 0.21 s。
 文章改名史：0005 撞名、0016 去撇号、0018 笔误、0021 去弯撇号、0029 去文件名空格、
+0039 去 ASCII 撇号（`Town's`→`Towns`，H1 保留 `'`，同 0016 处理）、
 0029/0030 编号写错重排为 0028/0029（H1 均保留排版符号）。**编号即身份**：改编号必须同步
 md 文件名 + 相邻 Continues + 重生成同名 WAV + 手工删旧 `src/*.html`（构建不删文件）。
 `## Continue(s)` 段由构建忽略，但 md 里仍需自洽：previous/next 按**编号相邻**、缺号不跳空，
