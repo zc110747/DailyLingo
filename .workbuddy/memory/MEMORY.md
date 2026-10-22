@@ -78,10 +78,13 @@ PS 的 `Start-Process` 会抛「关键字重复」，别用它启动。
   进度镜像成 `dailylingo-progress.json`（Android 写 LF，Windows .NET 9 默认 CRLF）。
   ⚠️ Android：`WindowInsetsController` 要在 `setContentView` 之后取；隐藏 WebView 用 **GONE**。
 
-## 已验证（2026-10-21，40 篇）
-`build.py` **40 篇 / 2 Chapter（0001–0025 满章 + 0026–0050 共 15 篇）/ 0 警告**；`validate.py`
-**PASS 1861**；`pytest -q` **296 passed**（test_timeline 按篇参数化，40 篇 = 103 例）；
-全量重建冷 2.66 s / 时间轴缓存命中 0.21 s。
+## 已验证（2026-10-22，45 篇）
+`build.py` **45 篇 / 2 Chapter（0001–0025 满章 + 0026–0050 共 20 篇）/ 0 警告**；`validate.py`
+**PASS 2086**；`pytest -q` **417 passed**（test_timeline 按篇参数化，45 篇 = 113 例）；
+全量重建冷 3.25 s / 时间轴缓存命中 0.30 s。
+**新文章先用 `python scripts/fix_content.py --apply` 归一文件名与 Continue 链接**
+（`--check` 只报；邻接按「编号升序相邻」，缺号也接得上）。⚠️ 用户常边写边存：
+改名/构建前先看 mtime 是否稳定，否则会按旧内容改名。
 文章改名史：0005 撞名、0016 去撇号、0018 笔误、0021 去弯撇号、0029 去文件名空格、
 0039 去 ASCII 撇号（`Town's`→`Towns`，H1 保留 `'`，同 0016 处理）、
 0029/0030 编号写错重排为 0028/0029（H1 均保留排版符号）。**编号即身份**：改编号必须同步

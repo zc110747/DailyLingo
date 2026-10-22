@@ -46,7 +46,10 @@ def _continue_links(path: Path) -> list[str]:
 
 
 def test_content_has_articles():
-    assert len(ARTICLES) == 40
+    """与本目录的扫描口径一致：不漏、不重、不写死篇数。"""
+    assert ARTICLES
+    parsed, _ = build.load_articles(CONTENT)
+    assert [n for _, n in ARTICLES] == [a.number for a in parsed]
 
 
 @pytest.mark.parametrize("path,number", ARTICLES, ids=IDS)
