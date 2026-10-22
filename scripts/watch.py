@@ -7,7 +7,7 @@ r"""DailyLingo 增量同步：content/ 或 sources/ 一变，站点 HTML 立刻�
 只用标准库；不联网、不生成音频（除非显式加 --audio）。
 
 用法：
-    python scripts/watch.py                 监听 content/*.md 与 sources/*.wav
+    python scripts/watch.py                 监听 content/**/*.md 与 sources/*.wav
     python scripts/watch.py --audio         新增 md 缺音频时，自动调用 EnglishAudio 生成
     python scripts/watch.py --audio --audio-tool "D:\...\eaudio.cmd"
     python scripts/watch.py --once          只检查并重建一次，然后退出
@@ -77,10 +77,16 @@ def resolve_audio_tool(explicit: str | None) -> Path | None:
 def snapshot(content_dir: Path, sources_dir: Path) -> dict[str, tuple[int, int]]:
     """{相对项目根的路径: (mtime_ns, size)}，只覆盖会触发重建的文件。"""
     state: dict[str, tuple[int, int]] = {}
-    for pattern, folder in (("*.md", content_dir), ("*.wav", sources_dir)):
+    for folder, pattern, recursive in (
+        (content_dir, "*.md", True),
+        (sources_dir, "*.wav", False),
+    ):
         if not folder.is_dir():
             continue
-        for path in sorted(folder.glob(pattern)):
+        paths = folder.rglob(pattern) if recursive else folder.glob(pattern)
+        for path in sorted(paths):
+            if any(part.startswith(".") for part in path.relative_to(folder).parts):
+                continue
             try:
                 st = path.stat()
             except OSError:
@@ -111,9 +117,9 @@ def describe_changes(
 
 
 def missing_audio(content_dir: Path, sources_dir: Path) -> list[Path]:
-    """content/*.md 里还没有同名 wav 的文章。"""
+    """content/**/*.md 里还没有同名 wav 的文章（支持按 Chapter 分子目录）。"""
     pending: list[Path] = []
-    for md in sorted(content_dir.glob("*.md")):
+    for md in build.iter_content_files(content_dir):
         if not (sources_dir / f"{md.stem}.wav").exists():
             pending.append(md)
     return pending
@@ -145,7 +151,7 @@ def make_audio(md: Path, sources_dir: Path, tool: Path) -> bool:
 
 def orphan_pages(content_dir: Path, out_dir: Path) -> list[str]:
     """src/ 里已经没有对应 md 的遗留页面。"""
-    expected = {f"{md.stem}.html" for md in content_dir.glob("*.md")}
+    expected = {f"{md.stem}.html" for md in build.iter_content_files(content_dir)}
     src_dir = out_dir / "src"
     if not src_dir.is_dir():
         return []

@@ -103,7 +103,7 @@ def test_long_sentence_after_quote_is_not_merged():
     ]
 
 
-@pytest.mark.parametrize("path", sorted(CONTENT.glob("*.md")), ids=lambda p: p.stem)
+@pytest.mark.parametrize("path", build.iter_content_files(CONTENT), ids=lambda p: p.stem)
 def test_split_is_lossless_on_real_articles(path: Path):
     """切句不允许吞字/重复 —— 否则时间轴会整体错位。"""
     text = path.read_text(encoding="utf-8")
@@ -232,7 +232,7 @@ def test_syllables_per_second_reports_zero_for_empty_window():
 # --------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("path", sorted(CONTENT.glob("*.md")), ids=lambda p: p.stem)
+@pytest.mark.parametrize("path", build.iter_content_files(CONTENT), ids=lambda p: p.stem)
 def test_real_article_timeline_is_consistent(path: Path):
     wav = SOURCES / f"{path.stem}.wav"
     if not wav.is_file():

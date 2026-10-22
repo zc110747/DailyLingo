@@ -82,11 +82,16 @@ def article_md(
 
 
 def write_content(tmp_path: Path, files: dict[str, str], audio: list[str] | None = None) -> Path:
-    """把 ``{"0001.A_New_Hobby.md": "<md>"}`` 写到临时 content 目录。"""
+    """把 ``{"0001.A_New_Hobby.md": "<md>"}`` 写到临时 content 目录。
+
+    键里可以带子目录（``"0001-0025/0001.A_New_Hobby.md"``），用来模拟按 Chapter 分组的源目录。
+    """
     content = tmp_path / "content"
     content.mkdir(parents=True, exist_ok=True)
     for name, text in files.items():
-        (content / name).write_text(text, encoding="utf-8", newline="\n")
+        target = content / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8", newline="\n")
     sources = tmp_path / "sources"
     sources.mkdir(parents=True, exist_ok=True)
     for name in audio or []:
@@ -973,3 +978,56 @@ def test_sections_appear_in_fixed_order(tmp_path):
     html = read(out / "src" / result.articles[0].html_name)
     positions = [html.index(f">{name}</h2>") for name in ("Article", "Words", "Questions", "Answers", "Continue")]
     assert positions == sorted(positions)
+
+
+# --------------------------------------------------------------------------
+# 源目录按 Chapter 分文件夹（content/0001-0025/xxx.md）
+# --------------------------------------------------------------------------
+
+
+def test_nested_chapter_folders_are_discovered(tmp_path):
+    files = {
+        "0001-0025/0001.A.md": article_md("A"),
+        "0001-0025/0002.B.md": article_md("B"),
+        "0026-0050/0026.Z.md": article_md("Z"),
+    }
+    result, out, _, _ = make_site(tmp_path, files)
+    assert [a.number for a in result.articles] == [1, 2, 26]
+    assert [c.label for c in result.chapters] == [
+        "Chapter 0001\u20130025",
+        "Chapter 0026\u20130050",
+    ]
+    # 输出仍然是扁平的 src/*.html，公开 URL 不随源目录层级变化
+    assert (out / "src" / "0001.A.html").is_file()
+    assert (out / "src" / "0026.Z.html").is_file()
+
+
+def test_flat_and_nested_sources_can_mix(tmp_path):
+    """过渡期两种布局并存也不能重复计数或漏掉文章。"""
+    files = {
+        "0001.A.md": article_md("A"),
+        "0001-0025/0002.B.md": article_md("B"),
+    }
+    result, out, _, _ = make_site(tmp_path, files)
+    assert [a.number for a in result.articles] == [1, 2]
+    assert "href=\"src/0001.A.html\"" in read(out / "index.html")
+    assert "href=\"src/0002.B.html\"" in read(out / "index.html")
+
+
+def test_hidden_folders_are_ignored(tmp_path):
+    files = {
+        "0001.A.md": article_md("A"),
+        ".drafts/0002.B.md": article_md("B"),
+    }
+    result, _, _, _ = make_site(tmp_path, files)
+    assert [a.number for a in result.articles] == [1]
+
+
+def test_nested_duplicate_numbers_still_conflict(tmp_path):
+    files = {
+        "0001-0025/0001.A.md": article_md("A"),
+        "0026-0050/0001.B.md": article_md("B"),
+    }
+    with pytest.raises(build.BuildError) as exc:
+        make_site(tmp_path, files)
+    assert "0001" in str(exc.value)

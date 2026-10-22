@@ -1336,12 +1336,28 @@ def render_article_page(article: Article) -> str:
 # --------------------------------------------------------------------------
 
 
+def iter_content_files(content_dir: Path) -> list[Path]:
+    """递归找出 ``content_dir`` 下的文章 md（支持 ``content/0001-0025/xxx.md`` 这类分组）。
+
+    忽略以 ``.`` 开头的隐藏文件与隐藏目录；返回顺序无关（调用方按编号重排）。
+    """
+    found = []
+    for path in content_dir.rglob("*.md"):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(content_dir)
+        if any(part.startswith(".") for part in rel.parts):
+            continue
+        found.append(path)
+    return sorted(found)
+
+
 def load_articles(content_dir: Path) -> tuple[list[Article], list[str]]:
     warnings: list[str] = []
     if not content_dir.is_dir():
         raise BuildError(f"内容目录不存在：{content_dir}")
 
-    paths = sorted(p for p in content_dir.glob("*.md") if not p.name.startswith("."))
+    paths = iter_content_files(content_dir)
     articles = [parse_article_file(p) for p in paths]
 
     errors: list[str] = []
@@ -1357,7 +1373,7 @@ def load_articles(content_dir: Path) -> tuple[list[Article], list[str]]:
     if errors:
         raise BuildError("文章数据校验失败：\n  - " + "\n  - ".join(errors))
     if not articles:
-        warnings.append(f"{content_dir} 下没有找到任何文章（*.md）")
+        warnings.append(f"{content_dir} 下没有找到任何文章（递归查找 *.md）")
 
     articles.sort(key=lambda a: a.number)
 

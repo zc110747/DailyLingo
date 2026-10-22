@@ -5,7 +5,9 @@
 ## 定位与布局
 纯静态英语学习站（无后端/DB/远程 API），GitHub Pages 项目子路径
 `https://zc110747.github.io/DailyLingo/`；只用 HTML/CSS/原生 JS；构建与校验**只用 Python 标准库**。
-`content/*.md` 是唯一源；`index.html` + `src/*.html` 由构建生成且**必须提交**（Pages 以仓库根为站点根）；
+`content/**/*.md` 是唯一源（**递归扫描**，按 Chapter 分子目录如 `content/0001-0025/`；目录只是整理，
+分组仍只看编号，**输出永远扁平** `src/*.html` + `sources/*.wav`，公开 URL 不随归档方式变）；
+`index.html` + `src/*.html` 由构建生成且**必须提交**（Pages 以仓库根为站点根）；
 `sources/*.wav` 由外部 TTS 写；`assets/`、`scripts/{build,validate,watch,timeline}.py`、`tests/` 可手改。
 `README.md`（英，默认）+ `README-CH.md`（中）**必须同步、H2 数相等**；凡随篇数线性增长的列举一律
 「第一条 + `…`」并注明省略。

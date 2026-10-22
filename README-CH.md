@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#快速开始)
 [![运行期依赖: 无](https://img.shields.io/badge/%E8%BF%90%E8%A1%8C%E6%9C%9F%E4%BE%9D%E8%B5%96-none-success.svg)](#快速开始)
-[![测试: 296 passed](https://img.shields.io/badge/tests-296%20passed-success.svg)](#验证结果)
+[![测试: 382 passed](https://img.shields.io/badge/tests-382%20passed-success.svg)](#验证结果)
 [![部署: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#部署到-github-pages)
 
 **线上站点：** <https://zc110747.github.io/DailyLingo/>
@@ -130,9 +130,12 @@ DailyLingo/
 ├── src/                        # 文章详情页（生成）—— 每篇文章一个 .html
 │   ├── 0001.A_New_Hobby.html
 │   └── …                       # 0002、0003、… 每篇一个
-├── content/                    # 文章唯一维护源（Markdown）
-│   ├── 0001.A_New_Hobby.md
-│   └── …                       # 0002、0003、… 每篇一个
+├── content/                    # 文章唯一维护源（Markdown），按 Chapter 区间分子目录
+│   ├── 0001-0025/
+│   │   ├── 0001.A_New_Hobby.md
+│   │   └── …                   # 每篇一个 .md
+│   └── 0026-0050/
+│       └── …                   # **递归**扫描，子目录可有可无
 ├── sources/                    # 外部 TTS 工具生成的 WAV（与 md 同名）
 │   ├── 0001.A_New_Hobby.wav
 │   └── …                       # 0002、0003、… 每篇一个
@@ -186,7 +189,7 @@ DailyLingo/
 
 | 路径 | 定位 | 可否手工编辑 |
 |---|---|---|
-| `content/` | 文章唯一维护源 | **是**，人工维护 |
+| `content/` | 文章唯一维护源；**递归**扫描，可以按 `0001-0025/` 这类目录分组 | **是**，人工维护 |
 | `src/`、`index.html` | 构建生成的 HTML | 否，重新构建即覆盖 |
 | `sources/` | 外部工具生成的 WAV | 由音频工具写入 |
 | `assets/` | 全站公共 CSS / JS | 是 |
@@ -230,10 +233,14 @@ DailyLingo/
 ### 文件命名
 
 ```text
-content/0001.A_New_Hobby.md
-src/0001.A_New_Hobby.html       # 构建生成
-sources/0001.A_New_Hobby.wav    # 音频工具生成
+content/0001-0025/0001.A_New_Hobby.md   # 目录只负责整理，不参与编号
+src/0001.A_New_Hobby.html               # 构建生成，始终是平的
+sources/0001.A_New_Hobby.wav            # 音频工具生成，始终是平的
 ```
+
+> **目录只是整理用。** Chapter 分组仍然只看编号（`((n-1)//25)*25+1`），把同一篇放进
+> `content/0002-0026/` 也还是落在同一个 Chapter。输出保持扁平（`src/*.html`、`sources/*.wav`），
+> 这样源文件怎么归档都不会动到已经发出去的 URL。
 
 > **文件名里不要有空格。** `0006.A_Visit_to_the Library.md` 会让 `sources/` 的音频名与页面链接、
 > `href` 属性三处对不上。请改用下划线。
@@ -601,7 +608,7 @@ python scripts/watch.py --audio
 
 ### 改完 Markdown 自动重建
 
-手工维护时不必反复敲构建命令：`watch.py` 轮询 `content/*.md` 与 `sources/*.wav`，
+手工维护时不必反复敲构建命令：`watch.py` 轮询 `content/**/*.md` 与 `sources/*.wav`，
 发现新增 / 修改 / 删除后自动重建 `index.html` 与 `src/*.html`。
 
 | 命令 | 作用 |
@@ -721,8 +728,11 @@ adb shell am start -n com.dailylingo.app/.MainActivity
 1. 在 `content/` 新建 Markdown，文件名用**未占用的编号**：
 
    ```text
-   content/0021.My_Weekend.md
+   content/0026-0050/0021.My_Weekend.md
    ```
+
+   放进编号所属 Chapter 的目录即可（新区间就新建目录）；构建是递归扫描的，
+   直接平铺成 `content/0021.My_Weekend.md` 也照样能用。
 
 2. 写原始标题与正文：`# My Weekend`，然后 `## Article`。
 3. 填 `## Words`（3 列或 5 列均可）、`## Questions`、`## Answers`。
@@ -759,7 +769,7 @@ adb shell am start -n com.dailylingo.app/.MainActivity
 
 `scripts/build.py` **会做**：
 
-扫描 `content/` → 解析 Markdown 与元数据 → 校验编号 / 标题 / 结构 / 重复编号 / 文件名一致性 →
+递归扫描 `content/` → 解析 Markdown 与元数据 → 校验编号 / 标题 / 结构 / 重复编号 / 文件名一致性 →
 按编号升序 → 计算 Chapter 分组 → 只输出非空分组 → 第一组默认展开 → 渲染 `index.html` →
 渲染全部文章页 → 统一生成主标题与浏览器标签 → 渲染单词表 / 练习题 / 答案 → 关联 WAV →
 生成上一篇与下一篇 → 检查导航目标与资源路径 → 缺失音频输出警告 → 非法数据明确报错 →
@@ -824,16 +834,17 @@ $ python scripts/validate.py
 
 ```text
 $ pytest -q
-296 passed in 29.7s
+382 passed in 30.5s
 ```
 
 | 文件 | 用例数 | 覆盖内容 |
 |---|---|---|
-| `tests/test_build.py` | 106 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0025`/`0026`/`0050`/`0051`/`0075`/`9999`/`10001`，即每章 25 篇）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`，含被转义的 `1\.` 写法，题干与答案都测）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**播放器与正文之间有分隔线**、**无 ±5 秒按钮且恰好三档倍速**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、**CSS/JS 的 URL 带内容指纹（`?v=` + 8 位十六进制）**、GitHub Pages 子路径、构建可重复 |
+| `tests/test_build.py` | 110 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0025`/`0026`/`0050`/`0051`/`0075`/`9999`/`10001`，即每章 25 篇）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`，含被转义的 `1\.` 写法，题干与答案都测）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**播放器与正文之间有分隔线**、**无 ±5 秒按钮且恰好三档倍速**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、**CSS/JS 的 URL 带内容指纹（`?v=` + 8 位十六进制）**、GitHub Pages 子路径、构建可重复、**在 `content/<chapter>/` 子目录下递归发现文章（只有子目录、平铺与子目录混放、隐藏目录被忽略、两个目录里出现同一编号仍然报错）** |
 | `tests/test_frontend.py` | 7 | 在 Node 中真实执行 `assets/js/main.js`：单选正确 / 错误 / 空选、大小写不敏感、首尾空格、尾部标点、多个可接受答案、空白输入不判正确；并与 `build.normalize_answer` 做逐样本一致性比对 |
 | `tests/test_progress.py` | 32 | 学习进度的首页结构（每篇一个完成按钮且初始未完成、统计总数 / `aria-valuemax` / Chapter 汇总等于真实篇数、设置对话框与导出导入控件、Android 安装包直链带 `download` 与内容指纹且 APK 缺失时整块省略、空站点渲染 `0 / 0`）**外加在 Node 中真实执行的纯逻辑**：编号补零、文件校验（JSON 语法 / `schemaVersion` / 结构）、去重与非法条目计数、忽略不存在编号、合并取并集、统计不除零、按真实篇数判定 Chapter 完成、导出载荷结构与文件名、导出内容可被导入解析器读回 |
 | `tests/test_progress_dom.py` | 18 | 在 **jsdom** 中用真实 click 事件与真实 `localStorage` 驱动生成的首页：首次访问为空、勾选同步统计与存储、取消回退、Chapter 全完成才变绿、**每章的进度条与计数各自独立（用合成的「两章」站点验证：勾第一章不动第二章）**、刷新恢复、损坏数据隔离、存储禁用降级、导入预览、合并、覆盖需二次确认、取消覆盖、非法 JSON / 不支持版本不改动进度、未知编号忽略并计数、导出载荷与对话框开关。未安装 jsdom 时自动跳过 |
 | `tests/test_timeline.py` | 103 | `scripts/timeline.py`：切句（`Mrs.` 缩写、引号内的句末标点、引号后的叙述语并回、引号后真正的新句子不并）、**对每篇文章的每一段**验证切分不丢字、音节估算、合成 WAV 上的静音检测、DP 选中「最接近音节比例」的停顿、完全没有停顿时退回网格、时间轴覆盖整段音频、逐句首尾相接、8 bit / 缺失音频时优雅返回空、真实文章 × 真实音频的一致性、以及构建是否真的输出 `data-start` / `data-end`（缺音频时退回纯段落） |
+| `tests/test_content_links.py` | 82 | Markdown 源里每个 `## Continue` 段：每条相对链接都能在磁盘上解析、previous / next 等于**编号相邻**的上一篇 / 下一篇（跨 Chapter 目录也算）、首篇 previous 与末篇 next 都指回首页、并单独校验 `0025` ↔ `0026` 这条跨目录（`0001-0025/` → `0026-0050/`）的边界 |
 | `tests/test_player_dom.py` | 9 | 在 **jsdom** 中用替身 `Audio` 驱动生成的文章页：播放前不高亮、高亮跟随 `currentTime`（0 / 2 / 4 秒 → 第 0 / 1 / 2 句）、点句子跳到句首并开始播放、选中文字时点击不跳转、快退后高亮回退、始终只有一句处于高亮。未安装 jsdom 时自动跳过 |
 | `tests/test_auto_complete.py` | 8 | 在 Node 里**不带 DOM**执行 `audio-player.js` 与 `study-completion.js`：收听累计（第一拍只记基准、正常 0.25 s 累加、恰好 1.5 s 仍算、向前 / 向后跳转丢弃、时间不动不加）与完成判定边界（0.89 不算、0.90 算、错一题不算、无题目不算、无快照不算）；外加生成结构 —— 每页的 `data-article-id`、`data-study-auto` 是否与「真的有音频且真的有题目」一致、两个脚本都带指纹、首页手动开关仍在 |
 | `tests/test_auto_complete_dom.py` | 13 | 在 jsdom 里用真实的 `main.js` / `progress.js` / `study-completion.js` 驱动**生成的文章页**：首次进入不动、只答题不完成、只听不完成、听一半不完成、听完且全对即标记并落库、反过来先听完再答题也打勾、重开显示已完成、完成后改答案不撤销、写入与已有记录取并集、坏数据先留档再标记、存储不可用明确报错。文章编号与题目数从构建结果读取，不写死；没装 jsdom 时整组 skip |
