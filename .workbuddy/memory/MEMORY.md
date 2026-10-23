@@ -47,12 +47,14 @@
 WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不记绝对路径**（写死坏过两次）。
 定位：`--audio-tool` > `DAILYLINGO_AUDIO_TOOL` > PATH（`eaudio.cmd`/`EnglishAudio.exe`）> `tools/eaudio.cmd`。
 只读 `## Article`；正文含中文被拒（exit 4）；弯引号 `“ ” ’` **不拦**。WAV 均单声道/16 bit/22 050 Hz。
-⚠️ **`009.ai_voice/publisher/` 里的 exe 会过期**：runtimeconfig 仍是 `net10.0`，本机只有 7/8/9 时
-直接跑只吐 `You must install or update .NET…` 然后 exit 1（在 bash 里是**空输出 + 立即结束**，
-别误判成被沙箱杀）。正解 `dotnet build src/EnglishAudio/EnglishAudio.csproj -c Release`，
-跑 `src/EnglishAudio/bin/Release/net9.0-windows/EnglishAudio.exe <md> --dist=sources`
-（AppPaths 向上找 `tools/piper`，必须在仓库树内）。另：本机 `HTTPS_PROXY`/`https_proxy` 同时存在，
-PS 的 `Start-Process` 会抛「关键字重复」，别用它启动。
+⚠️ `009.ai_voice/publisher/` 的 exe 用 `net10.0` runtimeconfig：**本机已装 `Microsoft.NETCore.App 10.0.11`，
+直接可用**（2026-10-23 实测生成 5 篇全成功）。若哪天真报 `You must install or update .NET…`
+（bash 里是**空输出 + 立即结束**，别误判成被沙箱杀），才退回源码：
+`dotnet build src/EnglishAudio/EnglishAudio.csproj -c Release` +
+`src/EnglishAudio/bin/Release/net9.0-windows/EnglishAudio.exe <md> --dist=sources`
+（AppPaths 向上找 `tools/piper`，必须在仓库树内）。
+⚠️ **`eaudio.cmd` 会把 stdout 吞掉**：成功也是空输出，**判据是 WAV 是否落地 + exit=0**，不是有没有打印。
+另：本机 `HTTPS_PROXY`/`https_proxy` 同时存在，PS 的 `Start-Process` 会抛「关键字重复」，别用它启动。
 
 ## 学习进度（纯前端，两处写入）
 - 存储 `localStorage["dailylingo_learning_progress_v1"]` = `{schemaVersion:1, completedArticles:["0001"], updatedAt}`；
@@ -78,10 +80,10 @@ PS 的 `Start-Process` 会抛「关键字重复」，别用它启动。
   进度镜像成 `dailylingo-progress.json`（Android 写 LF，Windows .NET 9 默认 CRLF）。
   ⚠️ Android：`WindowInsetsController` 要在 `setContentView` 之后取；隐藏 WebView 用 **GONE**。
 
-## 已验证（2026-10-22，45 篇）
-`build.py` **45 篇 / 2 Chapter（0001–0025 满章 + 0026–0050 共 20 篇）/ 0 警告**；`validate.py`
-**PASS 2086**；`pytest -q` **417 passed**（test_timeline 按篇参数化，45 篇 = 113 例）；
-全量重建冷 3.25 s / 时间轴缓存命中 0.30 s。
+## 已验证（2026-10-23，50 篇）
+`build.py` **50 篇 / 2 Chapter（0001–0025 + 0026–0050，两章均满 25 篇）/ 0 警告**；`validate.py`
+**PASS 2299**；`pytest -q` **437 passed**（test_timeline 按篇参数化 = 123 例，content_links 102 例）；
+全量重建冷 3.49 s / 时间轴缓存命中 0.30 s；51 页 706 条链接 + md 150 条链接均 0 坏链。
 **新文章先用 `python scripts/fix_content.py --apply` 归一文件名与 Continue 链接**
 （`--check` 只报；邻接按「编号升序相邻」，缺号也接得上）。⚠️ 用户常边写边存：
 改名/构建前先看 mtime 是否稳定，否则会按旧内容改名。
