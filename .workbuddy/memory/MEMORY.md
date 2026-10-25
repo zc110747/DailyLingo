@@ -81,10 +81,10 @@ WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不
   进度镜像成 `dailylingo-progress.json`（Android 写 LF，Windows .NET 9 默认 CRLF）。
   ⚠️ Android：`WindowInsetsController` 要在 `setContentView` 之后取；隐藏 WebView 用 **GONE**。
 
-## 已验证（2026-10-24，55 篇）
-`build.py` **55 篇 / 3 Chapter（0001–0025 与 0026–0050 各满 25 篇 + 0051–0075 开篇 5 篇）/ 0 警告**；
-`validate.py` **PASS 2527**；`pytest -q` **457 passed**（test_timeline 133 例，content_links 112 例）；
-120 条路径本地 HTTP 全 200；全量重建冷 1.90 s / 时间轴缓存命中 0.71 s；`watch.py --once` 2524 ms。
+## 已验证（2026-10-25，60 篇）
+`build.py` **60 篇 / 3 Chapter（0001–0025 与 0026–0050 各满 25 篇 + 0051–0075 开篇 10 篇）/ 0 警告**；
+`validate.py` **PASS 2732**；`pytest -q` **477 passed**（test_timeline 143 例，content_links 122 例）；
+130 条路径本地 HTTP 全 200；全量重建冷 2.10 s / 时间轴缓存命中 0.81 s；`watch.py --once` 2673 ms。
 **新文章先用 `python scripts/fix_content.py --apply` 归一文件名与 Continue 链接**
 （`--check` 只报；邻接按「编号升序相邻」，缺号也接得上）。⚠️ 用户常边写边存：
 改名/构建前先看 mtime 是否稳定，否则会按旧内容改名。
