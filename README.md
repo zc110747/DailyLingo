@@ -12,7 +12,7 @@ committed as-is and served straight from GitHub Pages.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#quick-start)
 [![Runtime dependencies: none](https://img.shields.io/badge/runtime%20dependencies-none-success.svg)](#quick-start)
-[![Tests: 477 passed](https://img.shields.io/badge/tests-477%20passed-success.svg)](#verification-results)
+[![Tests: 517 passed](https://img.shields.io/badge/tests-517%20passed-success.svg)](#verification-results)
 [![Deploy: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#deployment-to-github-pages)
 
 **Live site:** <https://zc110747.github.io/DailyLingo/>
@@ -146,8 +146,10 @@ DailyLingo/
 │   ├── 0001-0025/
 │   │   ├── 0001.A_New_Hobby.md
 │   │   └── …                   # one .md per article
-│   └── 0026-0050/
-│       └── …                   # scanned recursively — sub-folders are optional
+│   ├── 0026-0050/
+│   │   └── …                   # scanned recursively — sub-folders are optional
+│   └── 0051-0075/
+│       └── …                   # one folder per 25-article Chapter
 ├── sources/                    # WAV files from the external TTS tool (same basename as the .md)
 │   ├── 0001.A_New_Hobby.wav
 │   └── …                       # 0002, 0003, … one per article
@@ -689,7 +691,7 @@ removed.
 
 Behaviour:
 
-- **Full rebuild** (sixty articles, ~0.81 s in process with the timeline cache warm; the first run of a process takes ~2.10 s
+- **Full rebuild** (seventy articles, ~0.42 s in process with the timeline cache warm; the first run of a process takes ~4.85 s
   because it analyses each WAV for sentence timings, which are then cached against the file's
   size/mtime and only recomputed when the audio itself changes): adding or removing an article
   changes the
@@ -887,11 +889,11 @@ $ python scripts/build.py --verbose
   文章 0001  A New Hobby  |  3 词  3 题  |  音频 有
   …                                   # one such line per article
 DailyLingo 构建完成
-  文章总数：60
+  文章总数：70
   Chapter 分组：3
     Chapter 0001–0025（默认展开）：25 篇
     Chapter 0026–0050（默认折叠）：25 篇
-    Chapter 0051–0075（默认折叠）：10 篇
+    Chapter 0051–0075（默认折叠）：20 篇
   警告：0 条
 ```
 
@@ -902,7 +904,7 @@ every title under its Chapter. The CLI output is currently in Chinese; the forma
 
 ```text
 $ python scripts/validate.py
-结果：PASS 2732 / FAIL 0 / WARN 0
+结果：PASS 3142 / FAIL 0 / WARN 0
 ```
 
 Covers: article data; number uniqueness and ascending order; Chapter range boundaries and the
@@ -936,7 +938,7 @@ network calls**.
 
 ```text
 $ pytest -q
-477 passed in 19.8s
+517 passed in 37.2s
 ```
 
 | File | Cases | Coverage |
@@ -945,8 +947,8 @@ $ pytest -q
 | `tests/test_frontend.py` | 7 | Executes `assets/js/main.js` for real in Node: correct / incorrect / empty single-choice selections, case insensitivity, leading and trailing whitespace, trailing punctuation, multiple acceptable answers, blank input never correct; plus a sample-by-sample consistency check against `build.normalize_answer` |
 | `tests/test_progress.py` | 32 | Homepage structure for the progress feature (one toggle per real article, all starting unchecked, stats total / `aria-valuemax` / Chapter totals matching reality, settings dialog and its export-import controls, an Android package link carrying `download` and a content fingerprint, the block omitted when the APK is missing, empty site rendering `0 / 0`) **plus the pure logic executed in Node**: zero-padded IDs, payload validation (JSON syntax / `schemaVersion` / structure), dedupe and invalid-entry counting, ignoring unknown IDs, merge union, statistics without dividing by zero, Chapter completion on the real count, export payload shape, filename and import round-trip |
 | `tests/test_progress_dom.py` | 18 | Drives the generated homepage in **jsdom** with real click events and a real `localStorage`: first visit empty, toggle updates stats / storage / Chapter, unchecking reverts, Chapter turns green only when complete, **each Chapter's own progress bar and counter move independently (checked on a synthetic two-Chapter site)**, reload restores, corrupt data quarantined, storage-disabled degradation, import preview, merge, overwrite behind a second confirmation, cancelling overwrite, invalid JSON / unsupported version leaving progress intact, unknown IDs ignored and counted, export payload and dialog open/close. Skipped automatically when jsdom is not installed |
-| `tests/test_timeline.py` | 143 | `scripts/timeline.py`: sentence splitting (abbreviations such as `Mrs.`, terminators inside quotes, an attribution after a quote merged back, a long following sentence *not* merged), lossless splitting verified against **every paragraph of every article**, syllable estimation, silence detection on synthesised WAVs, the DP picking the pause closest to the syllable ratio, falling back to a grid when there is no pause at all, timeline covering the whole file, monotonic contiguous windows, graceful empty results for 8-bit / missing audio, consistency against the real articles and real WAVs, and the build emitting `data-start` / `data-end` (or plain paragraphs when audio is absent) |
-| `tests/test_content_links.py` | 122 | Every `## Continue` block in the Markdown sources: each relative link resolves on disk, previous/next equal the **number-adjacent** article even when it sits in another Chapter folder, first `previous` and last `next` point back to the homepage, and the `0025` ↔ `0026` boundary (which crosses `0001-0025/` → `0026-0050/`) is checked explicitly |
+| `tests/test_timeline.py` | 163 | `scripts/timeline.py`: sentence splitting (abbreviations such as `Mrs.`, terminators inside quotes, an attribution after a quote merged back, a long following sentence *not* merged), lossless splitting verified against **every paragraph of every article**, syllable estimation, silence detection on synthesised WAVs, the DP picking the pause closest to the syllable ratio, falling back to a grid when there is no pause at all, timeline covering the whole file, monotonic contiguous windows, graceful empty results for 8-bit / missing audio, consistency against the real articles and real WAVs, and the build emitting `data-start` / `data-end` (or plain paragraphs when audio is absent) |
+| `tests/test_content_links.py` | 142 | Every `## Continue` block in the Markdown sources: each relative link resolves on disk, previous/next equal the **number-adjacent** article even when it sits in another Chapter folder, first `previous` and last `next` point back to the homepage, and the `0025` ↔ `0026` boundary (which crosses `0001-0025/` → `0026-0050/`) is checked explicitly |
 | `tests/test_fix_content.py` | 15 | `scripts/fix_content.py`: slug rules (apostrophes dropped, punctuation removed, spaces → underscores), **every real article's filename already equals `slugify(title)`**, placeholder names renamed, links recomputed across Chapter folders, rerunning is a no-op, `--check` reports without touching files, duplicate numbers and a missing `# Title` are rejected |
 | `tests/test_player_dom.py` | 9 | Drives the generated article page in **jsdom** with a stand-in `Audio`: nothing highlighted before playback, highlight follows `currentTime` (0 / 2 / 4 s → sentences 0 / 1 / 2), clicking a sentence seeks to its start and starts playing, clicking while text is selected does nothing, rewinding moves the highlight back, exactly one sentence active. Skipped automatically when jsdom is not installed |
 | `tests/test_auto_complete.py` | 8 | Executes `audio-player.js` + `study-completion.js` in Node **without a DOM**: the listen accumulator (first tick only sets the baseline, a normal 0.25 s step accumulates, a step of exactly 1.5 s still counts, forward / backward seeks are discarded, a frozen clock adds nothing) and the completion boundary (0.89 no, 0.90 yes, one wrong answer no, empty question set no, no snapshot no); plus the generated markup — `data-article-id` on every page, `data-study-auto` matching whether audio *and* questions really exist, both scripts referenced with a fingerprint, and the homepage manual toggle still present |
@@ -974,7 +976,7 @@ $ python -m http.server 8123
 200 …                               <- /sources/0002 … 0020  (one WAV per article)
 ```
 
-*(Abridged: all 130 paths — the homepage plus 60 article pages, 60 WAVs, the shared assets and the Android package — were
+*(Abridged: all 150 paths — the homepage plus 70 article pages, 70 WAVs, the shared assets and the Android package — were
 requested and answered `200`; the per-article rows are collapsed to one example plus `…` so this
 listing stays readable as the collection grows.)*
 
@@ -1051,8 +1053,8 @@ live site.
   another machine — that is exactly what happened (the path broke twice as the source repo moved).
   Because the tool is installed on the system `PATH`, `resolve_audio_tool()` now looks it up by name
   (`eaudio.cmd` / `EnglishAudio.exe` / `EnglishAudio`) and **no absolute path is recorded anywhere in
-  the repository**. Verified: it resolves on this machine and `watch.py --once` rebuilds all 60
-  articles in 2673 ms.
+  the repository**. Verified: it resolves on this machine and `watch.py --once` rebuilds all 70
+  articles in 5770 ms.
 - **A line-ending trap aimed at the "byte-identical rebuild" guarantee.** `core.autocrlf=true` was
   set on the development machine and the repository had no `.gitattributes`, so a fresh clone would
   check `src/*.html` out as **CRLF** while `build.py` always writes LF. Reproduced by converting the
