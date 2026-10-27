@@ -81,19 +81,24 @@ WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不
   进度镜像成 `dailylingo-progress.json`（Android 写 LF，Windows .NET 9 默认 CRLF）。
   ⚠️ Android：`WindowInsetsController` 要在 `setContentView` 之后取；隐藏 WebView 用 **GONE**。
 
-## 已验证（2026-10-26，70 篇）
-`build.py` **70 篇 / 3 Chapter（0001–0025、0026–0050 各满 25 篇 + 0051–0075 共 20 篇）/ 0 警告**；
-`validate.py` **PASS 3142**；`pytest -q` **517 passed**（test_timeline 163 例，content_links 142 例）；
-71 个 HTML 986 条 + md 210 条链接均 0 坏链；全量重建冷 4.85 s / 时间轴缓存命中 0.42 s；
-`watch.py --once` 5770 ms。⚠️ **构建不校验标题唯一性**：
-`0055.The_First_Woman_in_Space` 与 `0040` 同名同题（不同改写、均 5 题），
-build/validate 全绿但首页会出现两个同名条目 —— 这类问题只能人工发现。
+## 已验证（2026-10-27，75 篇）
+`build.py` **75 篇 / 3 Chapter（0001–0025、0026–0050、0051–0075 各满 25 篇）/ 0 警告**；
+`validate.py` **PASS 3352**；`pytest -q` **537 passed**（test_timeline 173 例，content_links 152 例）；
+76 个 HTML 1056 条 + md 225 条链接均 0 坏链；全量重建冷 5.01 s / 时间轴缓存命中 0.43 s；
+`watch.py --once` 5472 ms。
+**标题唯一性已进 validate**（「标题唯一（同名会让首页出现两个无法区分的条目）」）：
+0040/0055 同名、0071/0072 连正文都一模一样这两次，都是全绿放过去的，
+现在不同编号共用同一标题会直接 FAIL（已反向验证过）。
+⚠️ 但仍**不校验正文重复**：同题不同改写、或改标题后正文照抄，仍只能人工发现。
 **新文章先用 `python scripts/fix_content.py --apply` 归一文件名与 Continue 链接**
 （`--check` 只报；邻接按「编号升序相邻」，缺号也接得上）。⚠️ 用户常边写边存：
-改名/构建前先看 mtime 是否稳定，否则会按旧内容改名。
+改名/构建前先看 mtime 是否稳定，否则会按旧内容改名。⚠️ 改名后**旧 WAV 与旧 HTML 要手删**
+（构建不删文件），否则站点会留下孤儿产物。
 文章改名史：0005 撞名、0016 去撇号、0018 笔误、0021 去弯撇号、0029 去文件名空格、
 0039 去 ASCII 撇号（`Town's`→`Towns`，H1 保留 `'`，同 0016 处理）、
-0029/0030 编号写错重排为 0028/0029（H1 均保留排版符号）。**编号即身份**：改编号必须同步
+0029/0030 编号写错重排为 0028/0029（H1 均保留排版符号）、
+**0055 整篇换题**（`The_First_Woman_in_Space` → `Why_Do_Cities_Have_Street_Names`，
+解掉与 0040 的同名）。**编号即身份**：改编号必须同步
 md 文件名 + 相邻 Continues + 重生成同名 WAV + 手工删旧 `src/*.html`（构建不删文件）。
 `## Continue(s)` 段由构建忽略，但 md 里仍需自洽：previous/next 按**编号相邻**、缺号不跳空，
 目录写 `../index.html`（仓库无 `catalogue.md`）。
