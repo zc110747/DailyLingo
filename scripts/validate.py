@@ -87,6 +87,15 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
     numbers = [a.number for a in articles]
     report.check("编号唯一", len(numbers) == len(set(numbers)))
     report.check("编号升序排列", numbers == sorted(numbers))
+    # 编号不同但标题相同时，首页会出现两个肉眼无法区分的条目（曾真的发生过：
+    # 0040 与 0055 同名同题、0071 与 0072 连正文都一模一样），因此单独校验标题唯一。
+    titles = [a.title for a in articles]
+    duplicate_titles = sorted({t for t in titles if titles.count(t) > 1})
+    report.check(
+        "标题唯一（同名会让首页出现两个无法区分的条目）",
+        not duplicate_titles,
+        "重复：" + "、".join(duplicate_titles) if duplicate_titles else "",
+    )
     for article in articles:
         report.check(
             f"文件名与编号一致（{article.source.name}）",
