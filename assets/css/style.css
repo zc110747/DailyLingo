@@ -1315,6 +1315,11 @@ summary:focus-visible,
   accent-color: var(--accent);
 }
 
+/* 同一分区里多个开关上下叠放时留出间距（现在有「播完循环播放」+「页面语音跟随」两个） */
+.settings-toggle + .settings-toggle {
+  margin-top: 8px;
+}
+
 .settings-toggle-body {
   display: block;
   font-size: 13.5px;

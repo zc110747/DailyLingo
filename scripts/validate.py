@@ -197,6 +197,13 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
         and 'id="setting-reading-follow" checked' not in index_html,
     )
     report.check(
+        "首页设置里有「播完循环播放」开关且默认开启",
+        'id="setting-audio-loop"' in index_html
+        and 'data-setting="audio-loop"' in index_html
+        and "播完循环播放" in index_html
+        and re.search(r'id="setting-audio-loop"[^>]*\bchecked\b', index_html) is not None,
+    )
+    report.check(
         "首页统计总数等于实际文章数",
         f"data-progress-total>{len(articles)}<" in index_html,
         f"articles={len(articles)}",
@@ -579,6 +586,23 @@ def validate(content_dir: Path, out_dir: Path, sources_dir: Path) -> int:
         "语音跟随开关默认关闭（读取失败一律按不跟随处理）",
         player_src.count("shouldFollow()") >= 1
         and "return false; // 存储不可用 ⇒ 用默认值（不跟随）" in main_src,
+    )
+    report.check(
+        f"{build.MAIN_JS} 提供「播完循环播放」设置（键在三个脚本里一致）",
+        "dailylingo_audio_loop_v1" in main_src
+        and "audioLoop" in main_src
+        and "audioLoop" in player_src
+        and "audioLoop" in progress_src,
+    )
+    report.check(
+        "循环播放默认开启（读不到设置就按循环处理）",
+        "shouldLoop()" in player_src
+        and "return true; // 存储不可用 ⇒ 用默认值（循环）" in main_src,
+    )
+    report.check(
+        "循环播放靠 ended 里手动重播，不用 audio.loop",
+        re.search(r"audio\.loop\s*=", player_src) is None and "shouldLoop()" in player_src,
+        "原生 loop 不触发 ended，收听完成的上报会永远发不出去",
     )
 
     # 文章页自动完成：两个脚本不能各写一套事件名，靠这两个断言锁住契约

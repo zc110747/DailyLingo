@@ -21,6 +21,7 @@ const mainSource = MAIN ? fs.readFileSync(MAIN, 'utf8') : null;
 
 const KEY = 'dailylingo_learning_progress_v1';
 const FOLLOW_KEY = 'dailylingo_reading_follow_v1';
+const LOOP_KEY = 'dailylingo_audio_loop_v1';
 const out = {};
 
 function tick(ms) {
@@ -382,7 +383,37 @@ async function pickFile(w, text, name) {
     w.close();
   }
 
-  /* 18. 每章独立的计数与进度条：勾一篇只动它所在的那一章 */
+  /* 18. 「播完循环播放」开关：默认开启、切换即写存储、重开对话框保持状态 */
+  {
+    const w = await boot(null);
+    const input = q(w, '#setting-audio-loop');
+    out.loop_default = {
+      exists: !!input,
+      checked: input ? input.checked : null,
+      stored: w.localStorage.getItem(LOOP_KEY),
+    };
+    q(w, '[data-action="open-settings"]').click();
+    input.checked = false;
+    input.dispatchEvent(new w.Event('change', { bubbles: true }));
+    out.loop_off = {
+      checked: input.checked,
+      stored: w.localStorage.getItem(LOOP_KEY),
+      message: q(w, '[data-settings-message]').textContent,
+    };
+    q(w, '[data-action="close-settings"]').click();
+    q(w, '[data-action="open-settings"]').click(); // 重开：应从存储恢复
+    out.loop_reopen = { checked: input.checked };
+    input.checked = true;
+    input.dispatchEvent(new w.Event('change', { bubbles: true }));
+    out.loop_on = {
+      checked: input.checked,
+      stored: w.localStorage.getItem(LOOP_KEY),
+      message: q(w, '[data-settings-message]').textContent,
+    };
+    w.close();
+  }
+
+  /* 19. 每章独立的计数与进度条：勾一篇只动它所在的那一章 */
   {
     const w = await boot(null);
     const snap = function () {

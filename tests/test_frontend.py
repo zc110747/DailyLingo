@@ -164,6 +164,7 @@ def test_js_blank_guard_exists_in_source():
 # 「页面语音跟随」的存储层在 main.js（文章页与首页共用），这里用假 window 直接跑。
 
 READING_FOLLOW_KEY = "dailylingo_reading_follow_v1"
+AUDIO_LOOP_KEY = "dailylingo_audio_loop_v1"
 
 FOLLOW_HARNESS = r"""
 const fs = require('fs');
@@ -196,6 +197,11 @@ if (!api) {
   process.stderr.write('main.js did not expose DailyLingo.readingFollow');
   process.exit(2);
 }
+const loop = ctx.DailyLingo.audioLoop;
+if (!loop) {
+  process.stderr.write('main.js did not expose DailyLingo.audioLoop');
+  process.exit(2);
+}
 
 const out = { key: api.key, initial: api.enabled() };
 out.setTrue = api.set(true);
@@ -204,6 +210,14 @@ out.raw = mode === 'memory' ? ctx.window.localStorage.getItem(api.key) : null;
 out.setFalse = api.set(false);
 out.afterFalse = api.enabled();
 out.rawFalse = mode === 'memory' ? ctx.window.localStorage.getItem(api.key) : null;
+
+out.loopKey = loop.key;
+out.loopInitial = loop.enabled();
+out.loopSetFalse = loop.set(false);
+out.loopAfterFalse = loop.enabled();
+out.loopRawFalse = mode === 'memory' ? ctx.window.localStorage.getItem(loop.key) : null;
+out.loopSetTrue = loop.set(true);
+out.loopAfterTrue = loop.enabled();
 process.stdout.write(JSON.stringify(out));
 """
 
@@ -248,3 +262,29 @@ def test_reading_follow_degrades_to_off():
         assert out["initial"] is False, mode
         assert out["setTrue"] is False, mode
         assert out["afterTrue"] is False, mode
+
+
+# 「播完循环播放」：同一个存储层，默认值反过来（默认开）
+def test_audio_loop_defaults_to_on():
+    """没设置过 ⇒ 循环；这正是「播完自动重播、不用手动再点」的默认行为。"""
+    out = _run_follow("memory")
+    assert out["loopKey"] == AUDIO_LOOP_KEY
+    assert out["loopInitial"] is True
+
+
+def test_audio_loop_round_trips():
+    out = _run_follow("memory")
+    assert out["loopSetFalse"] is True
+    assert out["loopAfterFalse"] is False
+    assert out["loopRawFalse"] == "0"
+    assert out["loopSetTrue"] is True
+    assert out["loopAfterTrue"] is True
+
+
+def test_audio_loop_degrades_to_on():
+    """存储不可用时不报错，并按默认值（循环）处理，而不是静默变成「不循环」。"""
+    for mode in ("broken", "no-window"):
+        out = _run_follow(mode)
+        assert out["loopInitial"] is True, mode
+        assert out["loopSetFalse"] is False, mode
+        assert out["loopAfterFalse"] is True, mode

@@ -970,7 +970,14 @@ def render_index(chapters: Sequence[Chapter]) -> str:
       </section>
       <section class="settings-section" aria-labelledby="settings-reading-title">
         <h3 class="settings-subtitle" id="settings-reading-title">朗读</h3>
-        <p class="settings-desc">播放音频时，正在朗读的句子会在正文里加粗。下面的开关只决定页面要不要跟着滚动。</p>
+        <p class="settings-desc">播放音频时，正在朗读的句子会在正文里加粗。下面的开关决定音频播完之后怎么走、页面要不要跟着滚动。</p>
+        <label class="settings-toggle">
+          <input type="checkbox" id="setting-audio-loop" data-setting="audio-loop" checked>
+          <span class="settings-toggle-body">
+            <span class="settings-toggle-label">播完循环播放</span>
+            <span class="settings-toggle-hint">默认开启：音频播到结尾会回到开头重播，适合反复磨耳朵。关闭后播完即停，不会再响。</span>
+          </span>
+        </label>
         <label class="settings-toggle">
           <input type="checkbox" id="setting-reading-follow" data-setting="reading-follow">
           <span class="settings-toggle-body">

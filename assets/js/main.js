@@ -1,7 +1,7 @@
 /* ==========================================================================
    DailyLingo — 页面交互
    职责：阅读理解练习的判分（单选 + 填空）、答案反馈、可访问性状态维护，
-        以及跨页面共用的本地设置（页面语音跟随）。
+        以及跨页面共用的本地设置（页面语音跟随 / 播完循环播放）。
 
    正确答案来自页面内嵌的 <script type="application/json" id="quiz-data">，
    与构建脚本生成的数据同源，因此自动判分与 Answers 区域显示的答案必然一致。
@@ -267,16 +267,20 @@
   }
 
   /* ---------------------------------------------------------------- 本地设置
-     「页面语音跟随」：播放到哪句，正文要不要自动滚到那一句。
+     两个朗读相关开关，都是单独一个 localStorage 键，
+     不混进学习进度的四键导出契约（那是跨端镜像的格式）。
+     写入在首页设置面板（progress.js），读取在文章页（audio-player.js），
+     两边都通过 globalThis.DailyLingo.* 走这一份实现。
 
+     「页面语音跟随」：播放到哪句，正文要不要自动滚到那一句。
      默认**关闭** —— 很多人的用法是边听边做题，播放器每换一句就把页面滚一次，
      等于每隔几秒把人拽回正文，题目就做不成了。开启后才跟随。
 
-     单独一个 localStorage 键，不混进学习进度的四键导出契约（那是跨端镜像的格式）。
-     写入在首页设置面板（progress.js），读取在文章页（audio-player.js），
-     两边都通过 globalThis.DailyLingo.readingFollow 走这一份实现。
-  */
+     「播完循环播放」：音频播到结尾要不要回到开头重播。
+     默认**开启** —— 单篇 40~70 秒，听完就静音几乎一定要手动再点一次播放；
+     想精听某一段时才关掉。 */
   var READING_FOLLOW_KEY = "dailylingo_reading_follow_v1";
+  var AUDIO_LOOP_KEY = "dailylingo_audio_loop_v1";
 
   function settingStorage() {
     if (typeof window === "undefined") {
@@ -314,6 +318,34 @@
     }
   }
 
+  /* 与 readingFollow 唯一的区别是**默认值反过来**：
+     存储不可用、或者从没设置过，都按「循环」处理。
+     判据写成「不等于 "0"」而不是「等于 "1"」，所以将来多出别的脏值也仍然按默认开启走。 */
+  function audioLoopEnabled() {
+    var store = settingStorage();
+    if (!store) {
+      return true; // 存储不可用 ⇒ 用默认值（循环）
+    }
+    try {
+      return store.getItem(AUDIO_LOOP_KEY) !== "0";
+    } catch (error) {
+      return true;
+    }
+  }
+
+  function setAudioLoop(enabled) {
+    var store = settingStorage();
+    if (!store) {
+      return false;
+    }
+    try {
+      store.setItem(AUDIO_LOOP_KEY, enabled ? "1" : "0");
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   /* 供自动化测试使用的纯逻辑导出（无 DOM 依赖） */
   if (typeof globalThis !== "undefined") {
     globalThis.DailyLingo = {
@@ -323,6 +355,11 @@
         key: READING_FOLLOW_KEY,
         enabled: readingFollowEnabled,
         set: setReadingFollow
+      },
+      audioLoop: {
+        key: AUDIO_LOOP_KEY,
+        enabled: audioLoopEnabled,
+        set: setAudioLoop
       }
     };
   }

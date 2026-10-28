@@ -6,6 +6,7 @@
         0.75x / 1x / 1.25x 倍速、音量、加载状态、播放结束、加载失败；
         进度条支持键盘左右键（Shift 加速）微调。
         句子高亮：读到哪句就把哪句标粗，拖动/点按跳转后立即跟着走。
+        循环播放：播完是否回到开头由本地设置决定（默认循环，见 main.js）。
         收听进度：按 timeupdate 累计实际播过的媒体秒数，通过
         `dailylingo:listen` 事件上报（文章页据此判断「听完了没有」）。
    ========================================================================== */
@@ -164,7 +165,6 @@
       var settings = api && api.readingFollow;
       return !!(settings && typeof settings.enabled === "function" && settings.enabled());
     }
-
     return {
       sync: sync,
       /* 点击某句 → 从这句开头播放。句首时间落在停顿里，不会切掉第一个音。 */
@@ -415,16 +415,40 @@
       }
     });
 
+    /* 「播完循环播放」开关（设置在首页，实现见 assets/js/main.js）。
+       默认**开启** —— 单篇 40~70 秒，播完就静音几乎一定要手动再点一次。
+       设置模块不存在时（例如单独加载本脚本做测试）按默认值走，即返回 true。 */
+    function shouldLoop() {
+      var api = typeof globalThis !== "undefined" ? globalThis.DailyLingo : null;
+      var settings = api && api.audioLoop;
+      if (!settings || typeof settings.enabled !== "function") {
+        return true;
+      }
+      return !!settings.enabled();
+    }
+
     audio.addEventListener("ended", function () {
       // 最后一个 timeupdate 通常离结尾还差几十毫秒，这里把这截尾巴补上
       if (lastMark !== null) {
         listened = addListenStep(listened, lastMark, audio.currentTime, LISTEN_STEP_LIMIT);
         lastMark = null;
       }
+      renderProgress();
+      reportListen(true); // 先把「这一轮听完了」报上去：循环与否，这一轮都算听完
+
+      /* 回到开头继续播。
+         刻意**不用** audio.loop —— 原生循环不触发 ended，上面那条上报就永远发不出去，
+         文章页的「听够 90% 自动完成」会卡在最后一帧。手动重播则每轮都能报一次。
+         进度条与句子高亮会随 renderProgress() 一起退回开头。 */
+      if (shouldLoop()) {
+        audio.currentTime = 0;
+        renderProgress();
+        play();
+        return;
+      }
+
       setToggleLabel(false);
       setState("播放结束");
-      renderProgress();
-      reportListen(true);
     });
 
     audio.addEventListener("error", function () {

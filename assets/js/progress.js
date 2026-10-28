@@ -554,20 +554,41 @@
     var importMsg = dialog.querySelector("[data-import-message]");
     var fileInput = dialog.querySelector("[data-import-input]");
     var followInput = dialog.querySelector('[data-setting="reading-follow"]');
+    var loopInput = dialog.querySelector('[data-setting="audio-loop"]');
     var pending = null; // { valid: string[], unknown: number }
 
-    /* 设置项的读写由 main.js 提供（文章页也要读同一个键），这里只负责界面。 */
-    function settingsApi() {
+    /* 设置项的读写由 main.js 提供（文章页也要读同一个键），这里只负责界面。
+       name 是 globalThis.DailyLingo 下的属性名，两个开关共用一套读写。 */
+    function settingsApi(name) {
       var api = typeof globalThis !== "undefined" ? globalThis.DailyLingo : null;
-      return api && api.readingFollow ? api.readingFollow : null;
+      return api && api[name] ? api[name] : null;
     }
 
-    function syncFollowInput() {
-      if (!followInput) {
+    function syncToggle(input, name) {
+      if (!input) {
         return;
       }
-      var api = settingsApi();
-      followInput.checked = !!(api && typeof api.enabled === "function" && api.enabled());
+      var api = settingsApi(name);
+      input.checked = !!(api && typeof api.enabled === "function" && api.enabled());
+    }
+
+    function bindToggle(input, name, onText, offText) {
+      if (!input) {
+        return;
+      }
+      syncToggle(input, name);
+      input.addEventListener("change", function () {
+        var api = settingsApi(name);
+        var wanted = !!input.checked;
+        var saved = !!(api && typeof api.set === "function" && api.set(wanted));
+        if (!saved) {
+          // 存储不可用（隐私模式 / 被策略禁用）：把开关拨回去，别让人以为已经生效
+          input.checked = !wanted;
+          setMessage(settingsMsg, "当前浏览器无法保存设置（本地存储不可用）。", "err");
+          return;
+        }
+        setMessage(settingsMsg, wanted ? onText : offText, "ok");
+      });
     }
 
     function setMessage(node, text, kind) {
@@ -583,7 +604,9 @@
 
     function openDialog() {
       setMessage(settingsMsg, "", "");
-      syncFollowInput(); // 可能刚在别的标签页改过，每次打开都对齐一次
+      // 可能刚在别的标签页改过，每次打开都对齐一次
+      syncToggle(followInput, "readingFollow");
+      syncToggle(loopInput, "audioLoop");
       if (typeof dialog.showModal === "function") {
         try {
           dialog.showModal();
@@ -840,25 +863,8 @@
       fileInput.addEventListener("change", onFilePicked);
     }
 
-    if (followInput) {
-      syncFollowInput();
-      followInput.addEventListener("change", function () {
-        var api = settingsApi();
-        var wanted = !!followInput.checked;
-        var saved = !!(api && typeof api.set === "function" && api.set(wanted));
-        if (!saved) {
-          // 存储不可用（隐私模式 / 被策略禁用）：把开关拨回去，别让人以为已经生效
-          followInput.checked = !wanted;
-          setMessage(settingsMsg, "当前浏览器无法保存设置（本地存储不可用）。", "err");
-          return;
-        }
-        setMessage(
-          settingsMsg,
-          wanted ? "已开启页面语音跟随。" : "已关闭页面语音跟随。",
-          "ok"
-        );
-      });
-    }
+    bindToggle(followInput, "readingFollow", "已开启页面语音跟随。", "已关闭页面语音跟随。");
+    bindToggle(loopInput, "audioLoop", "已开启播完循环播放。", "已关闭播完循环播放。");
   }
 
   /* -------------------------------------------------------------- 启动 */

@@ -80,6 +80,11 @@ async function boot() {
     scrollLog.push(this.getAttribute('data-start'));
   };
   w.eval(source);
+  // 收集收听进度上报：文章页的自动完成只认这个事件，循环重播不能把它吞掉
+  const listens = [];
+  w.document.addEventListener('dailylingo:listen', function (event) {
+    listens.push(event.detail || {});
+  });
   // 真实浏览器里 audio-player.js 以 defer 执行：解析完成、load 之前
   await new Promise(function (resolve) {
     if (w.document.readyState === 'complete') {
@@ -88,7 +93,7 @@ async function boot() {
       w.addEventListener('load', resolve);
     }
   });
-  return { w: w, audio: audio };
+  return { w: w, audio: audio, listens: listens };
 }
 
 function activeIndex(w) {
@@ -166,6 +171,42 @@ function activeIndex(w) {
   audio.emit('timeupdate');
   out.scrollAfterDisable = scrollLog.length;
   out.highlightStillFollows = activeIndex(w);
+
+  /* 「播完循环播放」：设置模块缺失时按默认值走 —— 必须回到开头继续播，
+     而不是停在结尾。播到结尾用替身手动派发 ended（真实浏览器同样会触发）。 */
+  const stateText = function () {
+    const el = w.document.querySelector('[data-role="state"]');
+    return el ? el.textContent : null;
+  };
+  const finishOneRound = function () {
+    audio.ended = true;
+    audio.paused = true;
+    audio.currentTime = audio.duration;
+    audio.emit('ended');
+  };
+
+  w.DailyLingo = {}; // 没有 audioLoop ⇒ 用默认值（循环）
+  const endedReportsBefore = env.listens.filter(function (e) { return e.ended; }).length;
+  finishOneRound();
+  out.loopByDefault = {
+    time: audio.currentTime,
+    playing: audio.paused === false,
+    state: stateText(),
+    highlight: activeIndex(w),
+  };
+  // 循环重播不许把「这一轮听完了」的上报吞掉（文章页的自动完成只认它）
+  out.loopStillReportsEnded = {
+    before: endedReportsBefore,
+    after: env.listens.filter(function (e) { return e.ended; }).length,
+  };
+
+  w.DailyLingo = { audioLoop: { enabled: function () { return false; } } };
+  finishOneRound();
+  out.loopTurnedOff = {
+    time: audio.currentTime,
+    playing: audio.paused === false,
+    state: stateText(),
+  };
 
   process.stdout.write(JSON.stringify(out));
 })();

@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/images/favicon-180.png">
   <meta name="theme-color" content="#3166a4">
-  <link rel="stylesheet" href="assets/css/style.css?v=acd18579">
+  <link rel="stylesheet" href="assets/css/style.css?v=2e64ec57">
 </head>
 <body class="page page-index">
   <main class="container">
@@ -426,7 +426,14 @@
       </section>
       <section class="settings-section" aria-labelledby="settings-reading-title">
         <h3 class="settings-subtitle" id="settings-reading-title">朗读</h3>
-        <p class="settings-desc">播放音频时，正在朗读的句子会在正文里加粗。下面的开关只决定页面要不要跟着滚动。</p>
+        <p class="settings-desc">播放音频时，正在朗读的句子会在正文里加粗。下面的开关决定音频播完之后怎么走、页面要不要跟着滚动。</p>
+        <label class="settings-toggle">
+          <input type="checkbox" id="setting-audio-loop" data-setting="audio-loop" checked>
+          <span class="settings-toggle-body">
+            <span class="settings-toggle-label">播完循环播放</span>
+            <span class="settings-toggle-hint">默认开启：音频播到结尾会回到开头重播，适合反复磨耳朵。关闭后播完即停，不会再响。</span>
+          </span>
+        </label>
         <label class="settings-toggle">
           <input type="checkbox" id="setting-reading-follow" data-setting="reading-follow">
           <span class="settings-toggle-body">
@@ -448,7 +455,7 @@
       </section>
     </div>
   </dialog>
-  <script src="assets/js/main.js?v=0436b308" defer></script>
-  <script src="assets/js/progress.js?v=9af2b792" defer></script>
+  <script src="assets/js/main.js?v=fbb7b6f3" defer></script>
+  <script src="assets/js/progress.js?v=8959a859" defer></script>
 </body>
 </html>

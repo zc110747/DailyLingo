@@ -2,7 +2,8 @@
 """朗读高亮：真实 DOM 交互测试（jsdom，可选依赖）。
 
 ``tests/js/player_dom.js`` 用替身 Audio 在真实 DOM 里跑 ``assets/js/audio-player.js``：
-播放前不高亮、时间推进时高亮跟随、点句子跳转、选中文字时不跳转、键盘快退后高亮回退。
+播放前不高亮、时间推进时高亮跟随、点句子跳转、选中文字时不跳转、键盘快退后高亮回退、
+「页面语音跟随」开关管不管滚动、「播完循环播放」默认循环 / 关掉后停在结尾。
 
 页面由**现场构建**生成（三句话 + 现场合成的音频），所以期望的高亮下标是确定的，
 不依赖 ``content/`` 里现有文章的具体句数。
@@ -168,3 +169,26 @@ def test_scroll_only_after_setting_enabled(observations):
     # 关掉以后高亮照样跟着时间走，但不再动滚动条
     assert observations["scrollAfterDisable"] == 1
     assert observations["highlightStillFollows"] == 2
+
+
+def test_loops_by_default(observations):
+    """「播完循环播放」默认开启：播到结尾回到开头继续播，并停在「正在播放」。"""
+    step = observations["loopByDefault"]
+    assert step["time"] == pytest.approx(0, abs=0.01)
+    assert step["playing"] is True
+    assert step["state"] == "正在播放"
+    assert step["highlight"] == 0  # 高亮跟着退回第一句
+
+
+def test_stops_at_end_when_loop_disabled(observations):
+    """关掉循环后必须停在结尾 —— 不回到开头、也不再播。"""
+    step = observations["loopTurnedOff"]
+    assert step["time"] > 0
+    assert step["playing"] is False
+    assert step["state"] == "播放结束"
+
+
+def test_looping_still_reports_ended(observations):
+    """循环重播不能吞掉「这一轮听完了」的上报 —— 文章页的自动完成只认这个事件。"""
+    step = observations["loopStillReportsEnded"]
+    assert step["after"] == step["before"] + 1

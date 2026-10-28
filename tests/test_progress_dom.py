@@ -125,6 +125,10 @@ def test_dom_script_reports_all_scenarios(observations):
         "follow_on",
         "follow_reopen",
         "follow_off",
+        "loop_default",
+        "loop_off",
+        "loop_reopen",
+        "loop_on",
         "chapters_initial",
         "chapters_after_first",
         "chapters_two",
@@ -335,6 +339,27 @@ def test_reading_follow_toggle_persists(observations):
     assert off["checked"] is False
     assert off["stored"] == "0"
     assert "已关闭" in off["message"]
+
+
+# 设置里的「播完循环播放」：默认开启，切换写进另一个独立的存储键
+def test_audio_loop_on_by_default(observations):
+    step = observations["loop_default"]
+    assert step["exists"] is True
+    assert step["checked"] is True
+    assert step["stored"] is None  # 没设置过也按「开」显示，不靠预写存储
+
+
+def test_audio_loop_toggle_persists(observations):
+    off = observations["loop_off"]
+    assert off["checked"] is False
+    assert off["stored"] == "0"
+    assert "已关闭" in off["message"]
+    assert observations["loop_reopen"]["checked"] is False
+
+    on = observations["loop_on"]
+    assert on["checked"] is True
+    assert on["stored"] == "1"
+    assert "已开启" in on["message"]
 
 
 # --------------------------------------------------------------------------

@@ -12,7 +12,7 @@ committed as-is and served straight from GitHub Pages.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#quick-start)
 [![Runtime dependencies: none](https://img.shields.io/badge/runtime%20dependencies-none-success.svg)](#quick-start)
-[![Tests: 537 passed](https://img.shields.io/badge/tests-537%20passed-success.svg)](#verification-results)
+[![Tests: 545 passed](https://img.shields.io/badge/tests-545%20passed-success.svg)](#verification-results)
 [![Deploy: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#deployment-to-github-pages)
 
 **Live site:** <https://zc110747.github.io/DailyLingo/>
@@ -512,6 +512,13 @@ there, deliberately out of the reading path.
   (`apps/android/publisher/DailyLingo.apk?v=<fingerprint>`, with a `download` attribute), so a tap on
   a phone saves the APK locally and it installs from there. When the package is not in the
   repository the whole block is **omitted** rather than leaving a link that 404s.
+- **Reading toggles** sit in the same panel, one key each, outside the progress export format:
+  *loop after finish* (**on** by default — the audio returns to the start and keeps playing, so a
+  40–70 s piece does not need a manual replay; `dailylingo_audio_loop_v1`) and *scroll with the
+  audio* (**off** by default — the page will not jump back to the body while you are working on the
+  questions; `dailylingo_reading_follow_v1`). The loop is restarted by hand inside the `ended`
+  handler rather than with `audio.loop`: the native loop never fires `ended`, which would silence
+  the "listened to 90 %, mark it complete" report.
 
 ### Storage format
 
@@ -691,7 +698,7 @@ removed.
 
 Behaviour:
 
-- **Full rebuild** (seventy-five articles, ~0.43 s in process with the timeline cache warm; the first run of a process takes ~5.01 s
+- **Full rebuild** (seventy-five articles, ~0.38 s in process with the timeline cache warm; the first run of a process takes ~4.77 s
   because it analyses each WAV for sentence timings, which are then cached against the file's
   size/mtime and only recomputed when the audio itself changes): adding or removing an article
   changes the
@@ -904,7 +911,7 @@ every title under its Chapter. The CLI output is currently in Chinese; the forma
 
 ```text
 $ python scripts/validate.py
-结果：PASS 3352 / FAIL 0 / WARN 0
+结果：PASS 3356 / FAIL 0 / WARN 0
 ```
 
 Covers: article data; number uniqueness, ascending order and **site-wide title uniqueness**
@@ -934,25 +941,28 @@ storage key plus the schema version while making no network calls**; **every art
 its `data-article-id` and a status line whose `data-study-auto` matches whether that article really
 has both audio and questions, both new scripts referenced with a content fingerprint, the listen /
 quiz event names identical on both sides of the contract, and the auto-mark script making no
-network calls**.
+network calls**; **both reading toggles in the settings panel — *loop after finish* rendered
+`checked` by default, *scroll with the audio* not — with `main.js`, `audio-player.js` and
+`progress.js` agreeing on the same storage keys and API names, and the loop implemented inside the
+`ended` handler without ever assigning `audio.loop`**.
 
 ### Automated tests
 
 ```text
 $ pytest -q
-537 passed in 30.3s
+545 passed in 31.3s
 ```
 
 | File | Cases | Coverage |
 |---|---|---|
 | `tests/test_build.py` | 110 | Article parsing (missing number / missing title / invalid number / duplicate number / filename-number mismatch / Chinese and special characters), number display rules (including beyond four digits), Chapter boundaries (`0001`/`0025`/`0026`/`0050`/`0051`/`0075`/`9999`/`10001`, i.e. 25 per Chapter), correct grouping across gaps, empty Chapters not rendered, ascending order within a group, first group expanded, a new article creating a new group, a group disappearing after its last article is deleted, homepage links resolvable, titles consistent site-wide, browser tab containing the number, previous/next links and first/last boundaries, navigation independent of grouping, 3- and 5-column word tables, question-type inference, compact answer strings, **numbered answer lists (`1. **B. …** explanation`, both the plain and the escaped `1\.` spelling, for stems and answers alike), 11 boundary cases for `extract_choice_key` (`cook` is not read as `C`)**, `题型：填空` with multiple acceptable answers, `______` preserved, invalid answer configurations detected, missing answers reported, Answers collapsed by default, grading data matching the answers, `normalize_answer` edge cases, **the player rendered above the body text (with and without a WAV)**, **a divider between the player and the body text**, **no ±5 s buttons and exactly three speed buttons**, **icon declarations carrying the correct relative prefix, home page icon next to the brand, icon assets valid PNG/SVG with the expected dimensions**, a missing WAV warning without affecting other sections, CSS/JS/audio relative paths, **CSS/JS URLs carrying a content fingerprint (`?v=` + 8 hex digits)**, GitHub Pages subpath, reproducible builds, **articles discovered recursively under `content/<chapter>/` folders (nested-only, mixed flat + nested, hidden folders ignored, the same number in two folders still conflicts)** |
-| `tests/test_frontend.py` | 7 | Executes `assets/js/main.js` for real in Node: correct / incorrect / empty single-choice selections, case insensitivity, leading and trailing whitespace, trailing punctuation, multiple acceptable answers, blank input never correct; plus a sample-by-sample consistency check against `build.normalize_answer` |
+| `tests/test_frontend.py` | 10 | Executes `assets/js/main.js` for real in Node: correct / incorrect / empty single-choice selections, case insensitivity, leading and trailing whitespace, trailing punctuation, multiple acceptable answers, blank input never correct; plus a sample-by-sample consistency check against `build.normalize_answer` |
 | `tests/test_progress.py` | 32 | Homepage structure for the progress feature (one toggle per real article, all starting unchecked, stats total / `aria-valuemax` / Chapter totals matching reality, settings dialog and its export-import controls, an Android package link carrying `download` and a content fingerprint, the block omitted when the APK is missing, empty site rendering `0 / 0`) **plus the pure logic executed in Node**: zero-padded IDs, payload validation (JSON syntax / `schemaVersion` / structure), dedupe and invalid-entry counting, ignoring unknown IDs, merge union, statistics without dividing by zero, Chapter completion on the real count, export payload shape, filename and import round-trip |
-| `tests/test_progress_dom.py` | 18 | Drives the generated homepage in **jsdom** with real click events and a real `localStorage`: first visit empty, toggle updates stats / storage / Chapter, unchecking reverts, Chapter turns green only when complete, **each Chapter's own progress bar and counter move independently (checked on a synthetic two-Chapter site)**, reload restores, corrupt data quarantined, storage-disabled degradation, import preview, merge, overwrite behind a second confirmation, cancelling overwrite, invalid JSON / unsupported version leaving progress intact, unknown IDs ignored and counted, export payload and dialog open/close. Skipped automatically when jsdom is not installed |
+| `tests/test_progress_dom.py` | 20 | Drives the generated homepage in **jsdom** with real click events and a real `localStorage`: first visit empty, toggle updates stats / storage / Chapter, unchecking reverts, Chapter turns green only when complete, **each Chapter's own progress bar and counter move independently (checked on a synthetic two-Chapter site)**, reload restores, corrupt data quarantined, storage-disabled degradation, import preview, merge, overwrite behind a second confirmation, cancelling overwrite, invalid JSON / unsupported version leaving progress intact, unknown IDs ignored and counted, export payload and dialog open/close. Skipped automatically when jsdom is not installed |
 | `tests/test_timeline.py` | 173 | `scripts/timeline.py`: sentence splitting (abbreviations such as `Mrs.`, terminators inside quotes, an attribution after a quote merged back, a long following sentence *not* merged), lossless splitting verified against **every paragraph of every article**, syllable estimation, silence detection on synthesised WAVs, the DP picking the pause closest to the syllable ratio, falling back to a grid when there is no pause at all, timeline covering the whole file, monotonic contiguous windows, graceful empty results for 8-bit / missing audio, consistency against the real articles and real WAVs, and the build emitting `data-start` / `data-end` (or plain paragraphs when audio is absent) |
 | `tests/test_content_links.py` | 152 | Every `## Continue` block in the Markdown sources: each relative link resolves on disk, previous/next equal the **number-adjacent** article even when it sits in another Chapter folder, first `previous` and last `next` point back to the homepage, and the `0025` ↔ `0026` boundary (which crosses `0001-0025/` → `0026-0050/`) is checked explicitly |
 | `tests/test_fix_content.py` | 15 | `scripts/fix_content.py`: slug rules (apostrophes dropped, punctuation removed, spaces → underscores), **every real article's filename already equals `slugify(title)`**, placeholder names renamed, links recomputed across Chapter folders, rerunning is a no-op, `--check` reports without touching files, duplicate numbers and a missing `# Title` are rejected |
-| `tests/test_player_dom.py` | 9 | Drives the generated article page in **jsdom** with a stand-in `Audio`: nothing highlighted before playback, highlight follows `currentTime` (0 / 2 / 4 s → sentences 0 / 1 / 2), clicking a sentence seeks to its start and starts playing, clicking while text is selected does nothing, rewinding moves the highlight back, exactly one sentence active. Skipped automatically when jsdom is not installed |
+| `tests/test_player_dom.py` | 12 | Drives the generated article page in **jsdom** with a stand-in `Audio`: nothing highlighted before playback, highlight follows `currentTime` (0 / 2 / 4 s → sentences 0 / 1 / 2), clicking a sentence seeks to its start and starts playing, clicking while text is selected does nothing, rewinding moves the highlight back, exactly one sentence active. Skipped automatically when jsdom is not installed |
 | `tests/test_auto_complete.py` | 8 | Executes `audio-player.js` + `study-completion.js` in Node **without a DOM**: the listen accumulator (first tick only sets the baseline, a normal 0.25 s step accumulates, a step of exactly 1.5 s still counts, forward / backward seeks are discarded, a frozen clock adds nothing) and the completion boundary (0.89 no, 0.90 yes, one wrong answer no, empty question set no, no snapshot no); plus the generated markup — `data-article-id` on every page, `data-study-auto` matching whether audio *and* questions really exist, both scripts referenced with a fingerprint, and the homepage manual toggle still present |
 | `tests/test_auto_complete_dom.py` | 13 | Drives a **generated article page** in jsdom with the real `main.js` / `progress.js` / `study-completion.js`: first visit untouched, quiz-only does not complete, playback-only does not complete, 50 % playback does not complete, full playback + all correct marks and persists, the reverse order (listen first, then answer) marks too, reopening shows the existing mark, changing an answer afterwards keeps it, the write is a union with existing records, corrupt storage is quarantined then marked, unavailable storage reports failure. Article ID and question count are read from the build, never hard-coded. Skipped automatically when jsdom is not installed |
 
@@ -1056,7 +1066,7 @@ live site.
   Because the tool is installed on the system `PATH`, `resolve_audio_tool()` now looks it up by name
   (`eaudio.cmd` / `EnglishAudio.exe` / `EnglishAudio`) and **no absolute path is recorded anywhere in
   the repository**. Verified: it resolves on this machine and `watch.py --once` rebuilds all 75
-  articles in 5472 ms.
+  articles in 5455 ms.
 - **A line-ending trap aimed at the "byte-identical rebuild" guarantee.** `core.autocrlf=true` was
   set on the development machine and the repository had no `.gitattributes`, so a fresh clone would
   check `src/*.html` out as **CRLF** while `build.py` always writes LF. Reproduced by converting the
