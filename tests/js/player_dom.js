@@ -17,8 +17,12 @@ const { JSDOM } = require('jsdom');
 
 const PAGE = process.argv[2];
 const SCRIPT = process.argv[3];
+const MAIN = process.argv[4] || null; // 可选：main.js，用来验证「设置真的能关掉循环」
 const html = fs.readFileSync(PAGE, 'utf8');
 const source = fs.readFileSync(SCRIPT, 'utf8');
+const mainSource = MAIN ? fs.readFileSync(MAIN, 'utf8') : null;
+
+const LOOP_KEY = 'dailylingo_audio_loop_v1';
 
 const out = { errors: [] };
 /* 记录 scrollIntoView 调用：用来验证「页面语音跟随」开关真的在管滚动 */
@@ -65,7 +69,8 @@ function fakeAudio() {
   return audio;
 }
 
-async function boot() {
+async function boot(options) {
+  const opts = options || {};
   const dom = new JSDOM(html, {
     url: 'https://example.test/src/page.html',
     runScripts: 'outside-only'
@@ -79,6 +84,12 @@ async function boot() {
   w.Element.prototype.scrollIntoView = function () {
     scrollLog.push(this.getAttribute('data-start'));
   };
+  if (opts.loopOff) {
+    w.localStorage.setItem(LOOP_KEY, '0'); // 等同用户在首页把开关关掉
+  }
+  if (opts.main) {
+    w.eval(opts.main); // 真实页面上 main.js 先于播放器执行
+  }
   w.eval(source);
   // 收集收听进度上报：文章页的自动完成只认这个事件，循环重播不能把它吞掉
   const listens = [];
@@ -207,6 +218,30 @@ function activeIndex(w) {
     playing: audio.paused === false,
     state: stateText(),
   };
+
+  /* 端到端：不手搓 DailyLingo，而是预置存储位 + 真实 main.js ——
+     「首页把开关关掉」这条链路必须真的让文章页不再循环。 */
+  if (mainSource) {
+    const env2 = await boot({ main: mainSource, loopOff: true });
+    const a2 = env2.audio;
+    const spans2 = Array.prototype.slice.call(env2.w.document.querySelectorAll('[data-start]'));
+    a2.duration = parseFloat(spans2[spans2.length - 1].getAttribute('data-end'));
+    a2.emit('loadedmetadata');
+    a2.ended = true;
+    a2.paused = true;
+    a2.currentTime = a2.duration;
+    a2.emit('ended');
+    out.loopOffThroughMain = {
+      apiSaysOff: env2.w.DailyLingo.audioLoop.enabled() === false,
+      time: a2.currentTime,
+      playing: a2.paused === false,
+      state: (function () {
+        const el = env2.w.document.querySelector('[data-role="state"]');
+        return el ? el.textContent : null;
+      })(),
+    };
+    env2.w.close();
+  }
 
   process.stdout.write(JSON.stringify(out));
 })();

@@ -12,7 +12,7 @@ committed as-is and served straight from GitHub Pages.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#quick-start)
 [![Runtime dependencies: none](https://img.shields.io/badge/runtime%20dependencies-none-success.svg)](#quick-start)
-[![Tests: 545 passed](https://img.shields.io/badge/tests-545%20passed-success.svg)](#verification-results)
+[![Tests: 546 passed](https://img.shields.io/badge/tests-546%20passed-success.svg)](#verification-results)
 [![Deploy: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#deployment-to-github-pages)
 
 **Live site:** <https://zc110747.github.io/DailyLingo/>
@@ -950,7 +950,7 @@ network calls**; **both reading toggles in the settings panel — *loop after fi
 
 ```text
 $ pytest -q
-545 passed in 31.3s
+546 passed in 29.3s
 ```
 
 | File | Cases | Coverage |
@@ -962,7 +962,7 @@ $ pytest -q
 | `tests/test_timeline.py` | 173 | `scripts/timeline.py`: sentence splitting (abbreviations such as `Mrs.`, terminators inside quotes, an attribution after a quote merged back, a long following sentence *not* merged), lossless splitting verified against **every paragraph of every article**, syllable estimation, silence detection on synthesised WAVs, the DP picking the pause closest to the syllable ratio, falling back to a grid when there is no pause at all, timeline covering the whole file, monotonic contiguous windows, graceful empty results for 8-bit / missing audio, consistency against the real articles and real WAVs, and the build emitting `data-start` / `data-end` (or plain paragraphs when audio is absent) |
 | `tests/test_content_links.py` | 152 | Every `## Continue` block in the Markdown sources: each relative link resolves on disk, previous/next equal the **number-adjacent** article even when it sits in another Chapter folder, first `previous` and last `next` point back to the homepage, and the `0025` ↔ `0026` boundary (which crosses `0001-0025/` → `0026-0050/`) is checked explicitly |
 | `tests/test_fix_content.py` | 15 | `scripts/fix_content.py`: slug rules (apostrophes dropped, punctuation removed, spaces → underscores), **every real article's filename already equals `slugify(title)`**, placeholder names renamed, links recomputed across Chapter folders, rerunning is a no-op, `--check` reports without touching files, duplicate numbers and a missing `# Title` are rejected |
-| `tests/test_player_dom.py` | 12 | Drives the generated article page in **jsdom** with a stand-in `Audio`: nothing highlighted before playback, highlight follows `currentTime` (0 / 2 / 4 s → sentences 0 / 1 / 2), clicking a sentence seeks to its start and starts playing, clicking while text is selected does nothing, rewinding moves the highlight back, exactly one sentence active. Skipped automatically when jsdom is not installed |
+| `tests/test_player_dom.py` | 13 | Drives the generated article page in **jsdom** with a stand-in `Audio`: nothing highlighted before playback, highlight follows `currentTime` (0 / 2 / 4 s → sentences 0 / 1 / 2), clicking a sentence seeks to its start and starts playing, clicking while text is selected does nothing, rewinding moves the highlight back, exactly one sentence active. Skipped automatically when jsdom is not installed |
 | `tests/test_auto_complete.py` | 8 | Executes `audio-player.js` + `study-completion.js` in Node **without a DOM**: the listen accumulator (first tick only sets the baseline, a normal 0.25 s step accumulates, a step of exactly 1.5 s still counts, forward / backward seeks are discarded, a frozen clock adds nothing) and the completion boundary (0.89 no, 0.90 yes, one wrong answer no, empty question set no, no snapshot no); plus the generated markup — `data-article-id` on every page, `data-study-auto` matching whether audio *and* questions really exist, both scripts referenced with a fingerprint, and the homepage manual toggle still present |
 | `tests/test_auto_complete_dom.py` | 13 | Drives a **generated article page** in jsdom with the real `main.js` / `progress.js` / `study-completion.js`: first visit untouched, quiz-only does not complete, playback-only does not complete, 50 % playback does not complete, full playback + all correct marks and persists, the reverse order (listen first, then answer) marks too, reopening shows the existing mark, changing an answer afterwards keeps it, the write is a union with existing records, corrupt storage is quarantined then marked, unavailable storage reports failure. Article ID and question count are read from the build, never hard-coded. Skipped automatically when jsdom is not installed |
 

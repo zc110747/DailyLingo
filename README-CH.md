@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#快速开始)
 [![运行期依赖: 无](https://img.shields.io/badge/%E8%BF%90%E8%A1%8C%E6%9C%9F%E4%BE%9D%E8%B5%96-none-success.svg)](#快速开始)
-[![测试: 545 passed](https://img.shields.io/badge/tests-545%20passed-success.svg)](#验证结果)
+[![测试: 546 passed](https://img.shields.io/badge/tests-546%20passed-success.svg)](#验证结果)
 [![部署: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#部署到-github-pages)
 
 **线上站点：** <https://zc110747.github.io/DailyLingo/>
@@ -851,7 +851,7 @@ $ python scripts/validate.py
 
 ```text
 $ pytest -q
-545 passed in 31.3s
+546 passed in 29.3s
 ```
 
 | 文件 | 用例数 | 覆盖内容 |
@@ -863,7 +863,7 @@ $ pytest -q
 | `tests/test_timeline.py` | 173 | `scripts/timeline.py`：切句（`Mrs.` 缩写、引号内的句末标点、引号后的叙述语并回、引号后真正的新句子不并）、**对每篇文章的每一段**验证切分不丢字、音节估算、合成 WAV 上的静音检测、DP 选中「最接近音节比例」的停顿、完全没有停顿时退回网格、时间轴覆盖整段音频、逐句首尾相接、8 bit / 缺失音频时优雅返回空、真实文章 × 真实音频的一致性、以及构建是否真的输出 `data-start` / `data-end`（缺音频时退回纯段落） |
 | `tests/test_content_links.py` | 152 | Markdown 源里每个 `## Continue` 段：每条相对链接都能在磁盘上解析、previous / next 等于**编号相邻**的上一篇 / 下一篇（跨 Chapter 目录也算）、首篇 previous 与末篇 next 都指回首页、并单独校验 `0025` ↔ `0026` 这条跨目录（`0001-0025/` → `0026-0050/`）的边界 |
 | `tests/test_fix_content.py` | 15 | `scripts/fix_content.py`：slug 规则（撇号丢弃、标点去掉、空格转下划线）、**仓库里每篇的文件名都等于 `slugify(标题)`**、占位文件名会被改名、跨 Chapter 目录的链接会重算、再跑一次不产生任何变化、`--check` 只报不改、重复编号与缺 `# 标题` 会被拒绝 |
-| `tests/test_player_dom.py` | 12 | 在 **jsdom** 中用替身 `Audio` 驱动生成的文章页：播放前不高亮、高亮跟随 `currentTime`（0 / 2 / 4 秒 → 第 0 / 1 / 2 句）、点句子跳到句首并开始播放、选中文字时点击不跳转、快退后高亮回退、始终只有一句处于高亮。未安装 jsdom 时自动跳过 |
+| `tests/test_player_dom.py` | 13 | 在 **jsdom** 中用替身 `Audio` 驱动生成的文章页：播放前不高亮、高亮跟随 `currentTime`（0 / 2 / 4 秒 → 第 0 / 1 / 2 句）、点句子跳到句首并开始播放、选中文字时点击不跳转、快退后高亮回退、始终只有一句处于高亮。未安装 jsdom 时自动跳过 |
 | `tests/test_auto_complete.py` | 8 | 在 Node 里**不带 DOM**执行 `audio-player.js` 与 `study-completion.js`：收听累计（第一拍只记基准、正常 0.25 s 累加、恰好 1.5 s 仍算、向前 / 向后跳转丢弃、时间不动不加）与完成判定边界（0.89 不算、0.90 算、错一题不算、无题目不算、无快照不算）；外加生成结构 —— 每页的 `data-article-id`、`data-study-auto` 是否与「真的有音频且真的有题目」一致、两个脚本都带指纹、首页手动开关仍在 |
 | `tests/test_auto_complete_dom.py` | 13 | 在 jsdom 里用真实的 `main.js` / `progress.js` / `study-completion.js` 驱动**生成的文章页**：首次进入不动、只答题不完成、只听不完成、听一半不完成、听完且全对即标记并落库、反过来先听完再答题也打勾、重开显示已完成、完成后改答案不撤销、写入与已有记录取并集、坏数据先留档再标记、存储不可用明确报错。文章编号与题目数从构建结果读取，不写死；没装 jsdom 时整组 skip |
 

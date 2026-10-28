@@ -95,7 +95,7 @@ WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不
 
 ## 已验证（2026-10-28，75 篇）
 `build.py` **75 篇 / 3 Chapter（0001–0025、0026–0050、0051–0075 各满 25 篇）/ 0 警告**；
-`validate.py` **PASS 3356**；`pytest -q` **545 passed**（test_timeline 173 例，content_links 152 例）；
+`validate.py` **PASS 3356**；`pytest -q` **546 passed**（test_timeline 173 例，content_links 152 例）；
 76 个 HTML 1056 条 + md 225 条链接均 0 坏链；全量重建冷 4.77 s / 时间轴缓存命中 0.38 s；
 `watch.py --once` 5455 ms。
 **标题唯一性已进 validate**（「标题唯一（同名会让首页出现两个无法区分的条目）」）：

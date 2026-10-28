@@ -30,6 +30,7 @@ from conftest import find_jsdom, find_node
 ROOT = Path(__file__).resolve().parent.parent
 DOM_SCRIPT = ROOT / "tests" / "js" / "player_dom.js"
 PLAYER_JS = ROOT / "assets" / "js" / "audio-player.js"
+MAIN_JS = ROOT / "assets" / "js" / "main.js"
 
 NODE = find_node()
 JSDOM_PATH = find_jsdom()
@@ -107,6 +108,7 @@ def observations(tmp_path_factory) -> dict:
             str(DOM_SCRIPT),
             str(out / "src" / "0001.Three_Sentences.html"),
             str(PLAYER_JS),
+            str(MAIN_JS),
         ],
         capture_output=True,
         text=True,
@@ -192,3 +194,15 @@ def test_looping_still_reports_ended(observations):
     """循环重播不能吞掉「这一轮听完了」的上报 —— 文章页的自动完成只认这个事件。"""
     step = observations["loopStillReportsEnded"]
     assert step["after"] == step["before"] + 1
+
+
+def test_loop_off_through_real_settings(observations):
+    """端到端：存储位预置 "0" + 真实 main.js ⇒ 文章页确实不再循环。
+
+    上面两条是直接塞一个假的 DailyLingo，这条才把「首页写入 → 文章页读取」串起来。
+    """
+    step = observations["loopOffThroughMain"]
+    assert step["apiSaysOff"] is True
+    assert step["time"] > 0
+    assert step["playing"] is False
+    assert step["state"] == "播放结束"
