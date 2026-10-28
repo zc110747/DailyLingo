@@ -93,11 +93,11 @@ WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不
   进度镜像成 `dailylingo-progress.json`（Android 写 LF，Windows .NET 9 默认 CRLF）。
   ⚠️ Android：`WindowInsetsController` 要在 `setContentView` 之后取；隐藏 WebView 用 **GONE**。
 
-## 已验证（2026-10-28，75 篇）
-`build.py` **75 篇 / 3 Chapter（0001–0025、0026–0050、0051–0075 各满 25 篇）/ 0 警告**；
-`validate.py` **PASS 3356**；`pytest -q` **546 passed**（test_timeline 173 例，content_links 152 例）；
-76 个 HTML 1056 条 + md 225 条链接均 0 坏链；全量重建冷 4.77 s / 时间轴缓存命中 0.38 s；
-`watch.py --once` 5455 ms。
+## 已验证（2026-10-28，80 篇）
+`build.py` **80 篇 / 4 Chapter（0001–0025、0026–0050、0051–0075 各满 25 篇 + 0076–0100 共 5 篇）/ 0 警告**；
+`validate.py` **PASS 3608**；`pytest -q` **566 passed**（test_timeline 183 例，content_links 162 例）；
+81 个 HTML 1126 条 + md 240 条链接均 0 坏链；全量重建冷 5.40 s / 时间轴缓存命中 0.42 s；
+`watch.py --once` 6158 ms。
 **标题唯一性已进 validate**（「标题唯一（同名会让首页出现两个无法区分的条目）」）：
 0040/0055 同名、0071/0072 连正文都一模一样这两次，都是全绿放过去的，
 现在不同编号共用同一标题会直接 FAIL（已反向验证过）。
