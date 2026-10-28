@@ -32,6 +32,7 @@
 11. **CSS/JS URL 必带 `?v=<sha256 前 8 位>`**（`build.asset_url`）。Pages 回 `max-age=600`：改 `assets/`
     不重建 ⇒ 手机最长 10 分钟吃旧文件。**改 assets 后必须重跑构建**；改行尾也会让全站指纹变（按磁盘字节算）。
 12. 播放器控件刻意做减法：无 ±5 s；倍速只 0.75/1/1.25；进度条 5 px，命中区靠 `.player-track::before` 撑到 ±9 px。
+   播完默认**循环**（设置里可关），一个设置键只管一件事，别塞进播放器 UI。
 13. `flex-basis` 不写 px（翻成 column 就是高度）；`.nav-link` 用 `flex: 1 1 0; min-width: 200px`。
 14. 图标是静态资产（`favicon.svg` + `-32`/`-180.png`），各页由 `build._render_icons(prefix)` 声明。
 15. 行尾：`.gitattributes` = `* text=auto eol=lf` / `*.bat eol=crlf` / 二进制 `binary`；
@@ -72,6 +73,14 @@ WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不
   `data-study-auto="false"`，页面直说只能手动勾。
 - 播放器累计：`timeupdate` 累加**媒体秒**，单步 >1.5 s 视为跳转丢弃（拖到结尾刷不出完成）；
   倍率无关。阈值是单常量 `REQUIRED_RATIO` / `LISTEN_STEP_LIMIT`，validate 断言 0.9。
+- 朗读设置（都只在首页设置面板改，`main.js` 读写、`progress.js` 画界面、播放器读）：
+  `dailylingo_reading_follow_v1` 页面语音跟随（**默认关**，`!=="1"` 判定，读不到一律 false）；
+  `dailylingo_audio_loop_v1` 播完循环播放（**默认开**，`!=="0"` 判定，读不到一律 true）。
+  两个键都不进学习进度的导出格式。
+- ⚠️ **循环必须写在 `ended` 里手动重播，不能给 `audio.loop` 赋值**：原生循环不触发 `ended`，
+  `reportListen(true)` 就永远发不出去，听够 90% 的自动完成会卡死。顺序是
+  「补最后一截 → `reportListen(true)` → 再判断要不要回开头」，validate 用正则
+  `audio\.loop\s*=` 断言全文没有这个赋值。
 - ⚠️ jsdom 测真 DOM 必须 `runScripts:"outside-only"`（否则 `window.eval` 静默不执行），并等 `load` 再点。
   jsdom 属开发期依赖，缺了整组 skip；node workspace `npm install jsdom` 可恢复。
 - ⚠️ 本机**当前**没有可用浏览器/playwright（`msedge --version` 假成功），像素未验证；音频真实播放未验证。
@@ -84,11 +93,11 @@ WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不
   进度镜像成 `dailylingo-progress.json`（Android 写 LF，Windows .NET 9 默认 CRLF）。
   ⚠️ Android：`WindowInsetsController` 要在 `setContentView` 之后取；隐藏 WebView 用 **GONE**。
 
-## 已验证（2026-10-27，75 篇）
+## 已验证（2026-10-28，75 篇）
 `build.py` **75 篇 / 3 Chapter（0001–0025、0026–0050、0051–0075 各满 25 篇）/ 0 警告**；
-`validate.py` **PASS 3352**；`pytest -q` **537 passed**（test_timeline 173 例，content_links 152 例）；
-76 个 HTML 1056 条 + md 225 条链接均 0 坏链；全量重建冷 5.01 s / 时间轴缓存命中 0.43 s；
-`watch.py --once` 5472 ms。
+`validate.py` **PASS 3356**；`pytest -q` **545 passed**（test_timeline 173 例，content_links 152 例）；
+76 个 HTML 1056 条 + md 225 条链接均 0 坏链；全量重建冷 4.77 s / 时间轴缓存命中 0.38 s；
+`watch.py --once` 5455 ms。
 **标题唯一性已进 validate**（「标题唯一（同名会让首页出现两个无法区分的条目）」）：
 0040/0055 同名、0071/0072 连正文都一模一样这两次，都是全绿放过去的，
 现在不同编号共用同一标题会直接 FAIL（已反向验证过）。
