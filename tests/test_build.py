@@ -146,6 +146,74 @@ def test_parse_basic_article(tmp_path):
     assert [o.key for o in art.questions[0].options] == ["A", "B", "C"]
 
 
+def test_dialogue_keeps_speaker_label_out_of_audio(tmp_path):
+    """对话体：页面上要看到「谁在说」，音频里不念名字。"""
+    dialogue = "**Anna:** Excuse me. Is this the line?\n\n**Man:** Yes, it is."
+    name = "0001.A_Conversation_at_the_Airport.md"
+    (tmp_path / name).write_text(
+        article_md(title="A Conversation at the Airport", article=dialogue),
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    art = build.parse_article_file(tmp_path / name)
+
+    assert art.paragraphs[0] == "Anna: Excuse me. Is this the line?"
+    assert art.spoken_paragraphs[0] == "Excuse me. Is this the line?"
+    assert art.paragraphs[1] == "Man: Yes, it is."
+    assert art.spoken_paragraphs[1] == "Yes, it is."
+    # 两版必须等长同序，否则 _spoken_flat 只能整篇退回显示文本
+    assert len(art.paragraphs) == len(art.spoken_paragraphs)
+
+
+def test_dialogue_page_still_shows_speaker(tmp_path):
+    """页面渲染不能因为「音频不念名字」而把名字也藏起来。"""
+    dialogue = "**Anna:** Excuse me. Is this the line?\n\n**Man:** Yes, it is."
+    files = {
+        "0001.A_Conversation_at_the_Airport.md": article_md(
+            title="A Conversation at the Airport", article=dialogue
+        )
+    }
+    _, out, _, _ = make_site(tmp_path, files, audio=["0001.A_Conversation_at_the_Airport.wav"])
+
+    page = read(out / "src" / "0001.A_Conversation_at_the_Airport.html")
+
+    assert "Anna: Excuse me. Is this the line?" in page
+    assert "Man: Yes, it is." in page
+
+
+def test_spoken_flat_uses_stripped_sentences(tmp_path):
+    art = build.parse_article_file(
+        _write_dialogue(tmp_path, "**Anna:** Excuse me. Is this the line?")
+    )
+    art.sentence_paragraphs = [["Anna: Excuse me.", "Is this the line?"]]
+    flat = ["Anna: Excuse me.", "Is this the line?"]
+
+    assert build._spoken_flat(art, flat) == ["Excuse me.", "Is this the line?"]
+
+
+def test_spoken_flat_falls_back_on_count_mismatch(tmp_path):
+    """两版句数不一致时整篇退回显示文本 —— 时间轴宁可不精确，也不能整体错位。"""
+    art = build.parse_article_file(
+        _write_dialogue(tmp_path, "**Anna:** Excuse me. Is this the line?")
+    )
+    art.sentence_paragraphs = [["Anna: Excuse me.", "Is this the line?"]]
+    art.spoken_paragraphs = ["Excuse me."]  # 故意少一句
+    flat = ["Anna: Excuse me.", "Is this the line?"]
+
+    assert build._spoken_flat(art, flat) == flat
+
+
+def _write_dialogue(tmp_path: Path, dialogue: str) -> Path:
+    path = tmp_path / "0001.A_Conversation.md"
+    path.write_text(
+        article_md(title="A Conversation", article=dialogue),
+        encoding="utf-8",
+        newline="\n",
+    )
+    return path
+
+
 def test_missing_number_in_filename(tmp_path):
     bad = tmp_path / "A_New_Hobby.md"
     bad.write_text(article_md(), encoding="utf-8")

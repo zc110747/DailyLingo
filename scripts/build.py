@@ -50,6 +50,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
 import timeline  # noqa: E402  （必须在上面的 sys.path 处理之后）
+import tts  # noqa: E402  同上：说话人标签的判据只写一份（见 scripts/tts.py）
 
 # --------------------------------------------------------------------------
 # 常量
@@ -298,6 +299,9 @@ class Article:
     source: Path
     audio_name: str
     paragraphs: list[str] = field(default_factory=list)
+    # 音频实际读到的正文（对话体的 ``**Anna:**`` 已去掉）。与 paragraphs 等长同序；
+    # 只用于音节先验，页面渲染仍走 paragraphs —— 名字要看得到，但不该念出来。
+    spoken_paragraphs: list[str] = field(default_factory=list)
     words: list[Word] = field(default_factory=list)
     questions: list[Question] = field(default_factory=list)
 
@@ -692,11 +696,17 @@ def parse_article_file(path: Path) -> Article:
     audio_name = meta.get("audio", "").strip() or f"{m.group(1)}.{slug}.wav"
 
     paragraphs: list[str] = []
+    spoken: list[str] = []
     if "article" in sections:
         for block in re.split(r"\n\s*\n", "\n".join(sections["article"])):
             block = block.strip()
             if block and not block.startswith("```"):
                 paragraphs.append(strip_markdown(block))
+                # 对话体 `**Anna:** ...`：页面上要看到讲话人，音频里不念名字。
+                # 去掉标签后的文本交给 timeline 做音节先验，否则每句凭空多两个音节。
+                spoken.append(
+                    strip_markdown(tts.SPEAKER_LABEL_RE.sub("", block, count=1))
+                )
     if not paragraphs:
         raise BuildError(f"{path.name} 缺少 `## Article` 正文内容")
 
@@ -707,6 +717,7 @@ def parse_article_file(path: Path) -> Article:
         source=path,
         audio_name=audio_name,
         paragraphs=paragraphs,
+        spoken_paragraphs=spoken,
         words=parse_words(sections.get("words", [])),
         questions=parse_questions(sections.get("questions", [])),
     )
@@ -1210,6 +1221,22 @@ def _render_continue(article: Article) -> str:
 PLAUSIBLE_RATE = (1.0, 8.0)
 
 
+def _spoken_flat(article: Article, flat: list[str]) -> list[str]:
+    """音频实际读到的句子（对话体已去掉 ``Anna:``），供音节先验使用。
+
+    句子数必须与显示文本一一对应；万一某段切出来对不上，就整篇退回显示文本 ——
+    宁可先验略有偏差，也不能让时间轴整体错位（错位比不精确难看得多）。
+    """
+    if not article.spoken_paragraphs or article.spoken_paragraphs == article.paragraphs:
+        return flat
+    spoken_groups = [
+        timeline.split_sentences_checked(paragraph) or [paragraph]
+        for paragraph in article.spoken_paragraphs
+    ]
+    spoken_flat = [sentence for group in spoken_groups for sentence in group]
+    return spoken_flat if len(spoken_flat) == len(flat) else flat
+
+
 def _attach_timeline(article: Article, audio_path: Path, warnings: list[str]) -> None:
     """切句 + 从 WAV 反推每句话的起止时间（缺音频时只切句、不产生时间轴）。"""
     article.sentence_paragraphs = []
@@ -1222,7 +1249,9 @@ def _attach_timeline(article: Article, audio_path: Path, warnings: list[str]) ->
     if not article.has_audio:
         return
     flat = [sentence for group in article.sentence_paragraphs for sentence in group]
-    article.sentence_timeline = timeline.build_timeline(audio_path, flat)
+    # 先验用「音频里真正读到的字」；页面高亮仍按 flat 里的显示文本走
+    prior = _spoken_flat(article, flat)
+    article.sentence_timeline = timeline.build_timeline(audio_path, prior)
     if not article.sentence_timeline:
         warnings.append(
             f"{article.source.name}: 无法从音频推导句子时间轴"
@@ -1233,7 +1262,7 @@ def _attach_timeline(article: Article, audio_path: Path, warnings: list[str]) ->
     low, high = PLAUSIBLE_RATE
     bad = [
         sentence
-        for sentence, rate in zip(flat, timeline.syllables_per_second(flat, article.sentence_timeline))
+        for sentence, rate in zip(prior, timeline.syllables_per_second(prior, article.sentence_timeline))
         if rate and not low <= rate <= high
     ]
     if bad:

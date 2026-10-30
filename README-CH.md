@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#快速开始)
 [![运行期依赖: 无](https://img.shields.io/badge/%E8%BF%90%E8%A1%8C%E6%9C%9F%E4%BE%9D%E8%B5%96-none-success.svg)](#快速开始)
-[![测试: 566 passed](https://img.shields.io/badge/tests-566%20passed-success.svg)](#验证结果)
+[![测试: 605 passed](https://img.shields.io/badge/tests-605%20passed-success.svg)](#验证结果)
 [![部署: GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-222.svg)](#部署到-github-pages)
 
 **线上站点：** <https://zc110747.github.io/DailyLingo/>
@@ -153,6 +153,9 @@ DailyLingo/
 │       └── favicon-180.png     # apple-touch-icon
 ├── scripts/
 │   ├── build.py                # 构建：解析 -> 分组 -> 渲染 -> 关联音频
+│   ├── tts.py                  # 生成 WAV（对话体的说话人名字不念）
+│   ├── timeline.py             # 从 WAV 反推句级朗读时间轴
+│   ├── fix_content.py          # 归一文件名与 Continue 链接
 │   ├── watch.py                # 同步：md/wav 一变就自动重建
 │   └── validate.py             # 生成结果与数据校验
 ├── tests/
@@ -602,6 +605,23 @@ python scripts/watch.py --audio
 该工具只朗读 `## Article` 章节 —— `## Words` / `## Questions` / `## Answers` / `## Continues`
 不会被读出来。正文含非英文字符会被直接拒绝（退出码 4），Markdown 必须是 UTF-8。
 
+**对话体文章：页面上看得到说话人，音频里不念名字。** 脚本式正文（`**Anna:** Excuse me. Is this
+the line?`）必须在页面上保留标签 —— 得看出是谁在说话；但 WAV 里不能连着念十四次 "Anna"：
+既不像对话，也把注意力从内容上带走。`scripts/tts.py` 是处理这件事的唯一入口：它只把
+`## Article` 段里的 `**名字:**` 前缀去掉（单词表、题目一个字不动），写到**同名**临时文件再
+交给工具，WAV 因此仍然落在 `sources/<同名>.wav`。`scripts/build.py` 推导句子时间轴时用同一份
+去掉标签的文本 —— 否则音节先验每行多两个音节，朗读高亮会一点点串到上一句。
+
+```bat
+:: 优先用这个，而不是直接调 EnglishAudio：说话人标签会被自动处理
+python scripts/tts.py "content\0076-0100\0082.A_Conversation_at_the_Airport.md"
+
+:: 一次多篇
+python scripts/tts.py content\0076-0100\0081.*.md content\0076-0100\0082.*.md
+```
+
+实测 `0082`：念名字 51.82 s，**不念 44.14 s**，差 7.68 s / 14 行（约 0.55 s 一个标签）。
+
 > **改了正文就必须重新生成 WAV。** 同步脚本只在文件**缺失**时补齐，不检测内容过期，
 > 所以改过正文的文章会一直保留过期录音，直到你重跑一次工具。
 
@@ -621,6 +641,7 @@ python scripts/watch.py --audio
 | 命令 | 作用 |
 |---|---|
 | `python scripts/watch.py` | 监听并自动重建（默认 1 s 轮询） |
+| `python scripts/tts.py <md>...` | 生成 WAV；对话体文章**不念**说话人名字 |
 | `python scripts/watch.py --audio` | 顺带用 EnglishAudio 补齐缺失的 WAV |
 | `python scripts/watch.py --once` | 只重建一次后退出（适合放进脚本 / Git hook） |
 | `python scripts/watch.py --interval 0.5` | 调整轮询间隔 |
@@ -628,7 +649,7 @@ python scripts/watch.py --audio
 
 行为约定：
 
-- **全量重建**（80 篇，时间轴缓存命中时进程内约 0.42 s；首次因为要分析音频里的句子时间轴约 5.40 s，
+- **全量重建**（85 篇，时间轴缓存命中时进程内约 0.50 s；首次因为要分析音频里的句子时间轴约 6.07 s，
   之后按 WAV 的大小 / mtime 缓存，只有音频本身变了才重新分析）：新增或删除一篇文章会改变
   相邻文章的上一篇 / 下一篇，只重写「变化的那一页」会留下不一致的假象。
 - Markdown 写坏时**只打印错误并继续监听**，不会退出；修好再保存即可重建成功。
@@ -811,12 +832,12 @@ $ python scripts/build.py --verbose
   文章 0001  A New Hobby  |  3 词  3 题  |  音频 有
   …                                   # 每篇文章一行
 DailyLingo 构建完成
-  文章总数：80
+  文章总数：85
   Chapter 分组：4
     Chapter 0001–0025（默认展开）：25 篇
     Chapter 0026–0050（默认折叠）：25 篇
     Chapter 0051–0075（默认折叠）：25 篇
-    Chapter 0076–0100（默认折叠）：5 篇
+    Chapter 0076–0100（默认折叠）：10 篇
   警告：0 条
 ```
 
@@ -826,7 +847,7 @@ DailyLingo 构建完成
 
 ```text
 $ python scripts/validate.py
-结果：PASS 3608 / FAIL 0 / WARN 0
+结果：PASS 3843 / FAIL 0 / WARN 0
 ```
 
 覆盖：文章数据；编号唯一性与升序；**全站标题唯一**（编号不同但标题相同时，首页会出现两个无法区分的条目）；Chapter 区间边界与「只输出有真实文章的 Chapter」；
@@ -852,19 +873,20 @@ $ python scripts/validate.py
 
 ```text
 $ pytest -q
-566 passed in 33.3s
+605 passed in 37.4s
 ```
 
 | 文件 | 用例数 | 覆盖内容 |
 |---|---|---|
-| `tests/test_build.py` | 110 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0025`/`0026`/`0050`/`0051`/`0075`/`9999`/`10001`，即每章 25 篇）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`，含被转义的 `1\.` 写法，题干与答案都测）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**播放器与正文之间有分隔线**、**无 ±5 秒按钮且恰好三档倍速**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、**CSS/JS 的 URL 带内容指纹（`?v=` + 8 位十六进制）**、GitHub Pages 子路径、构建可重复、**在 `content/<chapter>/` 子目录下递归发现文章（只有子目录、平铺与子目录混放、隐藏目录被忽略、两个目录里出现同一编号仍然报错）** |
+| `tests/test_build.py` | 114 | 文章解析（缺编号 / 缺标题 / 编号非法 / 重复编号 / 编号与文件名不一致 / 中文与特殊字符）、编号显示规则（含超过四位）、Chapter 边界（`0001`/`0025`/`0026`/`0050`/`0051`/`0075`/`9999`/`10001`，即每章 25 篇）、缺号仍正确分组、空 Chapter 不显示、组内升序、第一组默认展开、新增文章产生新分组、删除最后一篇后分组消失、首页链接可解析、标题全站一致、浏览器标签含编号、上一篇 / 下一篇与首末边界、导航与分组无关、单词表 3 列与 5 列、题型推断、紧凑答案串、**编号答案列表（`1. **B. …** 解释`，含被转义的 `1\.` 写法，题干与答案都测）、`extract_choice_key` 的 11 组边界（`cook` 不被当成 `C`）**、`题型：填空` + 多可接受答案、`______` 保留、非法答案配置可被识别、缺答案报错、Answers 默认折叠、判分数据与答案一致、`normalize_answer` 边界、**播放器位于正文之前（有 / 无 WAV 两种情形）**、**播放器与正文之间有分隔线**、**无 ±5 秒按钮且恰好三档倍速**、**图标声明前缀正确、首页品牌图标、图标资产的 PNG/SVG 有效性与尺寸**、缺音频只警告不影响其他区域、CSS/JS/音频相对路径、**CSS/JS 的 URL 带内容指纹（`?v=` + 8 位十六进制）**、GitHub Pages 子路径、构建可重复、**在 `content/<chapter>/` 子目录下递归发现文章（只有子目录、平铺与子目录混放、隐藏目录被忽略、两个目录里出现同一编号仍然报错）** |
 | `tests/test_frontend.py` | 10 | 在 Node 中真实执行 `assets/js/main.js`：单选正确 / 错误 / 空选、大小写不敏感、首尾空格、尾部标点、多个可接受答案、空白输入不判正确；并与 `build.normalize_answer` 做逐样本一致性比对 |
 | `tests/test_progress.py` | 32 | 学习进度的首页结构（每篇一个完成按钮且初始未完成、统计总数 / `aria-valuemax` / Chapter 汇总等于真实篇数、设置对话框与导出导入控件、Android 安装包直链带 `download` 与内容指纹且 APK 缺失时整块省略、空站点渲染 `0 / 0`）**外加在 Node 中真实执行的纯逻辑**：编号补零、文件校验（JSON 语法 / `schemaVersion` / 结构）、去重与非法条目计数、忽略不存在编号、合并取并集、统计不除零、按真实篇数判定 Chapter 完成、导出载荷结构与文件名、导出内容可被导入解析器读回 |
 | `tests/test_progress_dom.py` | 20 | 在 **jsdom** 中用真实 click 事件与真实 `localStorage` 驱动生成的首页：首次访问为空、勾选同步统计与存储、取消回退、Chapter 全完成才变绿、**每章的进度条与计数各自独立（用合成的「两章」站点验证：勾第一章不动第二章）**、刷新恢复、损坏数据隔离、存储禁用降级、导入预览、合并、覆盖需二次确认、取消覆盖、非法 JSON / 不支持版本不改动进度、未知编号忽略并计数、导出载荷与对话框开关。未安装 jsdom 时自动跳过 |
-| `tests/test_timeline.py` | 183 | `scripts/timeline.py`：切句（`Mrs.` 缩写、引号内的句末标点、引号后的叙述语并回、引号后真正的新句子不并）、**对每篇文章的每一段**验证切分不丢字、音节估算、合成 WAV 上的静音检测、DP 选中「最接近音节比例」的停顿、完全没有停顿时退回网格、时间轴覆盖整段音频、逐句首尾相接、8 bit / 缺失音频时优雅返回空、真实文章 × 真实音频的一致性、以及构建是否真的输出 `data-start` / `data-end`（缺音频时退回纯段落） |
-| `tests/test_content_links.py` | 162 | Markdown 源里每个 `## Continue` 段：每条相对链接都能在磁盘上解析、previous / next 等于**编号相邻**的上一篇 / 下一篇（跨 Chapter 目录也算）、首篇 previous 与末篇 next 都指回首页、并单独校验 `0025` ↔ `0026` 这条跨目录（`0001-0025/` → `0026-0050/`）的边界 |
+| `tests/test_timeline.py` | 193 | `scripts/timeline.py`：切句（`Mrs.` 缩写、引号内的句末标点、引号后的叙述语并回、引号后真正的新句子不并）、**对每篇文章的每一段**验证切分不丢字、音节估算、合成 WAV 上的静音检测、DP 选中「最接近音节比例」的停顿、完全没有停顿时退回网格、时间轴覆盖整段音频、逐句首尾相接、8 bit / 缺失音频时优雅返回空、真实文章 × 真实音频的一致性、以及构建是否真的输出 `data-start` / `data-end`（缺音频时退回纯段落） |
+| `tests/test_content_links.py` | 172 | Markdown 源里每个 `## Continue` 段：每条相对链接都能在磁盘上解析、previous / next 等于**编号相邻**的上一篇 / 下一篇（跨 Chapter 目录也算）、首篇 previous 与末篇 next 都指回首页、并单独校验 `0025` ↔ `0026` 这条跨目录（`0001-0025/` → `0026-0050/`）的边界 |
 | `tests/test_fix_content.py` | 15 | `scripts/fix_content.py`：slug 规则（撇号丢弃、标点去掉、空格转下划线）、**仓库里每篇的文件名都等于 `slugify(标题)`**、占位文件名会被改名、跨 Chapter 目录的链接会重算、再跑一次不产生任何变化、`--check` 只报不改、重复编号与缺 `# 标题` 会被拒绝 |
 | `tests/test_player_dom.py` | 13 | 在 **jsdom** 中用替身 `Audio` 驱动生成的文章页：播放前不高亮、高亮跟随 `currentTime`（0 / 2 / 4 秒 → 第 0 / 1 / 2 句）、点句子跳到句首并开始播放、选中文字时点击不跳转、快退后高亮回退、始终只有一句处于高亮。未安装 jsdom 时自动跳过 |
+| `tests/test_tts.py` | 15 | `scripts/tts.py`：说话人标签**只**从 `## Article` 去掉（`**Question 1:**` 保留），小写 / 超长 / 无冒号的行不动，重复执行无副作用，无标签文章逐字不变，工具查找顺序，`.cmd` 经 `cmd /c` 转一手；并用一个「会记录自己读到什么」的假 TTS 断言**送进工具的内容确实没有名字**、而 WAV 仍按原文件名落地。另有 `build.py` 侧：页面保留标签、音节先验用去标签文本，两版句数不一致时整篇退回显示文本 |
 | `tests/test_auto_complete.py` | 8 | 在 Node 里**不带 DOM**执行 `audio-player.js` 与 `study-completion.js`：收听累计（第一拍只记基准、正常 0.25 s 累加、恰好 1.5 s 仍算、向前 / 向后跳转丢弃、时间不动不加）与完成判定边界（0.89 不算、0.90 算、错一题不算、无题目不算、无快照不算）；外加生成结构 —— 每页的 `data-article-id`、`data-study-auto` 是否与「真的有音频且真的有题目」一致、两个脚本都带指纹、首页手动开关仍在 |
 | `tests/test_auto_complete_dom.py` | 13 | 在 jsdom 里用真实的 `main.js` / `progress.js` / `study-completion.js` 驱动**生成的文章页**：首次进入不动、只答题不完成、只听不完成、听一半不完成、听完且全对即标记并落库、反过来先听完再答题也打勾、重开显示已完成、完成后改答案不撤销、写入与已有记录取并集、坏数据先留档再标记、存储不可用明确报错。文章编号与题目数从构建结果读取，不写死；没装 jsdom 时整组 skip |
 
@@ -890,7 +912,7 @@ $ python -m http.server 8123
 200 …                               <- /sources/0002 … 0020（每篇文章一个 WAV）
 ```
 
-*（做了省略：全部 170 条路径——首页 + 80 个文章页、80 个 WAV、共享静态资源与 Android 安装包——都真实请求过且全部
+*（做了省略：全部 180 条路径——首页 + 85 个文章页、85 个 WAV、共享静态资源与 Android 安装包——都真实请求过且全部
 `200`；按文章逐条的那部分只留一个示例加 `…`，文章变多以后这份清单仍然可读。）*
 
 > **`python -m http.server` 不支持 `Range`。** 带 `Range: bytes=0-1023` 的请求仍返回 `200`
@@ -954,7 +976,7 @@ WAV 响应支持 HTTP Range 请求（`206 Partial Content`，已实测），因�
 - **音频工具被写成了绝对路径**：`watch.py` 的兜底路径写死了 EnglishAudio 在某块盘上的位置，
   工具一挪或换台电脑就失效 —— 实际已经因此坏过两次。现在工具本身已加入系统 `PATH`，
   `resolve_audio_tool()` 改为**按名字查找**（`eaudio.cmd` / `EnglishAudio.exe` / `EnglishAudio`），
-  **仓库里不再记录任何绝对路径**。实测：本机能解析到，`watch.py --once` 重建 80 篇耗时 6158 ms。
+  **仓库里不再记录任何绝对路径**。实测：本机能解析到，`watch.py --once` 重建 85 篇耗时 6581 ms。
 - **冲着「构建字节级可复现」来的行尾陷阱**：本机开着 `core.autocrlf=true` 而仓库没有
   `.gitattributes`，全新 clone 会把 `src/*.html` 签出成 **CRLF**，而 `build.py` 永远写 LF。
   在临时目录里把那 10 个生成页面改成 CRLF 复现：`validate.py` 对一个完全正常的站点报了 10 个

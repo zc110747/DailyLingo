@@ -30,9 +30,6 @@ EnglishAudio（本地离线 TTS）查找顺序：
 from __future__ import annotations
 
 import argparse
-import os
-import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -40,38 +37,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import build  # noqa: E402  （同目录，复用唯一的构建逻辑）
+import tts  # noqa: E402  （音频工具查找 / 合成的唯一实现）
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# EnglishAudio（本地离线 TTS）的查找顺序：--audio-tool > 环境变量 > 系统 PATH > 仓库内 tools/。
-# 工具已加入系统环境（PATH），因此**不写任何绝对路径** —— 各台电脑安装位置不同，
-# 写死一条只会在换机后失效。仓库内仍认 tools/eaudio.cmd 作为兜底（可选，默认不进 Git）。
-AUDIO_TOOL_ENV = "DAILYLINGO_AUDIO_TOOL"
-AUDIO_TOOL_NAMES = ("eaudio.cmd", "EnglishAudio.exe", "EnglishAudio")
-AUDIO_TOOL_CANDIDATES = (ROOT / "tools" / "eaudio.cmd",)
+# 兼容旧用法：仍可按 ``watch.AUDIO_TOOL_ENV`` 取环境变量名
+AUDIO_TOOL_ENV = tts.AUDIO_TOOL_ENV
 
 
 def resolve_audio_tool(explicit: str | None) -> Path | None:
-    """返回可直接调用的音频工具路径；找不到返回 None。
-
-    顺序：``--audio-tool`` > 环境变量 > 系统 PATH（按名称查找）> ``<仓库>/tools/eaudio.cmd``。
-    """
-    candidates: list[Path] = []
-    if explicit:
-        candidates.append(Path(explicit))
-    from_env = os.environ.get(AUDIO_TOOL_ENV)
-    if from_env:
-        candidates.append(Path(from_env))
-    for name in AUDIO_TOOL_NAMES:
-        found = shutil.which(name)
-        if found:
-            candidates.append(Path(found))
-    candidates.extend(AUDIO_TOOL_CANDIDATES)
-
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate.resolve()
-    return None
+    """工具查找的唯一实现在 ``scripts/tts.py``（监听与手动生成必须同一套判据）。"""
+    return tts.resolve_audio_tool(explicit)
 
 
 def snapshot(content_dir: Path, sources_dir: Path) -> dict[str, tuple[int, int]]:
@@ -126,27 +102,18 @@ def missing_audio(content_dir: Path, sources_dir: Path) -> list[Path]:
 
 
 def make_audio(md: Path, sources_dir: Path, tool: Path) -> bool:
-    """调用 EnglishAudio 的 eaudio.cmd 为单个 md 生成同名 wav。成功返回 True。"""
+    """为单个 md 生成同名 wav。成功返回 True。
+
+    实际调用在 ``scripts/tts.py``：对话体文章的 ``**Anna:**`` 会先被去掉再合成，
+    页面上仍然看得到说话人 —— 详见该文件顶部的说明。
+    """
     print(f"  [audio] {relative(md)} -> {relative(sources_dir / (md.stem + '.wav'))}", flush=True)
-    cmd = ["cmd", "/c", str(tool), str(md), f"--dist={sources_dir}"]
-    try:
-        proc = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True)
-    except OSError as exc:
-        print(f"  [audio] 启动失败：{exc}", flush=True)
-        return False
-
-    if proc.returncode == 0:
-        return True
-
-    print(f"  [audio] 失败（退出码 {proc.returncode}）", flush=True)
-    for stream in (proc.stdout, proc.stderr):
-        text = (stream or "").strip()
-        if text:
-            for line in text.splitlines():
-                print(f"    {line}", flush=True)
-    if proc.returncode == 130:
-        print("    （用户取消）", flush=True)
-    return False
+    ok, detail = tts.synthesize(md, sources_dir, tool)
+    if ok:
+        print(f"  [audio] ok: {detail}", flush=True)
+    else:
+        print(f"  [audio] 失败：{detail}", flush=True)
+    return ok
 
 
 def orphan_pages(content_dir: Path, out_dir: Path) -> list[str]:
