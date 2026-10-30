@@ -51,15 +51,22 @@
 WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不记绝对路径**（写死坏过两次）。
 定位：`--audio-tool` > `DAILYLINGO_AUDIO_TOOL` > PATH（`eaudio.cmd`/`EnglishAudio.exe`）> `tools/eaudio.cmd`。
 只读 `## Article`；正文含中文被拒（exit 4）；弯引号 `“ ” ’` **不拦**。WAV 均单声道/16 bit/22 050 Hz。
-⚠️ **`009.ai_voice/publisher/` 的 exe 用 `net10.0` runtimeconfig，本机没有 .NET 10，用不了**：
-`dotnet --list-runtimes` 只有 7.0.20 / 8.0.22 / 9.0.11（2026-10-24 复核；此前"已装 10.0.11、可直接用"
-的记录是错的，别再照抄）。直接跑 publisher 版会打印 `You must install or update .NET…` + 退出码 150。
-**可用的只有源码 net9 构建**（已存在则直接调用，别再 build）：
-`src/EnglishAudio/bin/Release/net9.0-windows/EnglishAudio.exe <md> --dist=sources`
-缺失时先 `dotnet build src/EnglishAudio/EnglishAudio.csproj -c Release`（AppPaths 向上找 `tools/piper`，
-必须在仓库树内）。
+✅ **`009.ai_voice/publisher/` 的 exe 现在直接可用**：本机已装 `Microsoft.NETCore.App 10.0.11`
+（2026-10-30 复核 `dotnet --list-runtimes`），而 PATH 里的 `eaudio.cmd` / `EnglishAudio.exe`
+正指向 `009.ai_voice/publisher/`。不必再从源码 `dotnet build`。
+（"本机没有 .NET 10、只能用 net9 源码构建"的旧记录是错的，别再照抄。）
 ⚠️ **`eaudio.cmd` 会把 stdout 吞掉**：成功也是空输出，**判据是 WAV 是否落地 + exit=0**，不是有没有打印。
 另：本机 `HTTPS_PROXY`/`https_proxy` 同时存在，PS 的 `Start-Process` 会抛「关键字重复」，别用它启动。
+
+### 对话体：名字要看得到，但不该念出来（2026-10-30 新增）
+正文写成脚本式 `**Anna:** Excuse me.` 时，页面上保留标签，**音频里必须去掉**。
+唯一入口是 `python scripts/tts.py <md>...`（`watch.py --audio` 也走它）：
+它只清 `## Article` 里的 `**名字:**` 前缀，写同名临时文件再交给工具，WAV 仍落 `sources/<同名>.wav`；
+原 md 一个字不动。`build.py` 的 `spoken_paragraphs` 保存去标签文本，句级时间轴的**音节先验**用它
+（显示仍用 `paragraphs`）——否则每行多两个音节，高亮会一点点串到上一句。
+两版句数不一致时整篇退回显示文本（宁可不精确，也不能整体错位）。
+铁证：0082 带名字 51.82 s / 不带 44.14 s，差 7.68 s ÷ 14 行 ≈ 0.55 s/标签。
+判据正则只认**行首 + 大写开头 + ≤28 字符 + 带粗体冒号**，所以 `**Question 1:**`、`**important:**` 不会被误删。
 
 ## 学习进度（纯前端，两处写入）
 - 存储 `localStorage["dailylingo_learning_progress_v1"]` = `{schemaVersion:1, completedArticles:["0001"], updatedAt}`；
@@ -93,11 +100,11 @@ WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不
   进度镜像成 `dailylingo-progress.json`（Android 写 LF，Windows .NET 9 默认 CRLF）。
   ⚠️ Android：`WindowInsetsController` 要在 `setContentView` 之后取；隐藏 WebView 用 **GONE**。
 
-## 已验证（2026-10-28，80 篇）
-`build.py` **80 篇 / 4 Chapter（0001–0025、0026–0050、0051–0075 各满 25 篇 + 0076–0100 共 5 篇）/ 0 警告**；
-`validate.py` **PASS 3608**；`pytest -q` **566 passed**（test_timeline 183 例，content_links 162 例）；
-81 个 HTML 1126 条 + md 240 条链接均 0 坏链；全量重建冷 5.40 s / 时间轴缓存命中 0.42 s；
-`watch.py --once` 6158 ms。
+## 已验证（2026-10-30，85 篇）
+`build.py` **85 篇 / 4 Chapter（0001–0025、0026–0050、0051–0075 各满 25 篇 + 0076–0100 共 10 篇）/ 0 警告**；
+`validate.py` **PASS 3843**；`pytest -q` **605 passed**（test_timeline 193 例，content_links 172 例，
+test_tts 15 例）；86 个 HTML 1196 条 + md 255 条链接均 0 坏链；
+全量重建冷 6.07 s / 时间轴缓存命中 0.50 s；`watch.py --once` 6581 ms。
 **标题唯一性已进 validate**（「标题唯一（同名会让首页出现两个无法区分的条目）」）：
 0040/0055 同名、0071/0072 连正文都一模一样这两次，都是全绿放过去的，
 现在不同编号共用同一标题会直接 FAIL（已反向验证过）。
