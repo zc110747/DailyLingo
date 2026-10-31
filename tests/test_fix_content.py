@@ -103,6 +103,15 @@ def test_placeholders_are_renamed(tmp_path):
     ]
 
 
+def test_file_without_extension_is_renamed(tmp_path):
+    """粘贴时连 `.md` 一起丢了（文件名就叫 `0086`）也要认出来并补全扩展名。"""
+    content = make_content(tmp_path, {"0041": "First Story"})
+    assert [e.path.name for e in fix_content.scan(content)] == ["0041"]
+    report = fix_content.apply(content)
+    assert [new for _, new in report.renames] == ["0041.First_Story.md"]
+    assert [p.name for p in content.iterdir()] == ["0041.First_Story.md"]
+
+
 def test_links_follow_numbers_across_folders(tmp_path):
     content = make_content(
         tmp_path,

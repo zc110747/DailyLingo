@@ -46,6 +46,15 @@ def slugify(title: str) -> str:
     return "_".join(words)
 
 
+def _article_files(content_dir: Path):
+    """``*.md`` 与「纯编号无扩展名」的文件（``0086``），后者也算待整理文章。"""
+    for path in sorted(content_dir.rglob("*")):
+        if not path.is_file():
+            continue
+        if path.suffix == ".md" or (path.suffix == "" and re.fullmatch(r"\d+", path.name)):
+            yield path
+
+
 @dataclass
 class Entry:
     path: Path
@@ -75,11 +84,13 @@ class Report:
 
 def scan(content_dir: Path) -> list[Entry]:
     entries: list[Entry] = []
-    for path in sorted(content_dir.rglob("*.md")):
+    # 也收「只有编号、没有扩展名」的文件（`0086`）：粘贴时常常连 `.md` 一起丢了，
+    # 这类文件构建会当成非文章跳过，必须在改名阶段就补回 `NNNN.<Slug>.md`。
+    for path in sorted(_article_files(content_dir)):
         rel = path.relative_to(content_dir)
         if any(part.startswith(".") for part in rel.parts):
             continue
-        match = re.match(r"^(\d+)\.", path.name)
+        match = re.match(r"^(\d+)(?:\.|$)", path.name)
         if not match:
             raise SystemExit(f"文件名不以编号开头：{rel.as_posix()}")
         text = path.read_text(encoding="utf-8")
