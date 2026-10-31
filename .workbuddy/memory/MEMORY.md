@@ -100,17 +100,20 @@ WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不
   进度镜像成 `dailylingo-progress.json`（Android 写 LF，Windows .NET 9 默认 CRLF）。
   ⚠️ Android：`WindowInsetsController` 要在 `setContentView` 之后取；隐藏 WebView 用 **GONE**。
 
-## 已验证（2026-10-30，85 篇）
-`build.py` **85 篇 / 4 Chapter（0001–0025、0026–0050、0051–0075 各满 25 篇 + 0076–0100 共 10 篇）/ 0 警告**；
-`validate.py` **PASS 3843**；`pytest -q` **605 passed**（test_timeline 193 例，content_links 172 例，
-test_tts 15 例）；86 个 HTML 1196 条 + md 255 条链接均 0 坏链；
-全量重建冷 6.07 s / 时间轴缓存命中 0.50 s；`watch.py --once` 6581 ms。
+## 已验证（2026-11-01，90 篇）
+`build.py` **90 篇 / 4 Chapter（0001–0025、0026–0050、0051–0075 各满 25 篇 + 0076–0100 共 15 篇）/ 0 警告**；
+`validate.py` **PASS 4078**；`pytest -q` **626 passed**（test_timeline 203 例，content_links 182 例）；
+91 个 HTML + 90 WAV + md 270 条链接，本地 HTTP **190 条路径全 200**；
+全量重建冷 2.92 s / 时间轴缓存命中 1.18 s；`watch.py --once` 3951 ms。
 **标题唯一性已进 validate**（「标题唯一（同名会让首页出现两个无法区分的条目）」）：
 0040/0055 同名、0071/0072 连正文都一模一样这两次，都是全绿放过去的，
 现在不同编号共用同一标题会直接 FAIL（已反向验证过）。
 ⚠️ 但仍**不校验正文重复**：同题不同改写、或改标题后正文照抄，仍只能人工发现。
 **新文章先用 `python scripts/fix_content.py --apply` 归一文件名与 Continue 链接**
-（`--check` 只报；邻接按「编号升序相邻」，缺号也接得上）。⚠️ 用户常边写边存：
+（`--check` 只报；邻接按「编号升序相邻」，缺号也接得上）。
+⚠️ **别用 `ls content/*.md | wc -l` 数篇数**：文件可能连 `.md` 都没有（2026-11-01 就有 5 个
+只叫 `0086`…`0090` 的文件），`build.py` 只扫 `*.md` 会**静默跳过**。现在 `fix_content.py`
+也认「纯编号无扩展名」的文件并补回 `.md`，所以新增后直接跑 `--check` 最稳。⚠️ 用户常边写边存：
 改名/构建前先看 mtime 是否稳定，否则会按旧内容改名。⚠️ 改名后**旧 WAV 与旧 HTML 要手删**
 （构建不删文件），否则站点会留下孤儿产物。
 文章改名史：0005 撞名、0016 去撇号、0018 笔误、0021 去弯撇号、0029 去文件名空格、
