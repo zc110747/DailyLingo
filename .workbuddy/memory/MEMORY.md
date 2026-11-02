@@ -67,6 +67,8 @@ WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不
 两版句数不一致时整篇退回显示文本（宁可不精确，也不能整体错位）。
 铁证：0082 带名字 51.82 s / 不带 44.14 s，差 7.68 s ÷ 14 行 ≈ 0.55 s/标签。
 判据正则只认**行首 + 大写开头 + ≤28 字符 + 带粗体冒号**，所以 `**Question 1:**`、`**important:**` 不会被误删。
+副作用可接受：寓言的 `**Moral:** Do not judge others by their size.` 也会被剥掉标签（0094/0095），
+页面仍显示、音频不念这个单词 —— 与对话体同一套逻辑，正是想要的。
 
 ## 学习进度（纯前端，两处写入）
 - 存储 `localStorage["dailylingo_learning_progress_v1"]` = `{schemaVersion:1, completedArticles:["0001"], updatedAt}`；
@@ -100,11 +102,14 @@ WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不
   进度镜像成 `dailylingo-progress.json`（Android 写 LF，Windows .NET 9 默认 CRLF）。
   ⚠️ Android：`WindowInsetsController` 要在 `setContentView` 之后取；隐藏 WebView 用 **GONE**。
 
-## 已验证（2026-11-01，90 篇）
-`build.py` **90 篇 / 4 Chapter（0001–0025、0026–0050、0051–0075 各满 25 篇 + 0076–0100 共 15 篇）/ 0 警告**；
-`validate.py` **PASS 4078**；`pytest -q` **626 passed**（test_timeline 203 例，content_links 182 例）；
-91 个 HTML + 90 WAV + md 270 条链接，本地 HTTP **190 条路径全 200**；
-全量重建冷 2.92 s / 时间轴缓存命中 1.18 s；`watch.py --once` 3951 ms。
+## 已验证（2026-11-02，100 篇）
+`build.py` **100 篇 / 4 Chapter（0001–0025、0026–0050、0051–0075、0076–0100 各满 25 篇）/ 0 警告**；
+`validate.py` **PASS 4542**；`pytest -q` **666 passed**（test_timeline 223 例，content_links 202 例）；
+101 个 HTML + 100 WAV + md 300 条链接（HTML 链接 1406 条 0 坏），本地 HTTP **213 条路径全 200**；
+全量重建冷 7.36 s / 时间轴缓存命中 0.63 s；`watch.py --once` 7521 ms。
+⚠️ 耗时随篇数线性涨（90 篇时是 2.92/1.18 s），README 两个数字要跟着实测更新。
+⚠️ 自写链接普查脚本**必须先剥 `?v=` 再解析本地路径**，否则几百条「缺文件」全是误报。
+
 **标题唯一性已进 validate**（「标题唯一（同名会让首页出现两个无法区分的条目）」）：
 0040/0055 同名、0071/0072 连正文都一模一样这两次，都是全绿放过去的，
 现在不同编号共用同一标题会直接 FAIL（已反向验证过）。
