@@ -102,11 +102,11 @@ WAV 由 **EnglishAudio**（Piper+ONNX，离线）生成，**工具在 PATH，不
   进度镜像成 `dailylingo-progress.json`（Android 写 LF，Windows .NET 9 默认 CRLF）。
   ⚠️ Android：`WindowInsetsController` 要在 `setContentView` 之后取；隐藏 WebView 用 **GONE**。
 
-## 已验证（2026-11-04，110 篇）
-`build.py` **110 篇 / 5 Chapter（0001–0125 前四章各 25 篇 + 0101–0125 共 10 篇）/ 0 警告**；
-`validate.py` **PASS 5055**；`pytest -q` **706 passed**（test_timeline 243 例，content_links 222 例）；
-111 个 HTML + 110 WAV + md 330 条链接（HTML 链接 1546 条 0 坏），本地 HTTP **232 条路径全 200**；
-全量重建冷 8.66 s / 时间轴缓存命中 0.82 s；`watch.py --once` 9752 ms。
+## 已验证（2026-11-05，115 篇）
+`build.py` **115 篇 / 5 Chapter（0001–0100 前四章各 25 篇 + 0101–0125 共 15 篇）/ 0 警告**；
+`validate.py` **PASS 5310**；`pytest -q` **726 passed**（test_timeline 253 例，content_links 232 例）；
+116 个 HTML + 115 WAV + md 345 条链接（HTML 链接 1616 条 0 坏），本地 HTTP **242 条路径全 200**；
+全量重建冷 8.79 s / 时间轴缓存命中 0.78 s；`watch.py --once` 9670 ms。
 ⚠️ 耗时随篇数线性涨（90 篇时是 2.92/1.18 s），README 两个数字要跟着实测更新。
 ⚠️ 自写链接普查脚本**必须先剥 `?v=` 再解析本地路径**，否则几百条「缺文件」全是误报。
 ⚠️ 路径普查用 **HEAD**：GET 逐条拉 100+ 个 6 MB WAV 会被沙箱 **SIGTERM** 打断
